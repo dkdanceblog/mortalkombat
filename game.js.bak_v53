@@ -124,7 +124,7 @@ const CHARS = {
   },
   korzh: {
     id: "korzh", name: "МАКС КОРЖ", special: "ЗЕМЛЕТРЯСЕНИЕ", color: "#e05050",
-    speed: 265, power: 1.05, specialCd: 6.0, tough: 1.0, armorActive: 0, jump: 0.9, weight: 1.3, dash: 0.9,
+    speed: 265, power: 1.05, specialCd: 6.0, tough: 1.08, jump: 0.9, weight: 1.3, dash: 0.9,
     stats: { "СКОРОСТЬ": 1, "СИЛА": 5, "ЗДОРОВЬЕ": 4 },
     perk: "ФИШКА: тяжёлый удар не сбить лёгким",
     blurb: "Главный собиратель стадионов.",
@@ -288,7 +288,6 @@ const SPECIALS = {
 /* ------------------------------------------------------------------ */
 const ASSET_PATHS = {
   logo: "assets/ui/logo.png",
-  dklogo: "assets/ui/dk_logo.png",
   // optional generated art: titlebg -> "assets/ui/title_bg.webp"
   "bg.moscow": "assets/backgrounds/moscow_msu.webp",
   "bg.thailand": "assets/backgrounds/thailand_beach.webp",
@@ -347,69 +346,15 @@ let loaded = 0;
 let total = 0;
 let fontsReady = false;
 
-// Stage-select thumbnails: small copies so the menu doesn't need the full arenas
-for (const k of Object.keys(ASSET_PATHS)) {
-  if (k.startsWith("bg.")) ASSET_PATHS["thumb." + k.slice(3)] = ASSET_PATHS[k].replace("backgrounds/", "backgrounds/thumbs/");
-}
-// Only what the menus need blocks the loading screen; full arenas and fight poses
-// download in the background right after (and the VS screen waits for them if needed).
-function deferredAsset(key) {
-  if (key === "bg.concert") return false;                 // title backdrop
-  if (key.startsWith("bg.") || key.startsWith("yard.") || key.startsWith("bar.")) return true;
-  return key.startsWith("spr.") && !key.endsWith(".idle");
-}
-let deferredStarted = false;
-function loadList(list, onDone) {
+function loadAssets() {
+  const list = Object.entries(ASSET_PATHS);
+  total = list.length;
   for (const [key, src] of list) {
     const img = new Image();
-    img.onload = img.onerror = onDone;
+    img.onload = img.onerror = () => { loaded++; };
     img.src = src;
     images[key] = img;
   }
-}
-// A small queue (6 at a time) so the files the next fight needs can jump ahead
-// fighter poses first (every fight needs two sets), arenas after
-const deferredQueue = Object.entries(ASSET_PATHS).filter(([k]) => deferredAsset(k))
-  .sort((a, b) => (a[0].startsWith("spr.") ? 0 : 1) - (b[0].startsWith("spr.") ? 0 : 1));
-let deferredActive = 0;
-function pumpDeferred() {
-  while (deferredStarted && deferredActive < 6 && deferredQueue.length) {
-    const [key, src] = deferredQueue.shift();
-    deferredActive++;
-    loadList([[key, src]], () => { deferredActive--; pumpDeferred(); });
-  }
-}
-function loadDeferred() {
-  if (deferredStarted) return;
-  deferredStarted = true;
-  pumpDeferred();
-}
-function prioritizeAssets(keys) {
-  const want = new Set(keys);
-  const front = deferredQueue.filter(([k]) => want.has(k));
-  if (!front.length) return;
-  const rest = deferredQueue.filter(([k]) => !want.has(k));
-  deferredQueue.length = 0; deferredQueue.push(...front, ...rest);
-  loadDeferred(); pumpDeferred();
-}
-function fightAssetKeys(chars, stage) {
-  const keys = stage ? ["bg." + stage] : [];
-  for (const cid of new Set(chars.filter(Boolean))) {
-    for (const k of Object.keys(ASSET_PATHS)) if (k.startsWith(`spr.${cid}.`)) keys.push(k);
-  }
-  if (stage === "yard" || stage === "bar") keys.push(...Object.keys(ASSET_PATHS).filter((k) => k.startsWith(stage + ".")));
-  return keys;
-}
-function fightAssetsReady() {
-  prioritizeAssets(fightAssetKeys(G.chars, G.stage));
-  return fightAssetKeys(G.chars, G.stage).every((k) => { const i = images[k]; return !!i && i.complete; });   // complete = loaded or failed
-}
-
-function loadAssets() {
-  const list = Object.entries(ASSET_PATHS).filter(([k]) => !deferredAsset(k));
-  total = list.length;
-  loadList(list, () => { loaded++; if (loaded >= total) loadDeferred(); });
-  setTimeout(loadDeferred, 8000);                          // never stall the rest on one slow file
   const fontLoads = document.fonts
     ? Promise.all([
         document.fonts.load(`40px ${FONT_HEAD}`, "ГУФ ABC"),
@@ -1621,7 +1566,7 @@ function applyHit(att, def, h) {
 
   // Korzh: a light hit can't knock him out of his heavy (he still takes the damage)
   const da = def.action;
-  if (def.cid === "korzh" && da && da.type === "heavy" && da.move && da.t < da.move.startup + (def.data.armorActive ?? da.move.active) && h.dmg <= 6 && h.melee &&
+  if (def.cid === "korzh" && da && da.type === "heavy" && da.move && da.t < da.move.startup + da.move.active && h.dmg <= 6 && h.melee &&
       !(att.action && (att.action.type === "super" || att.action.type === "throw"))) {
     const ad = Math.max(1, Math.round(h.dmg * DMG_SCALE * att.data.power / (def.data.tough || 1)));
     def.hp = Math.max(0, def.hp - ad); def.trailDelay = 0.45; def.flash = 0.1;
@@ -1646,7 +1591,7 @@ function applyHit(att, def, h) {
     if (att.cid === "noize" && aa && aa.move && aa.move.finisher) perk = 1.25;
     if (att.cid === "morgen" && G.time - (att.dashAt || -9) < 0.5) { perk = 1.3; popup(def.x, def.y - 320, "ДОРОГО!", "#ff86d8", 24); att.dashAt = -9; }
     if (att.cid === "maybe" && aa && aa.air) perk = 1.2;
-    if (att.cid === "face" && (def.x < WALL_L + 130 || def.x > WALL_R - 130)) perk = att.data.wallMul || 1.25;
+    if (att.cid === "face" && (def.x < WALL_L + 130 || def.x > WALL_R - 130)) perk = 1.25;
   }
   if (att.cid === "kreed" && att.hp <= 30 && !h.noScale) perk *= 1.15;
   let dmg = Math.max(1, Math.round(h.dmg * DMG_SCALE * att.data.power * scale * perk * (counter ? 1.25 : 1) / (def.data.tough || 1)));
@@ -3962,10 +3907,6 @@ function drawTitle() {
     text(label, 34, 12 + bh2 / 2 + 1, { size: 18, font: FONT_PIX, color: GOLD, shadow: false });
     region("secrets", 14, 12, bw2, bh2, () => { confirmSfx(); openSecrets(); });
   }
-  {   // author's logo, top-right under the sound button
-    const dk = img("dklogo");
-    if (dk) { const h = 124, w = h * dk.naturalWidth / dk.naturalHeight; ctx.save(); ctx.globalAlpha = 0.92; ctx.drawImage(dk, W - w - 18, 60, w, h); ctx.restore(); }
-  }
   const badges = cheatBadges();
   if (badges) text(badges, 16, 66, { size: 16, color: "#ff86d8", stroke: "#000", strokeW: 4 });
 }
@@ -4153,8 +4094,6 @@ function arcadeEndItems() {
 
 function drawLadder() {
   const A = G.arcade;
-  { const st = A.ladder[A.idx], ck = "L" + A.cid + st.cid + st.stage;
-    if (G.prioChars !== ck) { G.prioChars = ck; prioritizeAssets(fightAssetKeys([A.cid, st.cid], st.stage)); } }
   menuBackground(0.8);
   header("АРКАДА", `БОЙ ${A.idx + 1} ИЗ ${A.ladder.length}`);
   const n = A.ladder.length, tile = 104, gap = 22;
@@ -4263,11 +4202,16 @@ function drawMode() {
   menuBackground();
   header("РЕЖИМ ИГРЫ");
   const opts = [
-    { mode: 1, title: "1 ИГРОК", sub: "против бота", ids: ["guf", null], lines: ["выбери бойца и арену"] },
-    { mode: 3, title: "АРКАДА", sub: "6 боёв подряд", ids: [null, "boss"], lines: ["в конце — финальный босс"] },
+    { mode: 1, title: "1 ИГРОК", sub: "против бота", ids: ["guf", null],
+      lines: isTouch ? ["джойстик — движение", "РУКА • НОГА • СПЕЦ", "РЫВОК • БРОСОК", "ПАНЧ — когда полоска полная"]
+                     : ["стрелки — движение", "A рука • S нога • D спец", "→→ рывок • A A S связка", "A + S  ПАНЧ"] },
+    { mode: 3, title: "АРКАДА", sub: "6 боёв подряд", ids: [null, "boss"],
+      lines: ["6 боёв, сложность растёт", "проиграл — переиграй бой", "в конце — финальный босс", "и концовка за каждого"] },
     { mode: 2, title: "2 ИГРОКА", sub: "на одной клавиатуре", ids: ["guf", "noize"], off: isTouch,
-      lines: [isTouch ? "только на компьютере" : "друг против друга"] },
-    { mode: 4, title: "ОБУЧЕНИЕ", sub: "все приёмы по шагам", ids: ["guf", "tut"], lines: ["проиграть нельзя"] },
+      lines: isTouch ? ["нужна клавиатура:", "двое за одним", "компьютером", "на телефоне — только 1P"]
+                     : ["1P: WASD + F G H", "2P: стрелки + J K L", "рука + нога  ПАНЧ", "вперёд + рука  бросок"] },
+    { mode: 4, title: "ОБУЧЕНИЕ", sub: "все приёмы по шагам", ids: ["guf", "tut"],
+      lines: ["16 коротких шагов", "блок, связки, бросок", "рывок, подсечка, панч", "без проигрыша"] },
   ];
   const w = 292, h = 372, gap = 16;
   const x0 = W / 2 - (w * 4 + gap * 3) / 2;
@@ -4292,8 +4236,8 @@ function drawMode() {
     });
     text("VS", x + w / 2 - 5, y + 92, { size: 30, align: "center", gradient: ["#fff", GOLD], stroke: "#000" });
     text(o.title, x + w / 2, y + 196, { size: fitText(o.title, w - 30, 40), align: "center", color: active ? GOLD : "#fff", stroke: "#000", strokeW: 6 });
-    text(o.sub, x + w / 2, y + 244, { size: fitText(o.sub, w - 30, 26), align: "center", color: "#c9c2ff", stroke: "#000", strokeW: 4 });
-    o.lines.forEach((ln, k) => text(ln, x + w / 2, y + 300 + k * 28, { size: fitText(ln, w - 30, 22), align: "center", color: "#9d97c9", shadow: false }));
+    text(o.sub, x + w / 2, y + 236, { size: 20, align: "center", color: "#c9c2ff", shadow: false });
+    o.lines.forEach((ln, k) => text(ln, x + w / 2, y + 266 + k * 24, { size: fitText(ln, w - 30, 16), align: "center", color: "#9d97c9", shadow: false }));
     if (o.off) { ctx.fillStyle = "rgba(8,5,20,0.6)"; ctx.fillRect(x, y, w, h); }
     region("mode" + i, x, y, w, h, () => { if (o.off) { playSfx("block"); G.sel = i; return; } chooseMode(o.mode); }, () => { G.sel = i; });
   });
@@ -4616,8 +4560,6 @@ function moveCharCursor(player, delta) {
 /* Stage select */
 function drawStageSelect() {
   menuBackground();
-  const ck = G.chars.join();
-  if (G.prioChars !== ck) { G.prioChars = ck; prioritizeAssets(fightAssetKeys(G.chars, null)); }
   header("ВЫБЕРИ ЛОКАЦИЮ");
   const cols = 4, w = 290, h = 190, gx = 20, gy = 26;
   const y0 = 150;
@@ -4629,7 +4571,7 @@ function drawStageSelect() {
     const y = y0 + row * (h + gy);
     const active = G.sel === i;
     panel(x, y, w, h, { active });
-    const bg = img("thumb." + id) || img("bg." + id);
+    const bg = img("bg." + id);
     ctx.save();
     ctx.beginPath();
     ctx.rect(x + 10, y + 10, w - 20, h - 60);
@@ -4647,7 +4589,6 @@ function drawStageSelect() {
 function chooseStage(id) {
   confirmSfx();
   G.stage = id;
-  prioritizeAssets(fightAssetKeys(G.chars, id));
   startVs();
 }
 
@@ -4670,9 +4611,7 @@ function startVs() {
 function drawVs() {
   const v = G.vs;
   const t = G.time - v.t0;
-  if (!deferredStarted) loadDeferred();
-  const waiting = t > 3.0 || v.skip;
-  if (waiting && (fightAssetsReady() || t > 25)) { startMatch(); return; }
+  if (t > 3.0) { startMatch(); return; }
   const [c0, c1] = G.chars;
   const d0 = CHARS[c0], d1 = G.twin && c0 === c1 ? twinData(c1) : CHARS[c1];
   // background: two coloured halves split by a diagonal
@@ -4748,8 +4687,7 @@ function drawVs() {
     text(who + line, W / 2, 503, { size: fitText(who + line, W - 120, 34), align: "center", color: "#fff6c8", stroke: "#000", strokeW: 6, alpha: a });
   }
   text("АРЕНА: " + STAGES[G.stage].name, W / 2, H - 24, { size: 14, font: FONT_PIX, align: "center", color: "#c9c2ff", alpha: 0.85 });
-  if (waiting) text("ЗАГРУЗКА АРЕНЫ…", W / 2, H - 56, { size: 14, font: FONT_PIX, align: "center", color: GOLD, alpha: 0.5 + 0.5 * Math.sin(G.time * 6) });
-  region("vs-skip", 0, 0, W, H, () => { if (G.time - v.t0 > 0.4) v.skip = true; });
+  region("vs-skip", 0, 0, W, H, () => { if (G.time - v.t0 > 0.4) startMatch(); });
 }
 
 /* Pause */
@@ -5479,7 +5417,7 @@ function handleNav(ev) {
     return;
   }
   if (s === "vs") {
-    if ((t === "confirm" || t.startsWith("digit")) && G.time - G.vs.t0 > 0.4) G.vs.skip = true;
+    if ((t === "confirm" || t.startsWith("digit")) && G.time - G.vs.t0 > 0.4) startMatch();
     if (t === "back") setScreen("stage");
     return;
   }
