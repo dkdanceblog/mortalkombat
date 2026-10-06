@@ -213,6 +213,8 @@ canvas {
   font: 18px "Russo One", system-ui, sans-serif; color: #2a0d00; background: #ffd54a;
   border: 0; border-radius: 14px; padding: 14px 22px; box-shadow: 0 6px 20px rgba(255, 213, 74, 0.35);
 }
+#rotate .ios-tip { font-size: 14px; color: #fff6c8; background: rgba(255,213,74,0.1); border: 1px solid rgba(255,213,74,0.4); border-radius: 12px; padding: 10px 14px; }
+#rotate .ios-tip[hidden] { display: none; }
 #rotate .skip { background: transparent; color: #8d87b9; box-shadow: none; font-size: 14px; padding: 6px; }
 @media (pointer: coarse) and (orientation: portrait) {
   body:not(.portrait-ok) #rotate { display: flex; }

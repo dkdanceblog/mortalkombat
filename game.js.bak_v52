@@ -793,13 +793,6 @@ function goFullscreen() {
 (() => {
   const go = document.getElementById("rotate-go"), skip = document.getElementById("rotate-skip");
   if (go) go.addEventListener("click", () => { unlockAudio(); goFullscreen(); });
-  // iPhone Safari has no fullscreen API: the only way to hide its bars is "Add to Home Screen"
-  const de = document.documentElement;
-  if (/iP(hone|od)/.test(navigator.userAgent) && !de.requestFullscreen && !de.webkitRequestFullscreen && !navigator.standalone) {
-    const tip = document.getElementById("rotate-ios");
-    if (tip) tip.hidden = false;
-    if (go) go.style.display = "none";
-  }
   if (skip) skip.addEventListener("click", () => { unlockAudio(); document.body.classList.add("portrait-ok"); });
   let asked = false;
   canvas.addEventListener("touchstart", () => {
@@ -3390,7 +3383,7 @@ function drawFight() {
   drawQuote();
   drawFightOverlays();
   drawSuperCut();
-  if (G.tutorial && !G.paused) drawTutorial();
+  if (G.tutorial) drawTutorial();
 
   if (F.flash > 0) {
     ctx.fillStyle = `rgba(255,255,255,${F.flash * 0.8})`;
@@ -3699,7 +3692,6 @@ function header(str, sub) {
 }
 
 function footer(str) {
-  if (isTouch) return;           // keyboard hints mean nothing on a phone
   ctx.fillStyle = "rgba(0,0,0,0.55)";
   ctx.fillRect(0, H - 46, W, 46);
   text(str, W / 2, H - 22, { size: 18, align: "center", color: "#c9c2ff", shadow: false });
@@ -4030,7 +4022,7 @@ function drawTutorial() {
     ctx.fillStyle = i < T.step || (i === T.step && T.wait > 0) ? "#8dff7a" : i === T.step ? GOLD : "rgba(255,255,255,0.2)";
     ctx.fillRect(x + w - 20 - (TUTORIAL_STEPS.length - i) * 14, y + 16, 10, 10);
   }
-  if (!isTouch) text("ESC — ВЫЙТИ", W - 20, H - 60, { size: 10, font: FONT_PIX, align: "right", color: "rgba(255,255,255,0.5)", shadow: false });
+  text("ESC — ВЫЙТИ", W - 20, H - 60, { size: 10, font: FONT_PIX, align: "right", color: "rgba(255,255,255,0.5)", shadow: false });
 }
 
 /* ------------------------------------------------------------------ */
@@ -4133,7 +4125,6 @@ function drawLadder() {
   text("В БОЙ!", W / 2, by + bh / 2 + 2, { size: 30, align: "center", color: GOLD, stroke: "#000", strokeW: 5 });
   region("ladder-go", bx, by, bw, bh, () => arcadeFight());
   footer("ENTER  В БОЙ    ESC  ВЫЙТИ ИЗ АРКАДЫ");
-  backButton();
 }
 
 function drawArcadeEnd() {
@@ -4203,13 +4194,11 @@ function drawMode() {
   header("РЕЖИМ ИГРЫ");
   const opts = [
     { mode: 1, title: "1 ИГРОК", sub: "против бота", ids: ["guf", null],
-      lines: isTouch ? ["джойстик — движение", "РУКА • НОГА • СПЕЦ", "РЫВОК • БРОСОК", "ПАНЧ — когда полоска полная"]
-                     : ["стрелки — движение", "A рука • S нога • D спец", "→→ рывок • A A S связка", "A + S  ПАНЧ"] },
+      lines: ["стрелки — движение", "A рука • S нога • D спец", "→→ рывок • A A S связка", "A + S  ПАНЧ"] },
     { mode: 3, title: "АРКАДА", sub: "6 боёв подряд", ids: [null, "boss"],
       lines: ["6 боёв, сложность растёт", "проиграл — переиграй бой", "в конце — финальный босс", "и концовка за каждого"] },
-    { mode: 2, title: "2 ИГРОКА", sub: "на одной клавиатуре", ids: ["guf", "noize"], off: isTouch,
-      lines: isTouch ? ["нужна клавиатура:", "двое за одним", "компьютером", "на телефоне — только 1P"]
-                     : ["1P: WASD + F G H", "2P: стрелки + J K L", "рука + нога  ПАНЧ", "вперёд + рука  бросок"] },
+    { mode: 2, title: "2 ИГРОКА", sub: "на одной клавиатуре", ids: ["guf", "noize"],
+      lines: ["1P: WASD + F G H", "2P: стрелки + J K L", "рука + нога  ПАНЧ", "вперёд + рука  бросок"] },
     { mode: 4, title: "ОБУЧЕНИЕ", sub: "все приёмы по шагам", ids: ["guf", "tut"],
       lines: ["16 коротких шагов", "блок, связки, бросок", "рывок, подсечка, панч", "без проигрыша"] },
   ];
@@ -4238,8 +4227,7 @@ function drawMode() {
     text(o.title, x + w / 2, y + 196, { size: fitText(o.title, w - 30, 40), align: "center", color: active ? GOLD : "#fff", stroke: "#000", strokeW: 6 });
     text(o.sub, x + w / 2, y + 236, { size: 20, align: "center", color: "#c9c2ff", shadow: false });
     o.lines.forEach((ln, k) => text(ln, x + w / 2, y + 266 + k * 24, { size: fitText(ln, w - 30, 16), align: "center", color: "#9d97c9", shadow: false }));
-    if (o.off) { ctx.fillStyle = "rgba(8,5,20,0.6)"; ctx.fillRect(x, y, w, h); }
-    region("mode" + i, x, y, w, h, () => { if (o.off) { playSfx("block"); G.sel = i; return; } chooseMode(o.mode); }, () => { G.sel = i; });
+    region("mode" + i, x, y, w, h, () => chooseMode(o.mode), () => { G.sel = i; });
   });
   {   // achievements are reachable from here too (on phones the title badge is easy to miss)
     const label = `СЕКРЕТЫ ${secrets.size} / ${SECRETS.length}`;
@@ -4409,10 +4397,7 @@ function drawCharacter() {
     };
     if (c0) cursor(P_COLORS[0], "1P", 4);
     if (c1) cursor(P_COLORS[1], "2P", 10);
-    region("char" + i, x, ty, tile, tile + 30, () => {
-      if (isTouch && !taken && G.charCursor[G.picking] !== i) { G.charCursor[G.picking] = i; playSfx("uiMove"); return; }
-      pickChar(i);
-    }, () => { if (!taken) G.charCursor[G.picking] = i; });
+    region("char" + i, x, ty, tile, tile + 30, () => pickChar(i), () => { if (!taken) G.charCursor[G.picking] = i; });
   });
 
   // Previews
@@ -4455,7 +4440,6 @@ function drawCharacter() {
   footer(two
     ? (G.picking === 0 ? "1P: A D + F    (или мышь)    ESC  НАЗАД" : "2P: ← → + J / ENTER    ESC  НАЗАД")
     : "← → ↑ ↓  ВЫБОР    ENTER  ОК    ESC  НАЗАД    1-0  БЫСТРЫЙ ВЫБОР");
-  if (isTouch) text("ТАПНИ ЕЩЁ РАЗ, ЧТОБЫ ВЫБРАТЬ", W / 2, H - 20, { size: 13, font: FONT_PIX, align: "center", color: "#c9c2ff", stroke: "#000", strokeW: 4 });
   backButton();
 }
 
@@ -4706,7 +4690,7 @@ function drawPause() {
     text(l, W / 2, y + h / 2 + 2, { size: 28, align: "center", color: active ? GOLD : "#fff", stroke: "#000", strokeW: 5 });
     region("pause" + i, x, y, w, h, () => pauseChoose(i), () => { G.pauseSel = i; });
   });
-  const lines = isTouch ? ["джойстик: ходьба, прыжок, присед", "джойстик от врага — блок"] : G.mode === 1
+  const lines = G.mode === 1
     ? ["←→ ходьба  ↑ прыжок  ↓ присед/блок", "назад от врага — блок стоя", "A рука   S нога   D спецприём"]
     : ["1P: WASD, F/G/H      2P: стрелки, J/K/L", "назад от врага — блок стоя, ↓ — блок в приседе"];
   lines.forEach((ln, i) => text(ln, W / 2, 540 + i * 30, { size: 19, align: "center", color: "#9d97c9", shadow: false }));
