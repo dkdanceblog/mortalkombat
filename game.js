@@ -3697,6 +3697,22 @@ function footer(str) {
   text(str, W / 2, H - 22, { size: 18, align: "center", color: "#c9c2ff", shadow: false });
 }
 
+// Visible back button (top-left) — phones have no ESC
+function backButton() {
+  const label = "НАЗАД";
+  const bw = textWidth(label, 18, FONT_PIX) + 62, bh = 54, x = 14, y = 12;
+  const hov = hover && hover.id === "back-btn";
+  ctx.fillStyle = hov ? "rgba(60,40,110,0.92)" : "rgba(10,6,28,0.8)";
+  ctx.fillRect(x, y, bw, bh);
+  ctx.strokeStyle = "rgba(201,194,255,0.8)";
+  ctx.lineWidth = 3;
+  ctx.strokeRect(x + 1.5, y + 1.5, bw - 3, bh - 3);
+  ctx.fillStyle = "#e8e4ff";
+  ctx.beginPath(); ctx.moveTo(x + 18, y + bh / 2); ctx.lineTo(x + 32, y + bh / 2 - 10); ctx.lineTo(x + 32, y + bh / 2 + 10); ctx.closePath(); ctx.fill();
+  text(label, x + 42, y + bh / 2 + 1, { size: 18, font: FONT_PIX, color: "#e8e4ff", shadow: false });
+  region("back-btn", x, y, bw, bh, () => { navQueue.push({ type: "back", player: -1 }); });
+}
+
 function confirmSfx() { playSfx("uiConfirm"); }
 
 // Speaker button: top-right on menus, bottom-centre during a fight (the HUD owns the top)
@@ -3872,7 +3888,7 @@ function drawTitle() {
   text(`${plural(CHAR_IDS.length, "БОЕЦ", "БОЙЦА", "БОЙЦОВ")} • ${plural(STAGE_IDS.length, "АРЕНА", "АРЕНЫ", "АРЕН")}`, W / 2, by + bh + 26, { size: 11, font: FONT_PIX, align: "center", color: "rgba(255,255,255,0.7)", stroke: "#000", strokeW: 4 });
   {
     // big enough to hit with a thumb on a phone
-    const label = `★ СЕКРЕТЫ ${secrets.size}/${SECRETS.length}` + (isTouch ? "" : "  [S]");
+    const label = `СЕКРЕТЫ ${secrets.size}/${SECRETS.length}` + (isTouch ? "" : "  [S]");
     const bw2 = textWidth(label, 18, FONT_PIX) + 40, bh2 = 54;
     const hov = hover && hover.id === "secrets";
     ctx.fillStyle = hov ? "rgba(60,40,110,0.92)" : "rgba(10,6,28,0.8)";
@@ -4168,7 +4184,8 @@ function drawSecrets() {
     if (found) text("✓", x + w - 18, y + 22, { size: 20, align: "center", color: "#8dff7a", stroke: "#000", strokeW: 4 });
   });
   region("secrets-back", 0, H - 46, W, 46, () => { confirmSfx(); setScreen(G.secretsBack || "title"); });
-  footer("ESC / ENTER  НАЗАД");
+  footer(isTouch ? "" : "ESC / ENTER  НАЗАД");
+  backButton();
 }
 
 /* Mode select */
@@ -4213,7 +4230,7 @@ function drawMode() {
     region("mode" + i, x, y, w, h, () => chooseMode(o.mode), () => { G.sel = i; });
   });
   {   // achievements are reachable from here too (on phones the title badge is easy to miss)
-    const label = `★ СЕКРЕТЫ ${secrets.size} / ${SECRETS.length}`;
+    const label = `СЕКРЕТЫ ${secrets.size} / ${SECRETS.length}`;
     const bw = 380, bh = 56, bx = W / 2 - bw / 2, by = 560;
     const hov = hover && hover.id === "mode-ach";
     panel(bx, by, bw, bh, { active: hov });
@@ -4221,6 +4238,7 @@ function drawMode() {
     region("mode-ach", bx, by, bw, bh, () => { confirmSfx(); openSecrets(); });
   }
   footer("← →  ВЫБОР    ENTER  ОК    S  СЕКРЕТЫ    ESC  НАЗАД    M  ЗВУК");
+  backButton();
 }
 const MODE_ORDER = [1, 3, 2, 4];
 function chooseMode(m) {
@@ -4267,6 +4285,7 @@ function drawDifficulty() {
     region("diff" + i, x, y, w, h, () => chooseDifficulty(id), () => { G.sel = i; });
   });
   footer("← →  ВЫБОР    ENTER  ОК    ESC  НАЗАД");
+  backButton();
 }
 function drawSkull(x, y, color) {
   ctx.save();
@@ -4421,6 +4440,7 @@ function drawCharacter() {
   footer(two
     ? (G.picking === 0 ? "1P: A D + F    (или мышь)    ESC  НАЗАД" : "2P: ← → + J / ENTER    ESC  НАЗАД")
     : "← → ↑ ↓  ВЫБОР    ENTER  ОК    ESC  НАЗАД    1-0  БЫСТРЫЙ ВЫБОР");
+  backButton();
 }
 
 const PREVIEW_X = 205;
@@ -4548,6 +4568,7 @@ function drawStageSelect() {
     region("stage" + i, x, y, w, h, () => chooseStage(id), () => { G.sel = i; });
   });
   footer("← → ↑ ↓  ВЫБОР    ENTER  В БОЙ    ESC  НАЗАД");
+  backButton();
 }
 function chooseStage(id) {
   confirmSfx();
