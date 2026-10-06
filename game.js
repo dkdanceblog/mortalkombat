@@ -3872,7 +3872,7 @@ function drawTitle() {
   text(`${plural(CHAR_IDS.length, "БОЕЦ", "БОЙЦА", "БОЙЦОВ")} • ${plural(STAGE_IDS.length, "АРЕНА", "АРЕНЫ", "АРЕН")}`, W / 2, by + bh + 26, { size: 11, font: FONT_PIX, align: "center", color: "rgba(255,255,255,0.7)", stroke: "#000", strokeW: 4 });
   {
     // big enough to hit with a thumb on a phone
-    const label = `★ АЧИВКИ ${secrets.size}/${SECRETS.length}` + (isTouch ? "" : "  [S]");
+    const label = `★ СЕКРЕТЫ ${secrets.size}/${SECRETS.length}` + (isTouch ? "" : "  [S]");
     const bw2 = textWidth(label, 18, FONT_PIX) + 40, bh2 = 54;
     const hov = hover && hover.id === "secrets";
     ctx.fillStyle = hov ? "rgba(60,40,110,0.92)" : "rgba(10,6,28,0.8)";
@@ -4149,7 +4149,7 @@ function drawArcadeEnd() {
 function openSecrets() { G.secretsBack = G.screen === "mode" ? "mode" : "title"; setScreen("secrets"); }
 function drawSecrets() {
   menuBackground(0.8);
-  header("АЧИВКИ", `ОТКРЫТО ${secrets.size} ИЗ ${SECRETS.length}`);
+  header("СЕКРЕТЫ", `НАЙДЕНО ${secrets.size} ИЗ ${SECRETS.length}`);
   const cols = 3, gx = 14, gy = 10;
   const rows = Math.ceil(SECRETS.length / cols);
   const w = Math.floor((W - 60 - gx * (cols - 1)) / cols);
@@ -4213,14 +4213,14 @@ function drawMode() {
     region("mode" + i, x, y, w, h, () => chooseMode(o.mode), () => { G.sel = i; });
   });
   {   // achievements are reachable from here too (on phones the title badge is easy to miss)
-    const label = `★ АЧИВКИ ${secrets.size} / ${SECRETS.length}`;
+    const label = `★ СЕКРЕТЫ ${secrets.size} / ${SECRETS.length}`;
     const bw = 380, bh = 56, bx = W / 2 - bw / 2, by = 560;
     const hov = hover && hover.id === "mode-ach";
     panel(bx, by, bw, bh, { active: hov });
     text(label, W / 2, by + bh / 2 + 1, { size: 20, font: FONT_PIX, align: "center", color: GOLD, shadow: false });
     region("mode-ach", bx, by, bw, bh, () => { confirmSfx(); openSecrets(); });
   }
-  footer("← →  ВЫБОР    ENTER  ОК    S  АЧИВКИ    ESC  НАЗАД    M  ЗВУК");
+  footer("← →  ВЫБОР    ENTER  ОК    S  СЕКРЕТЫ    ESC  НАЗАД    M  ЗВУК");
 }
 const MODE_ORDER = [1, 3, 2, 4];
 function chooseMode(m) {
@@ -4823,7 +4823,7 @@ function unlockSecret(id) {
     secrets.add(id);
     store.set("secrets", [...secrets]);
   }
-  G.banner = { title: isNew ? "АЧИВКА ОТКРЫТА!" : "АЧИВКА", name: def.name, t: 3, isNew, count: secrets.size };
+  G.banner = { title: isNew ? "СЕКРЕТ ОТКРЫТ!" : "СЕКРЕТ", name: def.name, t: 3, isNew, count: secrets.size };
   if (isNew) playSfx("uiUnlock");
 }
 
