@@ -725,6 +725,31 @@ function updateTouchVisibility() {
   document.body.classList.toggle("mobile-fight", show);
 }
 
+// Phones: full screen + landscape. Browsers only allow this from a tap, so the "turn your phone" screen
+// has a button for it, and the first tap on the game in landscape also goes full screen (once).
+const isTouch = matchMedia("(pointer: coarse)").matches;
+function goFullscreen() {
+  const el = document.documentElement;
+  const req = el.requestFullscreen || el.webkitRequestFullscreen;
+  const lock = () => { try { const p = screen.orientation && screen.orientation.lock && screen.orientation.lock("landscape"); if (p && p.catch) p.catch(() => {}); } catch (e) {} };
+  try {
+    if (req && !document.fullscreenElement && !document.webkitFullscreenElement) {
+      const p = req.call(el, { navigationUI: "hide" });
+      if (p && p.then) p.then(lock, () => {}); else lock();
+    } else lock();
+  } catch (e) {}
+}
+(() => {
+  const go = document.getElementById("rotate-go"), skip = document.getElementById("rotate-skip");
+  if (go) go.addEventListener("click", () => { unlockAudio(); goFullscreen(); });
+  if (skip) skip.addEventListener("click", () => { unlockAudio(); document.body.classList.add("portrait-ok"); });
+  let asked = false;
+  canvas.addEventListener("touchstart", () => {
+    if (!isTouch || asked || !matchMedia("(orientation: landscape)").matches) return;
+    asked = true; goFullscreen();
+  }, { passive: true });
+})();
+
 // Virtual joystick: drag anywhere on the stick area; diagonals allowed.
 // A fresh push in a direction counts as a press, so a quick double flick forward = dash.
 (() => {

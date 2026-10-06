@@ -140,16 +140,78 @@ canvas {
     font-size: 15px;
   }
 
-  /* Landscape phone: there is no room under the canvas, so overlay the controls. */
-  @media (orientation: landscape) and (max-height: 560px) {
+  /* Landscape phone: the scene sits in the middle, controls live in the side gutters — never over the fight. */
+  @media (orientation: landscape) and (max-height: 600px) {
+    body.mobile-fight { --gut: clamp(140px, 19vw, 210px); }
+    body.mobile-fight canvas {
+      width: min(calc(100vw - 2 * var(--gut)), calc(100dvh * 16 / 9));
+      box-shadow: 0 0 0 2px #241d44;
+    }
     body.mobile-fight #touch-controls {
       position: fixed;
-      inset: auto 0 0 0;
-      max-width: none;
+      inset: 0;
+      width: auto; height: auto; max-width: none;
+      padding: 0;
       pointer-events: none;
     }
-    body.mobile-fight #touch-controls button { pointer-events: auto; opacity: 0.78; }
-    body.mobile-fight canvas { width: min(100vw, calc(100dvh * 16 / 9)); }
-    #touch-controls .pause-btn { position: fixed; top: max(19vh, 70px); left: 50%; transform: translateX(-50%); }
+    body.mobile-fight #touch-controls > * { pointer-events: auto; }
+    body.mobile-fight #stick {
+      left: calc(max(0px, env(safe-area-inset-left)) + (var(--gut) - min(150px, var(--gut) - 16px)) / 2);
+      bottom: max(14px, env(safe-area-inset-bottom));
+      width: min(150px, calc(var(--gut) - 16px));
+      height: min(150px, calc(var(--gut) - 16px));
+    }
+    body.mobile-fight #touch-controls .pause-btn {
+      position: absolute;
+      left: calc(max(8px, env(safe-area-inset-left)) + 4px);
+      top: 10px;
+      width: 44px; height: 44px;
+      font-size: 14px;
+      opacity: 0.8;
+      transform: none;
+    }
+    body.mobile-fight .touch-actions {
+      right: max(6px, env(safe-area-inset-right));
+      bottom: max(10px, env(safe-area-inset-bottom));
+      width: calc(var(--gut) - 12px);
+      height: calc(100dvh - 20px);
+      max-height: 330px;
+    }
+    /* two big rows at the bottom (РУКА НОГА / СПЕЦ ПАНЧ), small БРОСОК РЫВОК on top */
+    body.mobile-fight .touch-actions button {
+      width: calc(50% - 5px) !important;
+      opacity: 0.92;
+    }
+    body.mobile-fight .act-light   { left: 0 !important;  right: auto; bottom: 0 !important; top: auto !important; height: 30% !important; }
+    body.mobile-fight .act-heavy   { right: 0 !important; left: auto !important; bottom: 0 !important; top: auto !important; height: 30% !important; }
+    body.mobile-fight .act-special { left: 0 !important;  bottom: calc(30% + 10px) !important; top: auto !important; height: 30% !important; }
+    body.mobile-fight .act-super   { right: 0 !important; left: auto !important; bottom: calc(30% + 10px) !important; top: auto !important; height: 30% !important; }
+    body.mobile-fight .act-throw   { left: 0 !important;  top: 0 !important; height: calc(40% - 20px) !important; max-height: 52px; font-size: 12px !important; }
+    body.mobile-fight .act-dash    { right: 0 !important; left: auto !important; top: 0 !important; height: calc(40% - 20px) !important; max-height: 52px; font-size: 12px !important; }
   }
+}
+
+/* ---------- "Turn your phone" screen ---------- */
+#rotate {
+  display: none;
+  position: fixed; inset: 0; z-index: 50;
+  flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+  padding: 24px; text-align: center;
+  background: radial-gradient(ellipse at 50% 30%, rgba(120, 70, 255, 0.35), transparent 60%), #0b0820;
+  color: #fff6c8; font-family: "Russo One", system-ui, sans-serif;
+}
+#rotate .phone {
+  width: 70px; height: 116px; border: 4px solid #ffd54a; border-radius: 14px;
+  animation: turnPhone 1.8s ease-in-out infinite;
+}
+@keyframes turnPhone { 0%, 25% { transform: rotate(0); } 55%, 100% { transform: rotate(-90deg); } }
+#rotate h2 { margin: 0; font-size: 24px; color: #ffd54a; }
+#rotate p { margin: 0; font-size: 15px; color: #c9c2ff; max-width: 320px; }
+#rotate button {
+  font: 18px "Russo One", system-ui, sans-serif; color: #2a0d00; background: #ffd54a;
+  border: 0; border-radius: 14px; padding: 14px 22px; box-shadow: 0 6px 20px rgba(255, 213, 74, 0.35);
+}
+#rotate .skip { background: transparent; color: #8d87b9; box-shadow: none; font-size: 14px; padding: 6px; }
+@media (pointer: coarse) and (orientation: portrait) {
+  body:not(.portrait-ok) #rotate { display: flex; }
 }
