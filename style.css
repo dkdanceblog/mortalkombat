@@ -1,0 +1,155 @@
+@font-face {
+  font-family: "Russo One";
+  src: url("assets/fonts/russo-one-cyrillic-400-normal.woff2") format("woff2");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Russo One";
+  src: url("assets/fonts/russo-one-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2190-21FF, U+25A0-25FF;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Press Start 2P";
+  src: url("assets/fonts/press-start-2p-cyrillic-400-normal.woff2") format("woff2");
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Press Start 2P";
+  src: url("assets/fonts/press-start-2p-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F;
+  font-display: swap;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #07060f;
+  overflow: hidden;
+  font-family: "Russo One", system-ui, sans-serif;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#game-wrap {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(120, 70, 255, 0.18), transparent 55%),
+    linear-gradient(180deg, #120c2a, #05040a);
+  position: relative;
+}
+
+canvas {
+  display: block;
+  width: min(100vw, calc(100dvh * 16 / 9));
+  aspect-ratio: 16 / 9;
+  max-height: 100dvh;
+  image-rendering: pixelated;
+  background: #000;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7), 0 0 0 3px #241d44;
+  cursor: pointer;
+}
+
+#touch-controls { display: none; }
+
+/* ---------- Touch controls (phones / tablets, only during a fight) ---------- */
+@media (pointer: coarse) {
+  body.mobile-fight #touch-controls {
+    display: block;
+    position: relative;
+    width: 100%;
+    max-width: 900px;
+    height: 200px;
+    flex: 0 0 auto;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  body.mobile-fight canvas {
+    width: min(100vw, calc((100dvh - 200px) * 16 / 9));
+  }
+
+  .touch-actions {
+    position: absolute;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    right: max(10px, env(safe-area-inset-right));
+    width: 222px;
+    height: 140px;
+  }
+  #stick {
+    position: absolute;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    left: max(14px, env(safe-area-inset-left));
+    width: 136px;
+    height: 136px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 240, 166, 0.5);
+    background: radial-gradient(circle, rgba(40, 30, 80, 0.75), rgba(12, 10, 30, 0.75));
+    touch-action: none;
+  }
+  #stick .knob {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 60px; height: 60px;
+    margin: -30px 0 0 -30px;
+    border-radius: 50%;
+    background: rgba(255, 240, 166, 0.85);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+  }
+
+  #touch-controls button {
+    position: absolute;
+    width: 68px;
+    height: 64px;
+    border-radius: 16px;
+    border: 2px solid rgba(255, 240, 166, 0.75);
+    background: rgba(18, 14, 40, 0.82);
+    color: #fff6c8;
+    font: 15px/1.05 "Russo One", system-ui, sans-serif;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    touch-action: none;
+    padding: 0;
+  }
+  #touch-controls button.down { background: rgba(255, 240, 166, 0.35); transform: scale(0.95); }
+
+  .act-light   { left: 0;     bottom: 0; }
+  .act-heavy   { left: 77px;  bottom: 0; }
+  .act-special { left: 154px; bottom: 0; background: rgba(90, 30, 120, 0.85) !important; }
+  .act-throw   { left: 0;     top: 0; font-size: 12px !important; height: 56px !important; }
+  .act-dash    { left: 77px;  top: 0; font-size: 12px !important; height: 56px !important; }
+  .act-super   { left: 154px; top: 0; height: 56px !important; font-size: 13px !important; opacity: 0.55; }
+  .act-super.ready { opacity: 1; background: rgba(255, 190, 60, 0.9) !important; color: #2a0d00 !important; animation: superPulse 0.6s infinite alternate; }
+  @keyframes superPulse { from { box-shadow: 0 0 6px #ffd54a; } to { box-shadow: 0 0 22px #ffd54a; } }
+
+  #touch-controls .pause-btn {
+    left: max(14px, env(safe-area-inset-left));
+    top: 4px;
+    width: 46px;
+    height: 46px;
+    font-size: 15px;
+  }
+
+  /* Landscape phone: there is no room under the canvas, so overlay the controls. */
+  @media (orientation: landscape) and (max-height: 560px) {
+    body.mobile-fight #touch-controls {
+      position: fixed;
+      inset: auto 0 0 0;
+      max-width: none;
+      pointer-events: none;
+    }
+    body.mobile-fight #touch-controls button { pointer-events: auto; opacity: 0.78; }
+    body.mobile-fight canvas { width: min(100vw, calc(100dvh * 16 / 9)); }
+    #touch-controls .pause-btn { position: fixed; top: max(19vh, 70px); left: 50%; transform: translateX(-50%); }
+  }
+}
