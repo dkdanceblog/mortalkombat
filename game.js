@@ -406,15 +406,53 @@ const SFX_VOLUME = {
 // impacts get a random pitch on every play (±%), so a hundred punches per fight don't sound identical
 const PITCH_VARY = { hitLight: 0.06, hitHeavy: 0.05, hitKick: 0.05, hitBody: 0.05, hitCrit: 0.03, block: 0.1, whooshLight: 0.12, whooshHeavy: 0.1, bodyfall: 0.08, land: 0.1, dash: 0.1, jump: 0.1,
   voice_a_attack: 0.06, voice_a_hurt: 0.06, voice_b_attack: 0.06, voice_b_hurt: 0.06, voice_v_attack: 0.06 };
+// Sound effects go through Web Audio: decoded once, then every play is instant and cheap.
+// (iPhone Safari stalls badly when many <audio> elements play at once.) The <audio> tags
+// remain only as a fallback, e.g. when the game is opened as a local file and fetch() is blocked.
+let actx = null, sfxOut = null, voices = 0;
+const sfxBuf = {};
+function initWebAudio() {
+  if (actx) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  try { actx = new AC(); } catch (e) { actx = null; return; }
+  sfxOut = actx.createGain(); sfxOut.connect(actx.destination);
+  for (const [name, pool] of Object.entries(sfxPools)) {
+    sfxBuf[name] = [];
+    for (const src of new Set(pool.map((e) => e.getAttribute("src")))) {
+      fetch(src).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject()))
+        .then((ab) => new Promise((res, rej) => actx.decodeAudioData(ab, res, rej)))
+        .then((buf) => sfxBuf[name].push(buf))
+        .catch(() => { for (const el of pool) { try { el.load(); } catch (e) {} } });   // fall back to the <audio> tag
+    }
+  }
+}
 function unlockAudio() {
+  if (actx && actx.state !== "running") { try { actx.resume(); } catch (e) {} }   // iOS suspends it after interruptions
   if (audioUnlocked) return;
   audioUnlocked = true;
-  for (const pool of Object.values(sfxPools)) for (const el of pool) { try { el.load(); } catch (e) {} }
-
+  initWebAudio();
+  if (!actx) for (const pool of Object.values(sfxPools)) for (const el of pool) { try { el.load(); } catch (e) {} }
 }
 
 function playSfx(name) {
   if (!audioUnlocked || muted) return;
+  const bufs = sfxBuf[name];
+  if (actx && bufs && bufs.length) {
+    if (voices > 28) return;   // never pile up more than ~28 sounds at once
+    try {
+      const srcNode = actx.createBufferSource();
+      srcNode.buffer = bufs[Math.floor(Math.random() * bufs.length)];
+      const vary = PITCH_VARY[name];
+      if (vary) srcNode.playbackRate.value = 1 + (Math.random() * 2 - 1) * vary;
+      const g = actx.createGain();
+      g.gain.value = SFX_VOLUME[name] ?? 0.8;
+      srcNode.connect(g); g.connect(sfxOut);
+      voices++; srcNode.onended = () => { voices--; };
+      srcNode.start();
+    } catch (e) {}
+    return;
+  }
   const pool = sfxPools[name];
   if (!pool) return;
   const free = pool.filter((e) => e.paused || e.ended);
@@ -728,6 +766,8 @@ function updateTouchVisibility() {
 // Phones: full screen + landscape. Browsers only allow this from a tap, so the "turn your phone" screen
 // has a button for it, and the first tap on the game in landscape also goes full screen (once).
 const isTouch = matchMedia("(pointer: coarse)").matches;
+// Android: short buzz on strong hits (iPhone browsers don't support vibration)
+function buzz(pattern) { try { if (isTouch && navigator.vibrate) navigator.vibrate(pattern); } catch (e) {} }
 function goFullscreen() {
   const el = document.documentElement;
   const req = el.requestFullscreen || el.webkitRequestFullscreen;
@@ -1581,6 +1621,7 @@ function applyHit(att, def, h) {
   }
   if ((am && am.finisher && h.melee) || counter) sfx = "hitCrit";       // the juiciest ones for finishers and counters
   playSfx(sfx);
+  if (dmg >= 9 && (!att.isBot || !def.isBot)) buzz(dmg >= 13 ? 70 : 40);   // phone buzzes on strong hits
   if (dmg >= 6 && def.hp > 0) voice(def, "hurt", 0.45);
   if (h.launch) playSfx("launch");
   if (h.knockdown) playSfx("sweep");
@@ -1804,6 +1845,7 @@ function startSuper(f) {
   F.flash = Math.max(F.flash, 0.25);
   playSfx("special_" + f.cid);
   playSfx("superStart");
+  if (!f.isBot || G.mode === 2) buzz(60);
 }
 
 function startThrow(f, opp) {
@@ -2719,6 +2761,7 @@ function endRound(type, winnerSlot, dir = 1) {
       F.flash = 0.35;
       F.shake = 18;
       playSfx("koHit");
+      buzz([80, 50, 160]);
       if (REACT[G.stage]) playSfx(REACT[G.stage]);
       voice(l, "ko");
     } else {
@@ -3506,8 +3549,9 @@ function drawSide(f, side) {
   const fw = mw * clamp(fill, 0, 1);
   ctx.fillRect(left ? mx : mx + mw - fw, my, fw, mh);
   if (ready) {
-    ctx.shadowColor = "#ffd54a";
-    ctx.shadowBlur = 10 + Math.sin(G.time * 8) * 6;
+    ctx.strokeStyle = `rgba(255,213,74,${0.35 + 0.25 * Math.sin(G.time * 8)})`;
+    ctx.lineWidth = 6;
+    ctx.strokeRect(mx - 3, my - 3, mw + 6, mh + 6);
     ctx.strokeStyle = "#fff6c8";
     ctx.lineWidth = 2;
     ctx.strokeRect(mx - 1, my - 1, mw + 2, mh + 2);
@@ -5453,4 +5497,5 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 // Debug/test hook (harmless in production): lets automated checks read state.
-window.__game = { G, get F() { return F; }, CHARS, startMatch, sayQuote, updateFight, shareResult, endRound };
+window.__game = { G, get F() { return F; }, CHARS, startMatch, sayQuote, updateFight, shareResult, endRound,
+  audio: () => ({ state: actx && actx.state, loaded: Object.values(sfxBuf).filter((b) => b.length).length, total: Object.keys(sfxBuf).length, voices }) };
