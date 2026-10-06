@@ -693,7 +693,7 @@ window.addEventListener("keydown", (e) => {
 
   if (e.code === "KeyM") { setMuted(!muted); return; }
   if (G.screen === "title") checkCodes(e.code);
-  if (G.screen === "title" && e.code === "KeyS" && !e.repeat) { confirmSfx(); setScreen("secrets"); return; }
+  if ((G.screen === "title" || G.screen === "mode") && e.code === "KeyS" && !e.repeat) { confirmSfx(); openSecrets(); return; }
   if (G.screen === "end" && (e.code === "Enter" || e.code === "Space") && G.endLock <= 0 &&
       G.endItems && G.endItems[G.sel] && G.endItems[G.sel][0] === "СОХРАНИТЬ") {
     shareResult();
@@ -766,6 +766,17 @@ function updateTouchVisibility() {
 // Phones: full screen + landscape. Browsers only allow this from a tap, so the "turn your phone" screen
 // has a button for it, and the first tap on the game in landscape also goes full screen (once).
 const isTouch = matchMedia("(pointer: coarse)").matches;
+// iPhone Safari ignores user-scalable=no: block double-tap and pinch zoom ourselves
+(() => {
+  let lastEnd = 0;
+  document.addEventListener("touchend", (e) => {
+    const now = Date.now();
+    if (now - lastEnd < 350 && !(e.target.closest && e.target.closest("#rotate"))) e.preventDefault();
+    lastEnd = now;
+  }, { passive: false });
+  for (const ev of ["gesturestart", "gesturechange", "gestureend"]) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
+  document.addEventListener("dblclick", (e) => e.preventDefault(), { passive: false });
+})();
 // Android: short buzz on strong hits (iPhone browsers don't support vibration)
 function buzz(pattern) { try { if (isTouch && navigator.vibrate) navigator.vibrate(pattern); } catch (e) {} }
 function goFullscreen() {
@@ -3860,16 +3871,17 @@ function drawTitle() {
 
   text(`${plural(CHAR_IDS.length, "БОЕЦ", "БОЙЦА", "БОЙЦОВ")} • ${plural(STAGE_IDS.length, "АРЕНА", "АРЕНЫ", "АРЕН")}`, W / 2, by + bh + 26, { size: 11, font: FONT_PIX, align: "center", color: "rgba(255,255,255,0.7)", stroke: "#000", strokeW: 4 });
   {
-    const label = `СЕКРЕТЫ ${secrets.size}/${SECRETS.length} [S]`;
-    const bw2 = textWidth(label, 12, FONT_PIX) + 28;
+    // big enough to hit with a thumb on a phone
+    const label = `★ АЧИВКИ ${secrets.size}/${SECRETS.length}` + (isTouch ? "" : "  [S]");
+    const bw2 = textWidth(label, 18, FONT_PIX) + 40, bh2 = 54;
     const hov = hover && hover.id === "secrets";
-    ctx.fillStyle = hov ? "rgba(60,40,110,0.9)" : "rgba(10,6,28,0.75)";
-    ctx.fillRect(10, 8, bw2, 30);
-    ctx.strokeStyle = secrets.size ? GOLD : "rgba(255,255,255,0.4)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(11, 9, bw2 - 2, 28);
-    text(label, 24, 24, { size: 12, font: FONT_PIX, color: secrets.size ? GOLD : "rgba(255,255,255,0.75)", shadow: false });
-    region("secrets", 10, 8, bw2, 30, () => { confirmSfx(); setScreen("secrets"); });
+    ctx.fillStyle = hov ? "rgba(60,40,110,0.92)" : "rgba(10,6,28,0.8)";
+    ctx.fillRect(14, 12, bw2, bh2);
+    ctx.strokeStyle = GOLD;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(15.5, 13.5, bw2 - 3, bh2 - 3);
+    text(label, 34, 12 + bh2 / 2 + 1, { size: 18, font: FONT_PIX, color: GOLD, shadow: false });
+    region("secrets", 14, 12, bw2, bh2, () => { confirmSfx(); openSecrets(); });
   }
   const badges = cheatBadges();
   if (badges) text(badges, 16, 66, { size: 16, color: "#ff86d8", stroke: "#000", strokeW: 4 });
@@ -4134,9 +4146,10 @@ function drawArcadeEnd() {
 }
 
 /* Secrets screen */
+function openSecrets() { G.secretsBack = G.screen === "mode" ? "mode" : "title"; setScreen("secrets"); }
 function drawSecrets() {
   menuBackground(0.8);
-  header("СЕКРЕТЫ", `НАЙДЕНО ${secrets.size} ИЗ ${SECRETS.length}`);
+  header("АЧИВКИ", `ОТКРЫТО ${secrets.size} ИЗ ${SECRETS.length}`);
   const cols = 3, gx = 14, gy = 10;
   const rows = Math.ceil(SECRETS.length / cols);
   const w = Math.floor((W - 60 - gx * (cols - 1)) / cols);
@@ -4154,7 +4167,7 @@ function drawSecrets() {
       { size: 14, color: found ? "#c9c2ff" : "#7d77a8", shadow: false });
     if (found) text("✓", x + w - 18, y + 22, { size: 20, align: "center", color: "#8dff7a", stroke: "#000", strokeW: 4 });
   });
-  region("secrets-back", 0, H - 46, W, 46, () => { confirmSfx(); setScreen("title"); });
+  region("secrets-back", 0, H - 46, W, 46, () => { confirmSfx(); setScreen(G.secretsBack || "title"); });
   footer("ESC / ENTER  НАЗАД");
 }
 
@@ -4199,7 +4212,15 @@ function drawMode() {
     o.lines.forEach((ln, k) => text(ln, x + w / 2, y + 266 + k * 24, { size: fitText(ln, w - 30, 16), align: "center", color: "#9d97c9", shadow: false }));
     region("mode" + i, x, y, w, h, () => chooseMode(o.mode), () => { G.sel = i; });
   });
-  footer("← →  ВЫБОР    ENTER  ОК    ESC  НАЗАД    M  ЗВУК");
+  {   // achievements are reachable from here too (on phones the title badge is easy to miss)
+    const label = `★ АЧИВКИ ${secrets.size} / ${SECRETS.length}`;
+    const bw = 380, bh = 56, bx = W / 2 - bw / 2, by = 560;
+    const hov = hover && hover.id === "mode-ach";
+    panel(bx, by, bw, bh, { active: hov });
+    text(label, W / 2, by + bh / 2 + 1, { size: 20, font: FONT_PIX, align: "center", color: GOLD, shadow: false });
+    region("mode-ach", bx, by, bw, bh, () => { confirmSfx(); openSecrets(); });
+  }
+  footer("← →  ВЫБОР    ENTER  ОК    S  АЧИВКИ    ESC  НАЗАД    M  ЗВУК");
 }
 const MODE_ORDER = [1, 3, 2, 4];
 function chooseMode(m) {
@@ -5364,7 +5385,7 @@ function handleNav(ev) {
     return;
   }
   if (s === "secrets") {
-    if (t === "confirm" || t === "back") { confirmSfx(); setScreen("title"); }
+    if (t === "confirm" || t === "back") { confirmSfx(); setScreen(G.secretsBack || "title"); }
     return;
   }
   if (s === "mode") {
