@@ -14,7 +14,7 @@ for cid, poses in meta.items():
     for p in ('win', 'lose', 'idle'):
         if p in poses:
             out['spr'][cid][p] = uri(Image.open(os.path.join(ROOT, poses[p]['src'])), 'PNG', optimize=True)
-for f in os.listdir(os.path.join(ROOT, 'assets/backgrounds')):
+for f in sorted(x for x in os.listdir(os.path.join(ROOT, 'assets/backgrounds')) if os.path.isfile(os.path.join(ROOT, 'assets/backgrounds', x))):
     im = Image.open(os.path.join(ROOT, 'assets/backgrounds', f)).convert('RGB')
     im.thumbnail((1200, 630))
     out['bg'][f.split('.')[0]] = uri(im, 'JPEG', quality=72)
