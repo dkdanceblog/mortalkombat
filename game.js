@@ -5323,9 +5323,9 @@ function fmtTime(sec) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
-function gameUrl() {
-  return /^https?:/.test(location.protocol) ? location.origin + location.pathname : "";
-}
+// Always the public address, wherever the game was opened from (local file, test server, a mirror)
+const GAME_URL = "https://dkdanceblog.github.io/mortalkombat/";
+function gameUrl() { return GAME_URL; }
 
 function shareTexts() {
   const mw = F.matchWinner;
@@ -5420,7 +5420,7 @@ function makeShareCard(safe = false) {
     const url = gameUrl();
     ctx.fillStyle = "rgba(0,0,0,0.6)";
     ctx.fillRect(0, CH - 64, CW, 64);
-    const playLine = url ? "СЫГРАЙ САМ: " + url.replace(/^https?:\/\//, "") : "СЫГРАЙ САМ — РУССКИЙ РЭП НА ВЫЛЕТ";
+    const playLine = "СЫГРАЙ САМ: " + url.replace(/^https?:\/\//, "").replace(/\/$/, "");
     text(playLine, 56, CH - 32, { size: fitText(playLine, 760, 24), color: "#fff6c8", shadow: false });
     text("t.me/dkdanceblog", CW - 40, CH - 32, { size: 22, align: "right", color: "#9fd2ff", shadow: false });
   } finally {
