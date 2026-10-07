@@ -1091,7 +1091,7 @@ function startMatch() {
   F = {
     fighters: [makeFighter(G.chars[0], 0), makeFighter(G.chars[1], 1)],
     projectiles: [], particles: [], popups: [], ambient: [],
-    round: 1, wins: [0, 0], timer: ROUND_TIME,
+    round: 1, wins: [0, 0], timer: ROUND_TIME, hintUntil: G.time + 10,
     phase: "intro", phaseT: 0,
     hitstop: 0, slow: 0, shake: 0, flash: 0,
     winner: -1, endType: "", perfect: false,
@@ -3684,7 +3684,37 @@ function bigText(str, y, size, gradient, scaleIn = 1, alpha = 1) {
   ctx.restore();
 }
 
+// Keyboard reminder at the start of a match (desktop only): who plays with which keys
+function drawControlsHint() {
+  if (isTouch || G.tutorial || G.botVsBot || !F || F.round !== 1) return;
+  const left = F.hintUntil - G.time;
+  if (left <= 0) return;
+  const a = clamp(left / 0.8, 0, 1) * clamp((10 - left) / 0.4, 0, 1);
+  const two = G.mode === 2;
+  const w = two ? 1080 : 760, h = two ? 116 : 92, x = W / 2 - w / 2, y = 118;
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.fillStyle = "rgba(8,5,22,0.82)"; ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = "rgba(255,213,74,0.7)"; ctx.lineWidth = 2; ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+  const t = (str, tx, ty, size, color, align = "center") => text(str, tx, ty, { size, align, color, stroke: "#000", strokeW: 4 });
+  if (two) {
+    t("ИГРОК 1", x + w * 0.25, y + 24, 20, P_COLORS[0]);
+    t("WASD — ходьба, прыжок, присед", x + w * 0.25, y + 50, 18, "#fff");
+    t("F — рука   G — нога   H — спец", x + w * 0.25, y + 74, 18, "#fff");
+    t("ИГРОК 2", x + w * 0.75, y + 24, 20, P_COLORS[1]);
+    t("стрелки — ходьба, прыжок, присед", x + w * 0.75, y + 50, 18, "#fff");
+    t("J — рука   K — нога   L — спец", x + w * 0.75, y + 74, 18, "#fff");
+    ctx.fillStyle = "rgba(255,213,74,0.4)"; ctx.fillRect(W / 2 - 1, y + 12, 2, 70);
+    t("ПАНЧ — рука + нога   •   бросок — вперёд + рука   •   рывок — дважды вперёд   •   блок — назад", W / 2, y + 102, 15, "#c9c2ff");
+  } else {
+    t("стрелки — ходьба, прыжок, присед   •   A — рука   S — нога   D — спец", W / 2, y + 30, 19, "#fff");
+    t("ПАНЧ — A + S   •   бросок — вперёд + A   •   рывок — дважды вперёд   •   блок — назад", W / 2, y + 62, 16, "#c9c2ff");
+  }
+  ctx.restore();
+}
+
 function drawFightOverlays() {
+  drawControlsHint();
   if (F.phase === "intro") {
     const t = F.phaseT;
     ctx.fillStyle = `rgba(0,0,0,${0.3 * (1 - clamp((t - 1.3) / 0.4, 0, 1))})`;
@@ -4259,10 +4289,10 @@ function drawMode() {
   menuBackground();
   header("РЕЖИМ ИГРЫ");
   const opts = [
-    { mode: 1, title: "1 ИГРОК", sub: "против бота", ids: ["guf", null], lines: ["выбери бойца и арену"] },
+    { mode: 1, title: "1 ИГРОК", sub: "против бота", ids: ["guf", null], lines: isTouch ? ["выбери бойца и арену"] : ["стрелки + A S D"] },
     { mode: 3, title: "АРКАДА", sub: "6 боёв подряд", ids: [null, "boss"], lines: ["в конце — финальный босс"] },
     { mode: 2, title: "2 ИГРОКА", sub: "на одной клавиатуре", ids: ["guf", "noize"], off: isTouch,
-      lines: [isTouch ? "только на компьютере" : "друг против друга"] },
+      lines: isTouch ? ["только на компьютере"] : ["1P: WASD + F G H", "2P: стрелки + J K L"] },
     { mode: 4, title: "ОБУЧЕНИЕ", sub: "все приёмы по шагам", ids: ["guf", "tut"], lines: ["проиграть нельзя"] },
   ];
   const w = 292, h = 372, gap = 16;
