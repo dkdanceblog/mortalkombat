@@ -3790,6 +3790,21 @@ function footer(str) {
   text(str, W / 2, H - 22, { size: 18, align: "center", color: "#c9c2ff", shadow: false });
 }
 
+// Author's Telegram channel
+const TG_URL = "https://t.me/dkdanceblog";
+function openTelegram() { try { window.open(TG_URL, "_blank", "noopener"); } catch (e) {} }
+function tgButton(x, y) {
+  const label = "TELEGRAM @DKDANCEBLOG";
+  const bw = textWidth(label, 14, FONT_PIX) + 36, bh = 46;
+  const hov = hover && hover.id === "tg-btn";
+  ctx.fillStyle = hov ? "rgba(40,120,200,0.95)" : "rgba(10,6,28,0.8)";
+  ctx.fillRect(x, y, bw, bh);
+  ctx.strokeStyle = "#5fb8ff"; ctx.lineWidth = 3;
+  ctx.strokeRect(x + 1.5, y + 1.5, bw - 3, bh - 3);
+  text(label, x + 18, y + bh / 2 + 1, { size: 14, font: FONT_PIX, color: "#cfe9ff", shadow: false });
+  region("tg-btn", x, y, bw, bh, () => { confirmSfx(); openTelegram(); });
+}
+
 // Visible back button (top-left) — phones have no ESC
 function backButton() {
   const label = "НАЗАД";
@@ -3994,8 +4009,15 @@ function drawTitle() {
   }
   {   // author's logo, top-right under the sound button
     const dk = img("dklogo");
-    if (dk) { const h = 124, w = h * dk.naturalWidth / dk.naturalHeight; ctx.save(); ctx.globalAlpha = 0.92; ctx.drawImage(dk, W - w - 18, 60, w, h); ctx.restore(); }
+    if (dk) {
+      const h = 124, w = h * dk.naturalWidth / dk.naturalHeight, x = W - w - 18;
+      const hov = hover && hover.id === "tg-logo";
+      ctx.save(); ctx.globalAlpha = hov ? 1 : 0.92; ctx.drawImage(dk, x, 60, w, h); ctx.restore();
+      text("@DKDANCEBLOG", x + w / 2, 60 + h + 16, { size: 11, font: FONT_PIX, align: "center", color: hov ? "#cfe9ff" : "#9fd2ff", stroke: "#000", strokeW: 4 });
+      region("tg-logo", x - 20, 56, w + 40, h + 34, () => { confirmSfx(); openTelegram(); });
+    }
   }
+  text("Пародия. Все персонажи — шаржи.", W / 2, H - 12, { size: 14, align: "center", color: "rgba(255,255,255,0.6)", stroke: "#000", strokeW: 4 });
   const badges = cheatBadges();
   if (badges) text(badges, 16, 66, { size: 16, color: "#ff86d8", stroke: "#000", strokeW: 4 });
 }
@@ -4255,6 +4277,7 @@ function drawArcadeEnd() {
   panel(bx, by, bw, bh, { active: true });
   text("В ГЛАВНОЕ МЕНЮ", 860, by + bh / 2 + 2, { size: 24, align: "center", color: GOLD, stroke: "#000", strokeW: 5 });
   region("arc-end", bx, by, bw, bh, () => { if (G.time - G.arcadeEndT > 1) { confirmSfx(); G.arcade = null; setScreen("title"); } });
+  tgButton(14, 12);
 }
 
 /* Secrets screen */
@@ -4878,6 +4901,7 @@ function drawEnd() {
   });
   G.endItems = items;
   drawSharePreview();
+  tgButton(14, 12);
 }
 function rematch() {
   confirmSfx();
@@ -5396,7 +5420,9 @@ function makeShareCard(safe = false) {
     const url = gameUrl();
     ctx.fillStyle = "rgba(0,0,0,0.6)";
     ctx.fillRect(0, CH - 64, CW, 64);
-    text(url ? "СЫГРАЙ САМ: " + url.replace(/^https?:\/\//, "") : "СЫГРАЙ САМ — РУССКИЙ РЭП НА ВЫЛЕТ", 56, CH - 32, { size: fitText(url, 900, 24), color: "#fff6c8", shadow: false });
+    const playLine = url ? "СЫГРАЙ САМ: " + url.replace(/^https?:\/\//, "") : "СЫГРАЙ САМ — РУССКИЙ РЭП НА ВЫЛЕТ";
+    text(playLine, 56, CH - 32, { size: fitText(playLine, 760, 24), color: "#fff6c8", shadow: false });
+    text("t.me/dkdanceblog", CW - 40, CH - 32, { size: 22, align: "right", color: "#9fd2ff", shadow: false });
   } finally {
     ctx = main;
   }
@@ -5643,5 +5669,5 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 // Debug/test hook (harmless in production): lets automated checks read state.
-window.__game = { G, regions: () => hitRegions.map((r) => ({ id: r.id, x: r.x, y: r.y, w: r.w, h: r.h })), get F() { return F; }, CHARS, startMatch, sayQuote, updateFight, shareResult, endRound,
+window.__game = { G, makeShareCard: (s) => makeShareCard(s), regions: () => hitRegions.map((r) => ({ id: r.id, x: r.x, y: r.y, w: r.w, h: r.h })), get F() { return F; }, CHARS, startMatch, sayQuote, updateFight, shareResult, endRound,
   audio: () => ({ state: actx && actx.state, loaded: Object.values(sfxBuf).filter((b) => b.length).length, total: Object.keys(sfxBuf).length, voices }) };
