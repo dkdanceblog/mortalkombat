@@ -53,7 +53,8 @@ def fix(path):
     a[sel, :3] = dark
     im = Image.fromarray(a.clip(0, 255).astype(np.uint8), 'RGBA')
     return im, int(n), int(spike.sum())
-for p in sorted(glob.glob('assets_png_full/sprites/morgen_*.png')):
+CID = sys.argv[2] if len(sys.argv) > 2 else 'morgen'
+for p in sorted(glob.glob(f'assets_png_full/sprites/{CID}_*.png')):
     im, nh, ns = fix(p)
     im.save(os.path.join(OUT, os.path.basename(p)))
     print(os.path.basename(p), 'holes', nh, 'spikes', ns)
