@@ -454,8 +454,8 @@ let audioUnlocked = false;
 let muted = store.get("muted", false);
 
 const SFX_VOLUME = {
-  hitLight: 0.7, hitHeavy: 0.8, hitBody: 0.8, hitCrit: 0.9, block: 0.65, koHit: 1.0, superStart: 0.8, crowdReact: 0.5, hitKick: 0.75, whooshLight: 0.3, whooshHeavy: 0.35, bodyfall: 0.7, parry: 0.55, counter: 0.7, throw: 0.8, sweep: 0.8, wallHit: 0.85, jump: 0.35, land: 0.4, landHeavy: 0.6, dash: 0.45, comboFinisher: 0.85, launch: 0.7, superReady: 0.5, superHit: 0.8, sway: 0.8, armor: 0.75, money: 0.8, special_kreed_hit: 0.85, atl_boom: 0.5, atl_bolt: 0.45, special_face_hit: 0.85, special_morgen_hit: 0.85, special_guf_hit: 0.8, special_noize_hit: 0.8, react_yard: 0.28, react_circus: 0.3, react_concert: 0.45, uiMove: 0.12, uiBack: 0.18, uiPick: 0.35, uiVs: 0.55, uiUnlock: 0.8, uiTimer: 0.5, voice_a_attack: 0.65, voice_a_hurt: 0.65, voice_a_ko: 0.8, voice_b_attack: 0.65, voice_b_hurt: 0.65, voice_b_ko: 0.8, voice_v_attack: 0.65, voice_v_ko: 0.8, voice_g_hurt: 0.65, voice_g_attack: 0.7, react_fountains: 0.5, uiConfirm: 0.25, whoosh: 0.35, ko: 0.9, roundStart: 0.4,
-  menuSelect: 0.3, special_guf: 0.45, special_noize: 0.4, special_oxxxy: 0.7, special_morgen: 0.7, special_maybe: 0.75, special_kreed: 0.7, special_slava: 0.75, special_atl: 0.3, special_korzh: 0.9, special_face: 0.8, special_chip: 0.8,
+  hitLight: 0.7, hitHeavy: 0.8, hitBody: 0.8, hitCrit: 0.9, block: 0.65, koHit: 1.0, superStart: 0.8, crowdReact: 0.5, hitKick: 0.75, whooshLight: 0.3, whooshHeavy: 0.35, bodyfall: 0.7, parry: 0.55, counter: 0.7, throw: 0.8, sweep: 0.8, wallHit: 0.85, jump: 0.35, land: 0.4, landHeavy: 0.6, dash: 0.45, comboFinisher: 0.85, launch: 0.7, superReady: 0.5, superHit: 0.8, sway: 0.8, armor: 0.75, money: 0.8, special_kreed_hit: 0.85, atl_boom: 0.25, atl_bolt: 0.45, special_face_hit: 0.85, special_morgen_hit: 0.85, special_guf_hit: 0.8, special_noize_hit: 0.8, react_yard: 0.28, react_circus: 0.3, react_concert: 0.45, uiMove: 0.12, uiBack: 0.18, uiPick: 0.35, uiVs: 0.55, uiUnlock: 0.8, uiTimer: 0.5, voice_a_attack: 0.65, voice_a_hurt: 0.65, voice_a_ko: 0.8, voice_b_attack: 0.65, voice_b_hurt: 0.65, voice_b_ko: 0.8, voice_v_attack: 0.65, voice_v_ko: 0.8, voice_g_hurt: 0.65, voice_g_attack: 0.7, react_fountains: 0.5, uiConfirm: 0.25, whoosh: 0.35, ko: 0.9, roundStart: 0.4,
+  menuSelect: 0.3, special_guf: 0.45, special_noize: 0.4, special_oxxxy: 0.7, special_morgen: 0.7, special_maybe: 0.75, special_kreed: 0.7, special_slava: 0.75, special_atl: 0.15, special_korzh: 0.9, special_face: 0.8, special_chip: 0.8,
 };
 
 // impacts get a random pitch on every play (±%), so a hundred punches per fight don't sound identical
@@ -1937,7 +1937,7 @@ function superFlavor(f, opp) {
       for (let i = 0; i < 16; i++) F.birds.push({ x: rand(-400, -20), y: rand(110, 380), vx: rand(260, 420), vy: rand(-20, 10), ph: rand(0, 6.28), s: pick([3, 4, 4, 5]) });
       break;
     case "morgen": F.money = 2.6; break;
-    case "maybe": F.eggs = 2.6; break;
+    case "maybe": break;   // (Easter eggs removed at the author's request)
     case "kreed": F.roses = 2.6; break;
     case "slava": F.antihype = 2.4; break;
     case "atl": F.disco = 3; break;
