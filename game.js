@@ -931,9 +931,16 @@ canvas.addEventListener("pointermove", (e) => {
   hover = r ? r.id : null;
   if (r && r.onHover) r.onHover();
 });
+// Links must open on a full click/tap: phones block new tabs opened on "finger down"
+const LINK_REGIONS = new Set(["tg-logo", "tg-btn"]);
+canvas.addEventListener("click", (e) => {
+  const r = regionAt(canvasPoint(e));
+  if (r && LINK_REGIONS.has(r.id) && r.onClick) r.onClick();
+});
 canvas.addEventListener("pointerdown", (e) => {
   unlockAudio();
   const r = regionAt(canvasPoint(e));
+  if (r && LINK_REGIONS.has(r.id)) return;      // handled by the click listener above
   if (r && r.onClick) { r.onClick(); return; }
   if (G.screen === "title") navQueue.push({ type: "confirm", player: -1 });
 });
