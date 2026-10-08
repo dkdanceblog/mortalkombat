@@ -4017,7 +4017,7 @@ function drawTitle() {
       region("tg-logo", x - 20, 56, w + 40, h + 34, () => { confirmSfx(); openTelegram(); });
     }
   }
-  text("Пародия. Все персонажи — шаржи.", W / 2, H - 12, { size: 14, align: "center", color: "rgba(255,255,255,0.6)", stroke: "#000", strokeW: 4 });
+  text("Неофициальная фанатская пародия. Не связана с исполнителями. Все персонажи — шаржи.", W / 2, H - 12, { size: 14, align: "center", color: "rgba(255,255,255,0.6)", stroke: "#000", strokeW: 4 });
   const badges = cheatBadges();
   if (badges) text(badges, 16, 66, { size: 16, color: "#ff86d8", stroke: "#000", strokeW: 4 });
 }
