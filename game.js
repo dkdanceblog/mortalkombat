@@ -167,12 +167,12 @@ const CHARS = {
     quotes: ["ЛУЧШЕ Я СДОХНУ, ЧЕМ СТАНУ ТОБОЙ!", "Я ЕДИНСТВЕННЫЙ РЭПЕР!", "ТЫ ЛОВИШЬ ПРЯМОЙ В КАДЫК", "АНТИХАЙП!"],
   },
   kreed: {
-    id: "kreed", name: "ЕГОР КРИД", special: "СИНЯК", color: "#7aa8e8",
+    id: "kreed", name: "ЕГОР", special: "СИНЯК", color: "#7aa8e8",
     speed: 305, power: 1.06, specialCd: 5.0, tough: 1.0, jump: 1.0, weight: 1.0, dash: 1.0,
     stats: { "СКОРОСТЬ": 3, "СИЛА": 3, "ЗДОРОВЬЕ": 3 },
     perk: "ФИШКА: на последнем здоровье бьёт сильнее",
     blurb: "Главный холостяк страны.",
-    loseTitle: "КРИД ОТКРИДИЛСЯ",
+    loseTitle: "ЕГОР ОТКРИДИЛСЯ",
     quotes: ["СЮДА, БЛИН", "ЭТО НЕ ШОУ-ПРЕДСТАВЛЕНИЕ", "Я САМЫЙ ГРЯЗНЫЙ ЗАЯЦ", "ТЫ ПРИМЕШЬ ЭТУ РОЗУ?"],
   },
   maybe: {
@@ -4935,7 +4935,7 @@ const SECRETS = [
   { id: "a_show", name: "ВСЕ ХОТЯТ ОТ МЕНЯ ШОУ", win: "morgen", stage: "circus", how: "Выиграй за Моргенштерна в Цирке" },
   { id: "a_greenpark", name: "ГРИН ПАРК ЖИВ", win: "oxxxy", stage: "londograd", how: "Выиграй за Оксимирона в Лондонграде" },
   { id: "a_center", name: "СПАСИБО ЦЕНТРУ ЗА ЭТО!", win: "guf", stage: "moscow", how: "Выиграй за Гуфа в Городе дорог" },
-  { id: "a_pussyboy", name: "ПУСИБОЙ", special: "kreed", how: "Используй спецприём Егора Крида" },
+  { id: "a_pussyboy", name: "ПУСИБОЙ", special: "kreed", how: "Используй спецприём Егора" },
   { id: "a_truegangsta", name: "ЕДИНСТВЕННЫЙ ТРУ-ГАНГСТА-РЭПЕР", lose: "chip", how: "Победи Чипинкоса" },
 ];
 const SECRET_INFO = Object.fromEntries(SECRETS.map((s) => [s.id, { how: s.how, hint: s.how }]));
@@ -5021,7 +5021,7 @@ function checkCodes(code) {
 
 /* Evil twin */
 const TWIN_TINT = { color: "#2a0645", a: 0.5 };
-const ACCUSATIVE = { guf: "ГУФА", noize: "НОЙЗА", oxxxy: "ОКСИ", morgen: "МОРГЕНА", maybe: "МЭЙБИ БЭЙБИ", kreed: "ЕГОРА КРИДА", slava: "СЛАВУ КПСС", atl: "ATL", korzh: "МАКСА КОРЖА", face: "FACE", chip: "ЧИПИНКОСА" };
+const ACCUSATIVE = { guf: "ГУФА", noize: "НОЙЗА", oxxxy: "ОКСИ", morgen: "МОРГЕНА", maybe: "МЭЙБИ БЭЙБИ", kreed: "ЕГОРА", slava: "СЛАВУ КПСС", atl: "ATL", korzh: "МАКСА КОРЖА", face: "FACE", chip: "ЧИПИНКОСА" };
 const FEMININE = new Set(["maybe"]);
 function twinData(cid) {
   const base = CHARS[cid];
