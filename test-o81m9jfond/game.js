@@ -48,7 +48,7 @@ const store = {
 const CHARS = {
   guf: {
     id: "guf", name: "ГУФ", special: "ЧАЙ", color: "#f0e3b0",
-    speed: 295, power: 1.0, specialCd: 2.6, tough: 1.0, jump: 1.0, weight: 1.0, dash: 1.0,
+    speed: 295, power: 1.0, specialCd: 5.0, tough: 1.0, jump: 1.0, weight: 1.0, dash: 1.0,
     stats: { "СКОРОСТЬ": 3, "СИЛА": 3, "ЗДОРОВЬЕ": 3 },
     perk: "ФИШКА: иногда пьяно уворачивается от удара",
     blurb: "Пьяный мастер.",
@@ -193,7 +193,7 @@ const CHARS = {
   },
   morgen: {
     id: "morgen", name: "МОРГЕН", special: "CADILLAC", color: "#ff86d8",
-    speed: 345, power: 1.02, specialCd: 5.5, tough: 0.92, jump: 1.0, weight: 0.9, dash: 1.2,
+    speed: 345, power: 1.02, specialCd: 5.5, tough: 1.0, jump: 1.0, weight: 0.9, dash: 1.2,
     stats: { "СКОРОСТЬ": 5, "СИЛА": 3, "ЗДОРОВЬЕ": 2 },
     perk: "ФИШКА: удар сразу после рывка сильнее на 30%",
     blurb: "Молодой аристократ.",
@@ -419,6 +419,11 @@ function loadAssets() {
   Promise.race([fontLoads, new Promise((r) => setTimeout(r, 2500))]).then(() => { fontsReady = true; });
 }
 loadAssets();
+
+// Offline: a service worker keeps the game's files, so after one visit it starts without internet
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+}
 
 function ready(img) { return img && img.complete && img.naturalWidth > 0; }
 function img(key) { const i = images[key]; return ready(i) ? i : null; }
@@ -647,7 +652,7 @@ function toast(text) { G.toast = { text, t: 1.6 }; }
 /* ------------------------------------------------------------------ */
 /* Input                                                               */
 /* ------------------------------------------------------------------ */
-const ACTIONS = ["left", "right", "up", "down", "light", "heavy", "special"];
+const ACTIONS = ["left", "right", "up", "down", "light", "heavy", "special", "block"];
 const heldKeys = new Set();
 const tappedKeys = new Set();
 const touchHeld = new Set();
@@ -657,12 +662,13 @@ const navQueue = [];
 const KEYMAP_1P = {
   left: ["ArrowLeft"], right: ["ArrowRight"], up: ["ArrowUp", "Space"], down: ["ArrowDown"],
   light: ["KeyA", "KeyJ", "KeyZ"], heavy: ["KeyS", "KeyK", "KeyX"], special: ["KeyD", "KeyL", "KeyC"],
+  block: ["KeyF", "Semicolon", "KeyV"],
 };
 const KEYMAP_2P = [
   { left: ["KeyA"], right: ["KeyD"], up: ["KeyW"], down: ["KeyS"],
-    light: ["KeyF"], heavy: ["KeyG"], special: ["KeyH"] },
+    light: ["KeyF"], heavy: ["KeyG"], special: ["KeyH"], block: ["KeyR"] },
   { left: ["ArrowLeft"], right: ["ArrowRight"], up: ["ArrowUp"], down: ["ArrowDown"],
-    light: ["KeyJ", "Numpad1"], heavy: ["KeyK", "Numpad2"], special: ["KeyL", "Numpad3"] },
+    light: ["KeyJ", "Numpad1"], heavy: ["KeyK", "Numpad2"], special: ["KeyL", "Numpad3"], block: ["Semicolon", "Numpad0"] },
 ];
 
 function blankCtrl() {
@@ -673,18 +679,35 @@ function blankCtrl() {
 const ctrls = [blankCtrl(), blankCtrl()];
 const padPrev = [{}, {}];
 
+// Gamepad (DualShock / DualSense / Xbox). Layout:
+//   □/X рука · ×/A нога · ○/B спец · △/Y ПАНЧ · R1/L2 блок · L1 бросок · R2 рывок · Options/Start пауза
+// Browsers give most pads the "standard" layout; a Sony pad without it (Firefox, some Macs) is read raw.
+let padSeen = false;
 function readPad(i) {
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   const pad = pads && pads[i];
   if (!pad) return null;
-  const b = (n) => !!(pad.buttons[n] && pad.buttons[n].pressed);
-  const ax = pad.axes[0] || 0;
-  const ay = pad.axes[1] || 0;
+  if (!padSeen) { padSeen = true; if (G.screen !== "loading") toast("Геймпад подключён"); }
+  const b = (n) => !!(pad.buttons[n] && (pad.buttons[n].pressed || pad.buttons[n].value > 0.5));
+  const ax = pad.axes[0] || 0, ay = pad.axes[1] || 0;
+  let k;
+  if (pad.mapping === "standard" || !/054c|sony|dualsense|dualshock|wireless controller/i.test(pad.id)) {
+    k = { cross: b(0), circle: b(1), square: b(2), triangle: b(3), l1: b(4), r1: b(5), l2: b(6), r2: b(7), share: b(8), options: b(9),
+      up: b(12), down: b(13), left: b(14), right: b(15) };
+  } else {
+    // raw Sony layout: □ × ○ △ L1 R1 L2 R2 share options …, d-pad as a hat axis
+    const hat = pad.axes.length > 9 ? pad.axes[9] : 2;
+    const near = (v) => Math.abs(hat - v) < 0.2;
+    k = { square: b(0), cross: b(1), circle: b(2), triangle: b(3), l1: b(4), r1: b(5), l2: b(6), r2: b(7), share: b(8), options: b(9),
+      up: near(-1) || near(-0.71) || near(1), right: near(-0.43) || near(-0.71) || near(-0.14), down: near(0.14) || near(-0.14) || near(0.43),
+      left: near(0.71) || near(0.43) || near(1) };
+  }
   return {
-    left: b(14) || ax < -0.5, right: b(15) || ax > 0.5,
-    up: b(12) || ay < -0.6, down: b(13) || ay > 0.6,
-    light: b(0), heavy: b(1), special: b(2) || b(3),
-    start: b(9), back: b(8),
+    left: k.left || ax < -0.5, right: k.right || ax > 0.5,
+    up: k.up || ay < -0.6, down: k.down || ay > 0.6,
+    light: k.square, heavy: k.cross, special: k.circle, block: k.r1 || k.l2,
+    super: k.triangle, throw: k.l1, dash: k.r2,
+    confirm: k.cross, back: k.circle || k.share, start: k.options,
   };
 }
 
@@ -712,11 +735,19 @@ function buildControllers() {
       if (pad) {
         held = held || pad[a];
         pressed = pressed || (pad[a] && !padPrev[p][a]);
+        // combo buttons on the pad: △ = ПАНЧ (рука + нога), L1 = бросок (вперёд + рука)
+        const padEdge = (k2) => pad[k2] && !padPrev[p][k2];
+        if (padEdge("super") && (a === "light" || a === "heavy")) { held = true; pressed = true; }
+        if (padEdge("throw") && F && F.fighters) {
+          const towards = F.fighters[p].dir > 0 ? "right" : "left";
+          if (a === "light") pressed = true;
+          if (a === towards || a === "light") held = true;
+        }
       }
       c.held[a] = held || pressed;
       c.pressed[a] = pressed;
     }
-    c.dash = p === 0 && touchTapped.has("dash");
+    c.dash = (p === 0 && touchTapped.has("dash")) || !!(pad && pad.dash && !padPrev[p].dash);
     // Gamepad → menu navigation / pause
     if (pad) {
       const edge = (k) => pad[k] && !padPrev[p][k];
@@ -724,8 +755,9 @@ function buildControllers() {
       if (edge("right")) navQueue.push({ type: "right", player: p });
       if (edge("up")) navQueue.push({ type: "up", player: p });
       if (edge("down")) navQueue.push({ type: "down", player: p });
-      if (edge("light")) navQueue.push({ type: "confirm", player: p });
-      if (edge("heavy") || edge("back")) navQueue.push({ type: "back", player: p });
+      const inFight = G.screen === "fight" && !G.paused;   // in a fight ×/○ are kicks and specials, not menu keys
+      if (!inFight && edge("confirm")) navQueue.push({ type: "confirm", player: p });
+      if (!inFight && edge("back")) navQueue.push({ type: "back", player: p });
       if (edge("start")) navQueue.push({ type: "pause", player: p });
       padPrev[p] = pad;
     }
@@ -1213,7 +1245,7 @@ function updateFighter(f, opp, dt) {
   f.parryCd = Math.max(0, (f.parryCd || 0) - dt);
   {
     const backKey = f.dir === 1 ? "left" : "right";
-    if (c.pressed[backKey] && f.onGround && !f.action && f.parryCd <= 0) { f.parryT = 0.13; f.parryCd = 0.45; }
+    if ((c.pressed[backKey] || c.pressed.block) && f.onGround && !f.action && f.parryCd <= 0) { f.parryT = 0.13; f.parryCd = 0.45; }
   }
   if (f.downT > 0) { f.downT -= dt; if (f.downT <= 0) { f.invulnT = 0.2; spawnDust(f.x, f.y, 0.7); } }
   if (f.chainBuf) { f.chainBuf.t -= dt; if (f.chainBuf.t <= 0) f.chainBuf = null; }
@@ -1224,6 +1256,7 @@ function updateFighter(f, opp, dt) {
   if (f.trailDelay > 0) f.trailDelay -= dt;
   else f.trailHp = Math.max(f.hp, f.trailHp - 45 * dt);
 
+  if (f.grab) { updateGrab(f, c, dt); if (f.grab) { f.crouch = false; f.blocking = false; f.blockBtn = false; return; } }
   const fighting = F.phase === "fight" && !f.ko;
   const free = canAct(f);
 
@@ -1234,10 +1267,12 @@ function updateFighter(f, opp, dt) {
   const back = f.dir === 1 ? c.held.left : c.held.right;
   if (fighting && f.onGround && !f.action && f.hitstun <= 0) {
     f.crouch = c.held.down;
-    f.blocking = c.held.down || back;
+    f.blockBtn = !!c.held.block;
+    f.blocking = c.held.down || back || f.blockBtn;
   } else {
     f.crouch = f.onGround && f.blockstun > 0 && f.crouch;
     f.blocking = false;
+    f.blockBtn = false;
   }
 
   // Super: light + heavy together with a full meter
@@ -1308,7 +1343,7 @@ function updateFighter(f, opp, dt) {
     f.vx = f.dashV * (f.dashT > 0.06 ? 1 : 0.5);
   } else if (f.onGround) {
     let target = 0;
-    if (canAct(f) && !f.crouch) {
+    if (canAct(f) && !f.crouch && !f.blockBtn) {      // holding БЛОК plants you in place
       const dirInput = (c.held.right ? 1 : 0) - (c.held.left ? 1 : 0);
       const isBack = dirInput !== 0 && dirInput !== f.dir;
       target = dirInput * f.data.speed * 1.15 * (isBack ? 0.8 : 1);
@@ -1554,8 +1589,9 @@ function updateSpecial(f, opp, a) {
   } else if (f.cid === "morgen") {
     F.projectiles.push({
       kind: "cadillac", owner: f.slot, dir: f.dir,
-      x: f.dir === 1 ? -420 : W + 420, y: FLOOR_Y,
-      vx: f.dir * 1100, w: 400, h: 120, dmg: 15, life: 2.2, hit: false, height: "unblockable",
+      // smaller and faster than before: a well-timed jump clears it
+      x: f.dir === 1 ? -300 : W + 300, y: FLOOR_Y,
+      vx: f.dir * 1500, w: 250, h: 78, dmg: 15, life: 1.6, hit: false, height: "unblockable",
     });
     F.shake = Math.max(F.shake, 6);
   } else if (f.cid === "guf") {
@@ -1928,13 +1964,45 @@ function startSuper(f) {
   if (!f.isBot || G.mode === 2) buzz(60);
 }
 
+// Throw = a short grab first (GRAB_T): the victim can break it with БЛОК or РУКА, otherwise the throw lands
+const GRAB_T = 0.32;
+const BOT_TECH = { easy: 0.12, normal: 0.3, hard: 0.55 };
 function startThrow(f, opp) {
   f.crouch = false;
   f.action = { type: "throw", move: { frame: "light", startup: 0.06, active: 0, recovery: 0.32, dmg: 0, reach: 0, y0: 0, y1: 0 },
-    t: 0, total: 0.4, hitDone: true };
+    t: 0, total: GRAB_T + 0.4, hitDone: true, grab: true };
+  f.vx = 0; f.dashT = 0;
+  opp.grab = { by: f.slot, t: GRAB_T, botTech: opp.isBot && Math.random() < (BOT_TECH[G.difficulty] || 0.3) };
+  opp.action = null; opp.vx = 0; opp.dashT = 0; opp.chainBuf = null;
+  popup(f.x, f.y - 320, "ЗАХВАТ!", "#9fd0ff", 28);
+  playSfx("whooshLight");
+}
+function resolveThrow(f, opp) {      // f = attacker, opp = the grabbed one
+  f.action.grab = false;
   const res = applyHit(f, opp, { dmg: 4, height: "unblockable", hitstun: 2, blockstun: 0, knock: 0, dir: f.dir,
     sfx: "hitLight", stop: 0.06, chip: 0, noScale: true, sparkX: opp.x - f.dir * 20, sparkY: opp.y - 150 });
   if (res === "hit") opp.pull = { by: f.slot, t: 0.16, dist: 55, mode: "throw" };
+}
+// Called for the grabbed fighter every frame while the grab lasts
+function updateGrab(f, c, dt) {
+  const g = f.grab, att = F.fighters[g.by];
+  if (!att.action || att.action.type !== "throw" || !att.action.grab || att.ko || f.ko || F.phase !== "fight") { f.grab = null; return; }
+  g.t -= dt;
+  f.vx = 0; f.noPushT = 0.1;
+  f.x = lerp(f.x, clamp(att.x + att.dir * 70, WALL_L, WALL_R), 1 - Math.pow(0.001, dt));
+  const breakIt = g.t < GRAB_T - 0.04 && (f.isBot ? g.botTech && g.t < GRAB_T * 0.55 : (c.pressed.block || c.pressed.light));
+  if (breakIt) {
+    f.grab = null;
+    att.action = null;
+    att.vx = -att.dir * 460; f.vx = att.dir * 460;
+    att.blockstun = 0.18; f.blockstun = 0.12;
+    addSuper(f, 4);
+    blockSpark((att.x + f.x) / 2, f.y - 160);
+    playSfx("block");
+    popup(f.x, f.y - 320, "ВЫРВАЛСЯ!", "#8dff7a", 30);
+    return;
+  }
+  if (g.t <= 0) { f.grab = null; resolveThrow(att, f); }
 }
 
 function superFlavor(f, opp) {
@@ -1965,7 +2033,16 @@ function updateSuper(f, opp, dt) {
     f.x = clamp(f.x + f.dir * 1350 * dt, WALL_L, WALL_R);
     f.noPushT = 0.1;
     const reach = Math.abs(opp.x - f.x) < 110 && Math.sign(opp.x - f.x) === f.dir;
-    if (reach && !opp.ko && !(opp.downT > 0) && !(opp.invulnT > 0) && opp.y > FLOOR_Y - 170) {
+    // ПАНЧ can be countered: if the target is guarding when the rush arrives, it bounces off
+    if (reach && !opp.ko && opp.blocking && opp.onGround && !opp.action && opp.hitstun <= 0 && !(opp.downT > 0)) {
+      a.phase = "recover"; a.t = -0.35; a.move.frame = "heavy";            // longer recovery: punishable
+      f.vx = -f.dir * 520; opp.vx = f.dir * 380; opp.blockstun = 0.3;
+      addSuper(opp, 10);
+      blockSpark(opp.x - f.dir * 40, opp.y - 160);
+      playSfx("block"); playSfx("parry");
+      F.hitstop = 0.12; F.shake = Math.max(F.shake, 8);
+      popup(opp.x, opp.y - 330, "ПАНЧ ОТБИТ!", "#8dff7a", 34);
+    } else if (reach && !opp.ko && !(opp.downT > 0) && !(opp.invulnT > 0) && opp.y > FLOOR_Y - 170) {
       a.phase = "combo"; a.t = 0; a.hits = 0; playSfx("superHit");
       opp.vx = 0; opp.vy = 0; opp.hitstun = 3; opp.action = null; opp.pull = null; opp.dashT = 0;
     } else if (a.t > 0.5 || (f.dir > 0 ? f.x >= WALL_R : f.x <= WALL_L) || F.phase !== "fight") {
@@ -2466,7 +2543,7 @@ function updateProjectiles(dt) {
       F.particles.push({ type: "sq", x: p.x - p.dir * rand(120, 260), y: p.y + rand(-40, 40), vx: -p.dir * 300, vy: 0, life: 0.2, max: 0.2, size: 4, color: "rgba(255,255,255,0.7)" });
     }
     if (p.kind === "cadillac") {
-      if (Math.random() < dt * 40) spawnDust(p.x - p.dir * 220, FLOOR_Y, 0.6);
+      if (Math.random() < dt * 40) spawnDust(p.x - p.dir * 140, FLOOR_Y, 0.5);
       if (Math.abs(p.x - W / 2) < W / 2 + 100) F.shake = Math.max(F.shake, 3);
     }
 
@@ -2705,7 +2782,7 @@ function updateBot(bot, opp, dt) {
       } else if (p.kind === "cadillac") {
         // jump when the car's front edge is close enough
         const front = pd - p.w / 2;
-        if (front < 260 && front > 40 && Math.random() < d.dodge) ai.jump = true;
+        if (front < 400 && front > 130 && Math.random() < d.dodge * 0.6) ai.jump = true;   // bots don't clear it every time
       } else if (pd < 360 && Math.random() < d.dodge) {
         if (Math.random() < 0.55) ai.holdDown = 0.45; else ai.jump = true;
       }
@@ -2975,10 +3052,11 @@ function poseName(f) {
     return "ko";
   }
   if (f.won && F.phase === "ko") return "win";
+  if (f.grab) return "hurt";          // caught in a throw
   const foe = F && F.fighters && F.fighters[1 - f.slot];
   const guarding = f.blocking && !f.action && f.hitstun <= 0 && foe && (foe.action || F.projectiles.some((q) => q.owner !== f.slot)) &&
     Math.abs(foe.x - f.x) < 260;
-  if ((f.blockstun > 0 || guarding) && f.onGround) {
+  if ((f.blockstun > 0 || guarding || (f.blockBtn && !f.action && f.hitstun <= 0)) && f.onGround) {
     const p = f.crouch ? "crouch_block" : "block";
     if (hasPose(f.cid, p)) return p;
   }
@@ -3196,9 +3274,9 @@ function drawProjectiles() {
       if (p.dir < 0) ctx.scale(-1, 1);
       ctx.fillStyle = "rgba(0,0,0,0.4)";
       ctx.beginPath();
-      ctx.ellipse(0, -6, 300, 16, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, -6, 190, 12, 0, 0, Math.PI * 2);
       ctx.fill();
-      if (car) ctx.drawImage(car, -360, -250, 720, 250);
+      if (car) ctx.drawImage(car, -230, -160, 460, 160);
       ctx.restore();
       continue;
     }
@@ -3693,7 +3771,7 @@ function bigText(str, y, size, gradient, scaleIn = 1, alpha = 1) {
 
 // Keyboard reminder at the start of a match (desktop only): who plays with which keys
 function drawControlsHint() {
-  if (isTouch || G.tutorial || G.botVsBot || !F || F.round !== 1) return;
+  if ((isTouch && !padSeen) || G.paused || G.tutorial || G.botVsBot || !F || F.round !== 1) return;
   const left = F.hintUntil - G.time;
   if (left <= 0) return;
   const a = clamp(left / 0.8, 0, 1) * clamp((10 - left) / 0.4, 0, 1);
@@ -3707,15 +3785,20 @@ function drawControlsHint() {
   if (two) {
     t("ИГРОК 1", x + w * 0.25, y + 24, 20, P_COLORS[0]);
     t("WASD — ходьба, прыжок, присед", x + w * 0.25, y + 50, 18, "#fff");
-    t("F — рука   G — нога   H — спец", x + w * 0.25, y + 74, 18, "#fff");
+    t("F — рука   G — нога   H — спец   R — блок", x + w * 0.25, y + 74, 18, "#fff");
     t("ИГРОК 2", x + w * 0.75, y + 24, 20, P_COLORS[1]);
     t("стрелки — ходьба, прыжок, присед", x + w * 0.75, y + 50, 18, "#fff");
-    t("J — рука   K — нога   L — спец", x + w * 0.75, y + 74, 18, "#fff");
+    t("J — рука   K — нога   L — спец   ; — блок", x + w * 0.75, y + 74, 18, "#fff");
     ctx.fillStyle = "rgba(255,213,74,0.4)"; ctx.fillRect(W / 2 - 1, y + 12, 2, 70);
-    t("ПАНЧ — рука + нога   •   бросок — вперёд + рука   •   рывок — дважды вперёд   •   блок — назад", W / 2, y + 102, 15, "#c9c2ff");
+    t("ПАНЧ — рука + нога   •   бросок — вперёд + рука (вырваться — блок или рука)   •   рывок — дважды вперёд", W / 2, y + 102, 15, "#c9c2ff");
   } else {
-    t("стрелки — ходьба, прыжок, присед   •   A — рука   S — нога   D — спец", W / 2, y + 30, 19, "#fff");
-    t("ПАНЧ — A + S   •   бросок — вперёд + A   •   рывок — дважды вперёд   •   блок — назад", W / 2, y + 62, 16, "#c9c2ff");
+    if (padSeen) {
+      t("□ — рука   × — нога   ○ — спец   R1 — блок", W / 2, y + 30, 19, "#fff");
+      t("△ — ПАНЧ   •   L1 — бросок   •   R2 — рывок   •   Options — пауза", W / 2, y + 62, 16, "#c9c2ff");
+    } else {
+      t("стрелки — ходьба, прыжок, присед   •   A — рука   S — нога   D — спец   F — блок", W / 2, y + 30, 19, "#fff");
+      t("ПАНЧ — A + S (отбивается блоком)   •   бросок — вперёд + A   •   рывок — дважды вперёд", W / 2, y + 62, 16, "#c9c2ff");
+    }
   }
   ctx.restore();
 }
@@ -4038,12 +4121,12 @@ const TUTORIAL_STEPS = [
   { id: "jump", title: "ПРЫЖОК", text: "Прыгни:  ↑", touch: "джойстик вверх" },
   { id: "light", title: "УДАР РУКОЙ", text: "Подойди к сопернику и ударь рукой:  A", touch: "кнопка РУКА" },
   { id: "heavy", title: "УДАР НОГОЙ", text: "Ударь ногой:  S", touch: "кнопка НОГА" },
-  { id: "block", title: "БЛОК", text: "Соперник атакует! Держи НАЗАД (от него), чтобы заблокировать 2 удара", touch: "джойстик от соперника" },
+  { id: "block", title: "БЛОК", text: "Соперник атакует! Держи F (или НАЗАД от него), чтобы заблокировать 2 удара", touch: "кнопка БЛОК" },
   { id: "sweep", title: "ПОДСЕЧКА", text: "Присядь и ударь ногой:  ↓ + S  — соперник упадёт", touch: "джойстик вниз + НОГА" },
   { id: "crouchjab", title: "УДАР В ПРИСЕДЕ", text: "Присядь и ударь рукой:  ↓ + A  — быстрый низкий удар", touch: "джойстик вниз + РУКА" },
   { id: "chain", title: "СВЯЗКА", text: "Рука, рука, нога подряд:  A, A, S  — третий удар добивающий", touch: "РУКА, РУКА, НОГА" },
   { id: "dash", title: "РЫВОК", text: "Дважды быстро вперёд:  → →", touch: "кнопка РЫВОК" },
-  { id: "throw", title: "БРОСОК", text: "Подойди вплотную:  вперёд + A  — бросок не заблокировать", touch: "кнопка БРОСОК" },
+  { id: "throw", title: "БРОСОК", text: "Подойди вплотную:  вперёд + A  — блоком не закрыться, но можно вырваться: F или A", touch: "кнопка БРОСОК" },
   { id: "special", title: "СПЕЦПРИЁМ", text: "Фирменный спецприём:  D", touch: "кнопка СПЕЦ" },
   { id: "super", title: "ПАНЧ", text: "Шкала ПАНЧА полная! Зажми оба удара:  A + S", touch: "кнопка ПАНЧ" },
 ];
@@ -4320,10 +4403,10 @@ function drawMode() {
   menuBackground();
   header("РЕЖИМ ИГРЫ");
   const opts = [
-    { mode: 1, title: "1 ИГРОК", sub: "против бота", ids: ["guf", null], lines: isTouch ? ["выбери бойца и арену"] : ["стрелки + A S D"] },
+    { mode: 1, title: "1 ИГРОК", sub: "против бота", ids: ["guf", null], lines: isTouch ? ["выбери бойца и арену"] : ["стрелки + A S D, F — блок"] },
     { mode: 3, title: "АРКАДА", sub: "6 боёв подряд", ids: [null, "boss"], lines: ["в конце — финальный босс"] },
     { mode: 2, title: "2 ИГРОКА", sub: "на одной клавиатуре", ids: ["guf", "noize"], off: isTouch,
-      lines: isTouch ? ["только на компьютере"] : ["1P: WASD + F G H", "2P: стрелки + J K L"] },
+      lines: isTouch ? ["только на компьютере"] : ["1P: WASD + F G H, R — блок", "2P: стрелки + J K L, ; — блок"] },
     { mode: 4, title: "ОБУЧЕНИЕ", sub: "все приёмы по шагам", ids: ["guf", "tut"], lines: ["проиграть нельзя"] },
   ];
   const w = 292, h = 372, gap = 16;
@@ -4825,9 +4908,10 @@ function drawPause() {
     text(l, W / 2, y + h / 2 + 2, { size: 28, align: "center", color: active ? GOLD : "#fff", stroke: "#000", strokeW: 5 });
     region("pause" + i, x, y, w, h, () => pauseChoose(i), () => { G.pauseSel = i; });
   });
-  const lines = isTouch ? ["джойстик: ходьба, прыжок, присед", "джойстик от врага — блок"] : G.mode === 1
-    ? ["←→ ходьба  ↑ прыжок  ↓ присед/блок", "назад от врага — блок стоя", "A рука   S нога   D спецприём"]
-    : ["1P: WASD, F/G/H      2P: стрелки, J/K/L", "назад от врага — блок стоя, ↓ — блок в приседе"];
+  const lines = padSeen ? ["□ рука   × нога   ○ спец   R1 блок", "△ ПАНЧ   L1 бросок   R2 рывок"]
+    : isTouch ? ["джойстик: ходьба, прыжок, присед", "БЛОК — кнопка над джойстиком"] : G.mode === 1
+    ? ["←→ ходьба  ↑ прыжок  ↓ присед", "A рука   S нога   D спецприём   F блок"]
+    : ["1P: WASD, F/G/H, R — блок      2P: стрелки, J/K/L, ; — блок", "↓ + блок — блок в приседе"];
   lines.forEach((ln, i) => text(ln, W / 2, 540 + i * 30, { size: 19, align: "center", color: "#9d97c9", shadow: false }));
 }
 function pauseChoose(i) {
