@@ -1591,7 +1591,7 @@ function updateSpecial(f, opp, a) {
       kind: "cadillac", owner: f.slot, dir: f.dir,
       // smaller and faster than before: a well-timed jump clears it
       x: f.dir === 1 ? -300 : W + 300, y: FLOOR_Y,
-      vx: f.dir * 1500, w: 250, h: 78, dmg: 15, life: 1.6, hit: false, height: "unblockable",
+      vx: f.dir * 1500, w: 325, h: 98, dmg: 15, life: 1.6, hit: false, height: "unblockable",
     });
     F.shake = Math.max(F.shake, 6);
   } else if (f.cid === "guf") {
@@ -2543,7 +2543,7 @@ function updateProjectiles(dt) {
       F.particles.push({ type: "sq", x: p.x - p.dir * rand(120, 260), y: p.y + rand(-40, 40), vx: -p.dir * 300, vy: 0, life: 0.2, max: 0.2, size: 4, color: "rgba(255,255,255,0.7)" });
     }
     if (p.kind === "cadillac") {
-      if (Math.random() < dt * 40) spawnDust(p.x - p.dir * 140, FLOOR_Y, 0.5);
+      if (Math.random() < dt * 40) spawnDust(p.x - p.dir * 180, FLOOR_Y, 0.55);
       if (Math.abs(p.x - W / 2) < W / 2 + 100) F.shake = Math.max(F.shake, 3);
     }
 
@@ -3274,9 +3274,9 @@ function drawProjectiles() {
       if (p.dir < 0) ctx.scale(-1, 1);
       ctx.fillStyle = "rgba(0,0,0,0.4)";
       ctx.beginPath();
-      ctx.ellipse(0, -6, 190, 12, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, -6, 245, 14, 0, 0, Math.PI * 2);
       ctx.fill();
-      if (car) ctx.drawImage(car, -230, -160, 460, 160);
+      if (car) ctx.drawImage(car, -295, -205, 590, 205);
       ctx.restore();
       continue;
     }
