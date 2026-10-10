@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <title>[ТЕСТ] РУССКИЙ РЭП НА ВЫЛЕТ</title>
+  <meta name="description" content="Браузерный пиксельный пародийный файтинг: Гуф, Нойз, Окси, Морген, Мэйби Бэйби, Егор, Слава КПСС, ATL, Макс Корж и FACE." />
+  <meta property="og:title" content="РУССКИЙ РЭП НА ВЫЛЕТ — Pixel Fighter" />
+  <meta property="og:description" content="Браузерный пиксельный файтинг. 10 рэперов, 8 арен, аркада и секреты. Играй с телефона или компьютера." />
+  <meta property="og:image" content="https://dkdanceblog.github.io/mortalkombat/assets/ui/og_image.jpg" />
+  <meta property="og:url" content="https://dkdanceblog.github.io/mortalkombat/" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" href="favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/ui/favicon_32.png" />
+  <link rel="icon" type="image/png" sizes="64x64" href="assets/ui/favicon_64.png" />
+  <link rel="apple-touch-icon" href="assets/ui/apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="РЭП НА ВЫЛЕТ" />
+  <meta name="theme-color" content="#0b0820" />
+  <link rel="preload" href="assets/fonts/russo-one-cyrillic-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="assets/fonts/press-start-2p-cyrillic-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="rotate">
+    <div class="phone"></div>
+    <h2>ПОВЕРНИ ТЕЛЕФОН</h2>
+    <p>Игра сделана для горизонтального экрана — так сцена крупнее, а кнопки не мешают.</p>
+    <p id="rotate-ios" class="ios-tip" hidden>На iPhone панели Safari убираются так: <b>Поделиться → «На экран Домой»</b>. Игра появится иконкой и откроется на весь экран.</p>
+    <button id="rotate-go">ИГРАТЬ НА ВЕСЬ ЭКРАН</button>
+    <button id="rotate-skip" class="skip">играть вертикально</button>
+  </div>
+  <div id="game-wrap">
+    <canvas id="game" width="1280" height="720"></canvas>
+
+    <div id="touch-controls" aria-label="Сенсорное управление">
+      <div id="stick" aria-label="Джойстик: движение, прыжок, присед"><div class="knob"></div></div>
+      <button class="pause-btn" data-key="pause" aria-label="Пауза">II</button>
+      <div class="touch-actions">
+        <button class="act-throw" data-key="throw">БРОСОК</button>
+        <button class="act-dash" data-key="dash">РЫВОК</button>
+        <button class="act-super" data-key="super">ПАНЧ</button>
+        <button class="act-light" data-key="light">РУКА</button>
+        <button class="act-heavy" data-key="heavy">НОГА</button>
+        <button class="act-special" data-key="special">СПЕЦ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sounds. Several copies of frequent effects so hits can overlap. -->
+  <audio data-sfx="block" src="assets/audio/block.mp3" preload="none"></audio>
+  <audio data-sfx="block" src="assets/audio/block.mp3" preload="none"></audio>
+  <audio data-sfx="whoosh" src="assets/audio/whoosh.mp3" preload="none"></audio>
+  <audio data-sfx="whoosh" src="assets/audio/whoosh.mp3" preload="none"></audio>
+  <audio data-sfx="whoosh" src="assets/audio/whoosh.mp3" preload="none"></audio>
+  <audio data-sfx="special_guf" src="assets/audio/special_guf.mp3" preload="none"></audio>
+  <audio data-sfx="special_noize" src="assets/audio/special_noize.mp3" preload="none"></audio>
+  <audio data-sfx="special_oxxxy" src="assets/audio/special_oxxxy.mp3" preload="none"></audio>
+  <audio data-sfx="special_morgen" src="assets/audio/special_morgen.mp3" preload="none"></audio>
+  <audio data-sfx="special_maybe" src="assets/audio/special_maybe.mp3" preload="none"></audio>
+  <audio data-sfx="special_kreed" src="assets/audio/special_kreed.mp3" preload="none"></audio>
+  <audio data-sfx="special_slava" src="assets/audio/special_slava.mp3" preload="none"></audio>
+  <audio data-sfx="special_atl" src="assets/audio/special_atl.mp3" preload="none"></audio>
+  <audio data-sfx="special_korzh" src="assets/audio/special_korzh.mp3" preload="none"></audio>
+  <audio data-sfx="special_face" src="assets/audio/special_face.mp3" preload="none"></audio>
+  <audio data-sfx="special_chip" src="assets/audio/special_chip.mp3" preload="none"></audio>
+  <audio data-sfx="ko" src="assets/audio/ko.mp3" preload="none"></audio>
+  <audio data-sfx="roundStart" src="assets/audio/round_start.mp3" preload="none"></audio>
+  <audio data-sfx="menuSelect" src="assets/audio/menu_select.mp3" preload="none"></audio>
+  <audio data-sfx="menuSelect" src="assets/audio/menu_select.mp3" preload="none"></audio>
+  <audio data-sfx="koHit" src="assets/audio/ko_hit.mp3" preload="none"></audio>
+  <audio data-sfx="superStart" src="assets/audio/super_start.mp3" preload="none"></audio>
+  <audio data-sfx="crowdReact" src="assets/audio/crowd_react.mp3" preload="none"></audio>
+  <audio data-sfx="whooshLight" src="assets/audio/whoosh_light.mp3" preload="none"></audio>
+  <audio data-sfx="whooshLight" src="assets/audio/whoosh_light.mp3" preload="none"></audio>
+  <audio data-sfx="whooshHeavy" src="assets/audio/whoosh_heavy.mp3" preload="none"></audio>
+  <audio data-sfx="whooshHeavy" src="assets/audio/whoosh_heavy.mp3" preload="none"></audio>
+  <audio data-sfx="bodyfall" src="assets/audio/bodyfall.mp3" preload="none"></audio>
+  <audio data-sfx="bodyfall" src="assets/audio/bodyfall.mp3" preload="none"></audio>
+  <audio data-sfx="parry" src="assets/audio/parry.mp3" preload="none"></audio>
+  <audio data-sfx="counter" src="assets/audio/counter.mp3" preload="none"></audio>
+  <audio data-sfx="throw" src="assets/audio/throw.mp3" preload="none"></audio>
+  <audio data-sfx="sweep" src="assets/audio/sweep.mp3" preload="none"></audio>
+  <audio data-sfx="wallHit" src="assets/audio/wall_hit.mp3" preload="none"></audio>
+  <audio data-sfx="jump" src="assets/audio/jump.mp3" preload="none"></audio>
+  <audio data-sfx="jump" src="assets/audio/jump.mp3" preload="none"></audio>
+  <audio data-sfx="land" src="assets/audio/land.mp3" preload="none"></audio>
+  <audio data-sfx="land" src="assets/audio/land.mp3" preload="none"></audio>
+  <audio data-sfx="landHeavy" src="assets/audio/land_heavy.mp3" preload="none"></audio>
+  <audio data-sfx="dash" src="assets/audio/dash.mp3" preload="none"></audio>
+  <audio data-sfx="dash" src="assets/audio/dash.mp3" preload="none"></audio>
+  <audio data-sfx="comboFinisher" src="assets/audio/combo_finisher.mp3" preload="none"></audio>
+  <audio data-sfx="launch" src="assets/audio/launch.mp3" preload="none"></audio>
+  <audio data-sfx="superReady" src="assets/audio/super_ready.mp3" preload="none"></audio>
+  <audio data-sfx="superHit" src="assets/audio/super_hit.mp3" preload="none"></audio>
+  <audio data-sfx="sway" src="assets/audio/sway.mp3" preload="none"></audio>
+  <audio data-sfx="armor" src="assets/audio/armor.mp3" preload="none"></audio>
+  <audio data-sfx="money" src="assets/audio/money.mp3" preload="none"></audio>
+  <audio data-sfx="special_kreed_hit" src="assets/audio/special_kreed_hit.mp3" preload="none"></audio>
+  <audio data-sfx="atl_boom" src="assets/audio/atl_boom.mp3" preload="none"></audio>
+  <audio data-sfx="atl_bolt" src="assets/audio/atl_bolt.mp3" preload="none"></audio>
+  <audio data-sfx="special_face_hit" src="assets/audio/special_face_hit.mp3" preload="none"></audio>
+  <audio data-sfx="special_face_hit" src="assets/audio/special_face_hit.mp3" preload="none"></audio>
+  <audio data-sfx="special_morgen_hit" src="assets/audio/special_morgen_hit.mp3" preload="none"></audio>
+  <audio data-sfx="special_guf_hit" src="assets/audio/special_guf_hit.mp3" preload="none"></audio>
+  <audio data-sfx="special_guf_hit" src="assets/audio/special_guf_hit.mp3" preload="none"></audio>
+  <audio data-sfx="special_noize_hit" src="assets/audio/special_noize_hit.mp3" preload="none"></audio>
+  <audio data-sfx="react_yard" src="assets/audio/react_yard.mp3" preload="none"></audio>
+  <audio data-sfx="react_circus" src="assets/audio/react_circus.mp3" preload="none"></audio>
+  <audio data-sfx="react_concert" src="assets/audio/react_concert.mp3" preload="none"></audio>
+  <audio data-sfx="uiMove" src="assets/audio/ui_move.mp3" preload="none"></audio>
+  <audio data-sfx="uiMove" src="assets/audio/ui_move.mp3" preload="none"></audio>
+  <audio data-sfx="uiMove" src="assets/audio/ui_move_2.mp3" preload="none"></audio>
+  <audio data-sfx="uiMove" src="assets/audio/ui_move_2.mp3" preload="none"></audio>
+  <audio data-sfx="uiBack" src="assets/audio/ui_back.mp3" preload="none"></audio>
+  <audio data-sfx="uiPick" src="assets/audio/ui_pick_fighter.mp3" preload="none"></audio>
+  <audio data-sfx="uiVs" src="assets/audio/ui_vs.mp3" preload="none"></audio>
+  <audio data-sfx="uiUnlock" src="assets/audio/ui_unlock.mp3" preload="none"></audio>
+  <audio data-sfx="uiTimer" src="assets/audio/ui_timer.mp3" preload="none"></audio>
+  <audio data-sfx="voice_a_attack" src="assets/audio/voice_a_attack.mp3" preload="none"></audio>
+  <audio data-sfx="voice_a_attack" src="assets/audio/voice_a_attack.mp3" preload="none"></audio>
+  <audio data-sfx="voice_a_hurt" src="assets/audio/voice_a_hurt.mp3" preload="none"></audio>
+  <audio data-sfx="voice_a_hurt" src="assets/audio/voice_a_hurt.mp3" preload="none"></audio>
+  <audio data-sfx="voice_a_ko" src="assets/audio/voice_a_ko.mp3" preload="none"></audio>
+  <audio data-sfx="voice_b_attack" src="assets/audio/voice_b_attack.mp3" preload="none"></audio>
+  <audio data-sfx="voice_b_attack" src="assets/audio/voice_b_attack.mp3" preload="none"></audio>
+  <audio data-sfx="voice_b_hurt" src="assets/audio/voice_b_hurt.mp3" preload="none"></audio>
+  <audio data-sfx="voice_b_hurt" src="assets/audio/voice_b_hurt.mp3" preload="none"></audio>
+  <audio data-sfx="voice_b_ko" src="assets/audio/voice_b_ko.mp3" preload="none"></audio>
+  <audio data-sfx="voice_v_attack" src="assets/audio/voice_v_attack.mp3" preload="none"></audio>
+  <audio data-sfx="voice_v_attack" src="assets/audio/voice_v_attack.mp3" preload="none"></audio>
+  <audio data-sfx="voice_v_ko" src="assets/audio/voice_v_ko.mp3" preload="none"></audio>
+  <audio data-sfx="react_fountains" src="assets/audio/react_fountains.mp3" preload="none"></audio>
+  <audio data-sfx="uiConfirm" src="assets/audio/ui_confirm.mp3" preload="none"></audio>
+  <audio data-sfx="uiConfirm" src="assets/audio/ui_confirm.mp3" preload="none"></audio>
+  <audio data-sfx="hitLight" src="assets/audio/hit_light_1.mp3" preload="none"></audio>
+  <audio data-sfx="hitLight" src="assets/audio/hit_light_2.mp3" preload="none"></audio>
+  <audio data-sfx="hitLight" src="assets/audio/hit_light_3.mp3" preload="none"></audio>
+  <audio data-sfx="hitLight" src="assets/audio/hit_light_4.mp3" preload="none"></audio>
+  <audio data-sfx="hitLight" src="assets/audio/hit_light_5.mp3" preload="none"></audio>
+  <audio data-sfx="hitHeavy" src="assets/audio/hit_heavy_1.mp3" preload="none"></audio>
+  <audio data-sfx="hitHeavy" src="assets/audio/hit_heavy_2.mp3" preload="none"></audio>
+  <audio data-sfx="hitHeavy" src="assets/audio/hit_heavy_3.mp3" preload="none"></audio>
+  <audio data-sfx="hitHeavy" src="assets/audio/hit_heavy_4.mp3" preload="none"></audio>
+  <audio data-sfx="hitHeavy" src="assets/audio/hit_heavy_5.mp3" preload="none"></audio>
+  <audio data-sfx="hitKick" src="assets/audio/hit_kick_1.mp3" preload="none"></audio>
+  <audio data-sfx="hitKick" src="assets/audio/hit_kick_2.mp3" preload="none"></audio>
+  <audio data-sfx="hitKick" src="assets/audio/hit_kick_3.mp3" preload="none"></audio>
+  <audio data-sfx="hitKick" src="assets/audio/hit_kick_4.mp3" preload="none"></audio>
+  <audio data-sfx="hitBody" src="assets/audio/hit_body_1.mp3" preload="none"></audio>
+  <audio data-sfx="hitBody" src="assets/audio/hit_body_2.mp3" preload="none"></audio>
+  <audio data-sfx="hitCrit" src="assets/audio/hit_crit_1.mp3" preload="none"></audio>
+  <audio data-sfx="hitCrit" src="assets/audio/hit_crit_2.mp3" preload="none"></audio>
+  <audio data-sfx="hitCrit" src="assets/audio/hit_crit_3.mp3" preload="none"></audio>
+  <audio data-sfx="voice_g_attack" src="assets/audio/voice_g_attack.mp3" preload="none"></audio>
+  <audio data-sfx="voice_g_attack" src="assets/audio/voice_g_attack.mp3" preload="none"></audio>
+  <audio id="battle-music" preload="none"></audio>
+
+  <script src="sprites.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
