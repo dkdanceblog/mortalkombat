@@ -46,6 +46,23 @@ const store = {
 /* Data                                                                */
 /* ------------------------------------------------------------------ */
 const CHARS = {
+  husky: {
+    id: "husky", name: "ХАСКИ", special: "КАНЬЕ", color: "#9fb8d8",
+    speed: 310, power: 1.04, specialCd: 6.0, tough: 1.03, jump: 1.05, weight: 0.95, dash: 1.05,
+    stats: { "СКОРОСТЬ": 3, "СИЛА": 3, "ЗДОРОВЬЕ": 3 },
+    perk: "ФИШКА: раз в раунд на последнем издыхании пьёт живую воду",
+    blurb: "Поэт с панельки.",
+    loseTitle: "ХАСКИ СКУЛИТ",
+    quotes: ["ЛОВИ КАНЬЕ!", "ПАНЕЛЬКА ВСЁ ПОМНИТ", "Я ИЗ ПАНЕЛЬКИ", "ЖИВАЯ ВОДА!"],
+    moves: {
+      // street headbutt: lunges with the shaved forehead
+      light: { frame: "light", startup: 0.09, active: 0.08, recovery: 0.2, dmg: 7, reach: 104, lunge: 200,
+        y0: -235, y1: -165, hitstun: 0.4, blockstun: 0.16, knock: 230, height: "high", sfx: "hitHeavy", stop: 0.08 },
+      // dropkick: both feet, body horizontal — big knockback, but he lands on his back (long recovery)
+      heavy: { frame: "heavy", startup: 0.2, active: 0.12, recovery: 0.34, dmg: 11, reach: 150, lunge: 560, lift: 70,
+        y0: -190, y1: -95, hitstun: 0.5, blockstun: 0.24, knock: 620, height: "high", sfx: "hitKick", stop: 0.1, wall: true },
+    },
+  },
   ramirez: {
     id: "ramirez", name: "ГРЯЗНЫЙ РАМИРЕС", short: "РАМИРЕС", special: "ОБЕЗЬЯНЫ", color: "#b4c94a",
     speed: 280, power: 1.04, specialCd: 6.0, tough: 1.04, jump: 0.95, weight: 1.2, dash: 0.95,
@@ -238,7 +255,7 @@ for (const d of Object.values(CHARS)) {
     "ЗДОРОВЬЕ": st(3 + ((d.tough || 1) - 1) / 0.04),
   };
 }
-const BASE_IDS = ["guf", "noize", "oxxxy", "morgen", "maybe", "kreed", "slava", "atl", "korzh", "face", "ramirez"];
+const BASE_IDS = ["guf", "noize", "oxxxy", "morgen", "maybe", "kreed", "slava", "atl", "korzh", "face", "ramirez", "husky"];
 // Chipinkos is the arcade boss; he joins the roster once he has been beaten in the arcade
 const CHAR_IDS = [...BASE_IDS];
 function chipUnlocked() { return CHAR_IDS.includes("chip"); }
@@ -298,6 +315,7 @@ const SPECIALS = {
   face: { startup: 0.3, total: 0.7, sfx: "special_face" },
   chip: { startup: 0.25, total: 1.3, sfx: "special_chip" },
   ramirez: { startup: 0.35, total: 0.85, sfx: "special_slava" },
+  husky: { startup: 0.32, total: 0.75, sfx: "throw" },
   maybe: { startup: 0.21, active: 0.14, total: 0.7, sfx: "special_maybe" },
 };
 
@@ -339,6 +357,9 @@ const ASSET_PATHS = {
   "fx.guitar": "assets/effects/guitar_projectile.png",
   "fx.cadillac": "assets/effects/cadillac_projectile.png",
   "fx.monkey": "assets/effects/monkey_run.png",
+  "fx.kanye_fly": "assets/effects/kanye_fly.png",
+  "fx.kanye_lie": "assets/effects/kanye_lie.png",
+  "fx.kanye_walk": "assets/effects/kanye_walk.png",
   "fx.sinyak": "assets/effects/sinyak_projectile.png",
   "fx.kpss_jacket_1": "assets/effects/kpss_jacket_1.png",
   "fx.kpss_jacket_2": "assets/effects/kpss_jacket_2.png",
@@ -351,6 +372,7 @@ const ASSET_PATHS = {
   "portrait.face": "assets/portraits/face_portrait.png",
   "portrait.chip": "assets/portraits/chip_portrait.png",
   "portrait.ramirez": "assets/portraits/ramirez_portrait.png",
+  "portrait.husky": "assets/portraits/husky_portrait.png",
   "fx.burger": "assets/effects/burger.png",
   "fx.nuke": "assets/effects/nuke_bomb.png",
   "portrait.kreed": "assets/portraits/kreed_portrait.png",
@@ -606,7 +628,7 @@ const AMB_VOL = { bar: 0.32, yard: 0.6, circus: 0.38, concert: 0.2, londograd: 0
 const REACT = { bar: "crowdReact", yard: "react_yard", circus: "react_circus", concert: "react_concert", fountains: "react_fountains" };
 const REACT_CD = { bar: 4, yard: 14, circus: 16, concert: 6, fountains: 6 };   // seconds between crowd reactions
 // Fighter voices (grunts): voice set per fighter; only sets with files are used
-const VOICE = { guf: "a", korzh: "a", atl: "a", chip: "a", noize: "b", oxxxy: "b", face: "b", kreed: "v", slava: "v", morgen: "v", maybe: "g", ramirez: "a" };
+const VOICE = { guf: "a", korzh: "a", atl: "a", chip: "a", noize: "b", oxxxy: "b", face: "b", kreed: "v", slava: "v", morgen: "v", maybe: "g", ramirez: "a", husky: "b" };
 // a voice set without one of the sounds borrows it: v has no hurt (→ b), g has no attack shout (→ her gasp)
 const VOICE_FALLBACK = { voice_v_hurt: "voice_b_hurt", voice_g_hurt: "none", voice_g_ko: "none" };
 function voice(f, what, chance = 1) {
@@ -1260,6 +1282,16 @@ function updateFighter(f, opp, dt) {
   f.land = Math.max(0, f.land - dt);
   f.comboT = Math.max(0, f.comboT - dt);
   f.buffT = Math.max(0, f.buffT - dt);
+  if (f.cid === "husky" && !f.waterUsed && !f.ko && f.hp > 0 && f.hp <= 25 && F.phase === "fight") {
+    f.waterUsed = true; f.healT = 1.2;
+    popup(f.x, f.y - 320, "ЖИВАЯ ВОДА!", "#7fd8ff", 30);
+  }
+  if (f.healT > 0) {
+    f.healT -= dt;
+    if (!f.ko) f.hp = Math.min(100, f.hp + 12 * dt / 1.2);
+    if (Math.random() < dt * 30) F.particles.push({ type: "sq", x: f.x + rand(-40, 40), y: f.y - rand(20, 220), vx: 0, vy: rand(-160, -60),
+      life: 0.5, max: 0.5, size: pick([4, 6]), color: pick(["#7fd8ff", "#c8f0ff", "#3fa8e0"]) });
+  }
   f.invulnT = Math.max(0, (f.invulnT || 0) - dt);
   f.parryT = Math.max(0, (f.parryT || 0) - dt);
   f.parryCd = Math.max(0, (f.parryCd || 0) - dt);
@@ -1598,6 +1630,13 @@ function updateSpecial(f, opp, a) {
         last: i === 2,
       });
     });
+  } else if (f.cid === "husky") {
+    // throws Kanye in a high arc that lands on the opponent's head: crouching won't help, block standing or step away
+    const x0 = f.x + f.dir * 60, y0 = FLOOR_Y - 250, T = 0.8, g = 1700, yt = FLOOR_Y - 120;
+    const vx = clamp((opp.x - x0) / T, -950, 950);
+    F.projectiles.push({ kind: "kanye", phase: "fly", owner: f.slot, dir: f.dir, x: x0, y: y0,
+      vx: Math.abs(vx) < 200 ? f.dir * 200 : vx, vy: (yt - y0 - 0.5 * g * T * T) / T, g, rot: 0,
+      w: 150, h: 120, dmg: 14, life: 9, hit: false, height: "overhead", pierce: true, t: 0 });
   } else if (f.cid === "ramirez") {
     // a horde of wild monkeys storms out from behind him like a mosh pit — low, jump over them
     for (let i = 0; i < 4; i++) {
@@ -1971,7 +2010,7 @@ const SUPER_NAMES = {
   guf: "ХЛЕБНИ ЧАЯ!", noize: "MAKE SOME NOIZE", oxxxy: "РАУНД, С*КА", morgen: "АЛИШЕР ТАГИРОВИЧ",
   maybe: "БИЛЕТ В МЭЙБИЛЭНД!", kreed: "СЮДА, БЛИН", slava: "ПРИДИ И ОХЛАДИ МОЙ ПЫЛ", atl: "Я ТЕБЯ ОТПЕЛ",
   korzh: "МАЛЫЙ ПОВЗРОСЛЕЛ", face: "Я РОНЯЮ ЗАПАД", chip: "ЭТО МОЁ ГЭНГСТА!",
-  ramirez: "ДИКИЙ СЛЭМ!",
+  ramirez: "ДИКИЙ СЛЭМ!", husky: "ПУЛЯ-ДУРА",
 };
 
 function addSuper(f, v) {
@@ -2168,7 +2207,7 @@ const FINISHERS = {
   guf: "ЭТО ЦЕНТР!", noize: "ВЫДЫХАЙСЯ!", oxxxy: "ГОРГОРОД!", morgen: "ДОРОГО-БОГАТО!",
   maybe: "БЭЙБИ-КОМБО!", kreed: "ХОЛОСТЯК!", slava: "ГНОЙНЫЙ!", atl: "МАРАБУ!",
   korzh: "ЖИТЬ В КАЙФ!", face: "ЮМОРИСТ!", chip: "ГАНГСТА!",
-  ramirez: "ВЕРТУШКА!",
+  ramirez: "ВЕРТУШКА!", husky: "ПАНЕЛЬКА!",
 };
 
 function startDash(f, d) {
@@ -2540,11 +2579,37 @@ function projBox(p) {
   return { x0: p.x - p.w / 2, x1: p.x + p.w / 2, y0: p.y - p.h / 2, y1: p.y + p.h / 2 };
 }
 
+function updateKanye(p, dt) {
+  p.t += dt;
+  if (p.phase === "fly") {
+    p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += 7 * dt * Math.sign(p.vx || 1);
+    if (p.x < WALL_L - 40 || p.x > WALL_R + 40) { p.vx = -p.vx * 0.4; p.x = clamp(p.x, WALL_L - 40, WALL_R + 40); }
+    const target = F.fighters[1 - p.owner];
+    if (!p.hit && F.phase === "fight" && p.vy > 0 && overlap(projBox(p), hurtbox(target))) {
+      p.hit = true;
+      const res = applyHit(F.fighters[p.owner], target, { dmg: p.dmg, height: "overhead", hitstun: 0.8, blockstun: 0.26, knock: 360,
+        dir: Math.sign(p.vx) || p.dir, sfx: "hitHeavy", stop: 0.12, chip: 3, launch: -520, sparkX: target.x, sparkY: target.y - 200 });
+      if (res === "hit") popup(target.x, target.y - 320, "ПРИЗЕМЛИЛСЯ!", "#ff4a3a", 32);
+      p.vx = -p.vx * 0.35; p.vy = -380;          // bounces off the head
+    }
+    if (p.y >= FLOOR_Y - 35 && p.vy > 0) {
+      p.phase = "lie"; p.t = 0; p.y = FLOOR_Y; p.vx = 0; p.vy = 0;
+      F.shake = Math.max(F.shake, 7); spawnDust(p.x, FLOOR_Y, 1.4); playSfx("bodyfall");
+    }
+  } else if (p.phase === "lie") {
+    if (p.t > 0.9) { p.phase = "walk"; p.t = 0; p.walkDir = p.x < W / 2 ? -1 : 1; }
+  } else {
+    p.x += p.walkDir * 170 * dt;
+    if (p.x < -200 || p.x > W + 200) p.life = 0;
+  }
+}
+
 function updateProjectiles(dt) {
   for (const p of F.projectiles) {
     if (p.delay > 0) { p.delay -= dt; continue; }
     if (p.kind === "nuke") { updateNuke(p, dt); continue; }
     if (p.kind === "quake") { updateQuake(p, dt); continue; }
+    if (p.kind === "kanye") { updateKanye(p, dt); continue; }
     p.t = (p.t || 0) + dt;
     p.x += p.vx * dt;
     p.life -= dt;
@@ -2737,7 +2802,7 @@ function drawAmbient() {
 const BOT_STYLE = {
   korzh: { aggro: 1.35, dash: 0.6 }, morgen: { aggro: 1.25, dash: 2.2 }, oxxxy: { aggro: 1.2 }, noize: { aggro: 1.1 },
   maybe: { jump: 2.5 }, guf: { erratic: true }, slava: { dash: 1.8 }, face: { aggro: 1.1 },
-  atl: { keep: 190 }, chip: { keep: 280 }, kreed: {}, ramirez: { aggro: 1.3 },
+  atl: { keep: 190 }, chip: { keep: 280 }, kreed: {}, ramirez: { aggro: 1.3 }, husky: { aggro: 1.15, jump: 1.3 },
 };
 function updateBot(bot, opp, dt) {
   const c = bot.ctrl;
@@ -2787,6 +2852,10 @@ function updateBot(bot, opp, dt) {
     for (const p of F.projectiles) {
       if (p.owner === bot.slot) continue;
       if (p.kind === "burger") continue;   // handled every frame below
+      if (p.kind === "kanye") {
+        if (p.phase === "fly" && !p.hit && p.vy > -200 && Math.abs(bot.x - (p.x + p.vx * 0.3)) < 180 && Math.random() < d.block) { ai.holdBack = 0.6; ai.holdDown = 0; }
+        continue;
+      }
       if (p.kind === "quake") {
         const gap = Math.abs(bot.x - p.x) - p.t * p.speed;
         if (!p.hit && gap > 30 && gap < 190 && Math.random() < d.dodge) ai.jump = true;
@@ -3195,6 +3264,7 @@ function drawFighter(f) {
       else { rot = 0.18 * f.dir; oy += 6; }
     }
     if (am.airKick && am.drawn === false) rot = 0.35 * f.dir;
+    if (am.lift && at >= am.startup * 0.7) { const k = clamp((at - am.startup * 0.7) / (am.startup * 0.3 + am.active), 0, 1); oy -= am.lift * Math.sin(Math.min(1, k * 1.4) * Math.PI); }
     if (am.uppercut && at >= am.startup) { rot = -0.32 * f.dir; oy -= 22; }
     if (am.spin && at < am.startup * 0.8) drawDir = -f.dir;      // back turned before the heel strike
   }
@@ -3361,6 +3431,27 @@ function drawProjectiles() {
     }
     if (p.kind === "nuke") { drawNuke(p); continue; }
     if (p.kind === "quake") { drawQuake(p); continue; }
+    if (p.kind === "kanye") {
+      ctx.save();
+      if (p.phase === "fly") {
+        const im = img("fx.kanye_fly");
+        ctx.fillStyle = "rgba(0,0,0,0.25)";
+        ctx.beginPath(); ctx.ellipse(p.x, FLOOR_Y + 4, 70, 8, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.translate(p.x, p.y); if (p.vx < 0) ctx.scale(-1, 1); ctx.rotate(p.rot * (p.vx < 0 ? -1 : 1));
+        if (im) ctx.drawImage(im, -im.width / 2, -im.height / 2);
+      } else if (p.phase === "lie") {
+        const im = img("fx.kanye_lie");
+        ctx.translate(p.x, FLOOR_Y + 4); if (p.walkDir === 1 || p.x > W / 2) ctx.scale(-1, 1);
+        if (im) ctx.drawImage(im, -im.width / 2, -im.height);
+      } else {
+        const im = img("fx.kanye_walk");
+        ctx.translate(p.x, FLOOR_Y + 2 - Math.abs(Math.sin(p.t * 8)) * 4); if (p.walkDir < 0) ctx.scale(-1, 1);
+        ctx.rotate(Math.sin(p.t * 8) * 0.04);
+        if (im) ctx.drawImage(im, -im.width / 2, -im.height);
+      }
+      ctx.restore();
+      continue;
+    }
     if (p.kind === "monkey") {
       if (p.delay > 0) continue;
       const im = img("fx.monkey");
@@ -4315,6 +4406,7 @@ const ARCADE_ENDINGS = {
   face: "Фэйс всех уронил.",
   chip: "Чипинкос тупо лучший.",
   ramirez: "Грязный Рамирес превратил турнир в один большой слэм.",
+  husky: "Хаски вернулся на панельку чемпионом.",
 };
 const ARCADE_FIGHTS = 6;   // 5 opponents + the boss
 function arcadeDifficulty(i) { return i < 3 ? "easy" : "normal"; }
@@ -5177,7 +5269,7 @@ function checkCodes(code) {
 
 /* Evil twin */
 const TWIN_TINT = { color: "#2a0645", a: 0.5 };
-const ACCUSATIVE = { guf: "ГУФА", noize: "НОЙЗА", oxxxy: "ОКСИ", morgen: "МОРГЕНА", maybe: "МЭЙБИ БЭЙБИ", kreed: "ЕГОРА", slava: "СЛАВУ КПСС", atl: "ATL", korzh: "МАКСА КОРЖА", face: "FACE", chip: "ЧИПИНКОСА", ramirez: "ГРЯЗНОГО РАМИРЕСА" };
+const ACCUSATIVE = { guf: "ГУФА", noize: "НОЙЗА", oxxxy: "ОКСИ", morgen: "МОРГЕНА", maybe: "МЭЙБИ БЭЙБИ", kreed: "ЕГОРА", slava: "СЛАВУ КПСС", atl: "ATL", korzh: "МАКСА КОРЖА", face: "FACE", chip: "ЧИПИНКОСА", ramirez: "ГРЯЗНОГО РАМИРЕСА", husky: "ХАСКИ" };
 const FEMININE = new Set(["maybe"]);
 function twinData(cid) {
   const base = CHARS[cid];
