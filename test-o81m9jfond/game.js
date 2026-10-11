@@ -1638,16 +1638,13 @@ function updateSpecial(f, opp, a) {
       vx: Math.abs(vx) < 200 ? f.dir * 200 : vx, vy: (yt - y0 - 0.5 * g * T * T) / T, g, rot: 0,
       w: 150, h: 120, dmg: 14, life: 9, hit: false, height: "overhead", pierce: true, t: 0 });
   } else if (f.cid === "ramirez") {
-    // a horde of wild monkeys storms out from behind him like a mosh pit — low, jump over them
-    for (let i = 0; i < 4; i++) {
-      F.projectiles.push({
-        kind: "monkey", owner: f.slot, dir: f.dir, delay: i * 0.13 + rand(0, 0.04),
-        x: f.x - f.dir * (200 + i * 30), y: FLOOR_Y - 45,
-        vx: f.dir * rand(900, 1000), w: 90, h: 90, dmg: 4, life: 2.6, hit: false, height: "mid", pierce: true, t: 0,
-        ph: rand(0, 6.28), last: i === 3, shade: i % 2,
-      });
-    }
-    F.shake = Math.max(F.shake, 6);
+    // wall of death: two walls of monkeys run in from both edges, stare each other down, then crash together on the opponent.
+    // Only a well-timed jump saves you.
+    const ms = [];
+    for (const side of [-1, 1]) for (let k = 0; k < 3; k++) ms.push({ side, k, x: side < 0 ? -150 - k * 60 : W + 150 + k * 60, y: [0, -10, 8][k], sc: [1, 0.9, 1.06][k], ph: rand(0, 6.28), rot: 0, vx: 0, vy: 0 });
+    F.projectiles.push({ kind: "mosh", owner: f.slot, dir: f.dir, x: opp.x, y: FLOOR_Y, cx: opp.x, w: 1, h: 1, vx: 0,
+      life: 4.2, t: 0, hit: false, pierce: true, height: "unblockable", phase: "enter", ms, ticks: 0 });
+    F.shake = Math.max(F.shake, 5);
   } else if (f.cid === "kreed") {
     // Igor Sinyak flies in from behind Kreed at chest height: duck under him or get flattened
     F.projectiles.push({
@@ -2579,6 +2576,88 @@ function projBox(p) {
   return { x0: p.x - p.w / 2, x1: p.x + p.w / 2, y0: p.y - p.h / 2, y1: p.y + p.h / 2 };
 }
 
+const MOSH = { enter: 0.45, stare: 1.05, clash: 1.3, pile: 2.2 };
+function moshWall(p, side, k) {
+  const half = 340;
+  const edge = side < 0 ? Math.max(70, p.cx - half) : Math.min(W - 70, p.cx + half);
+  return edge + side * k * 58;
+}
+function updateMosh(p, dt) {
+  p.t += dt; p.life -= dt;
+  const target = F.fighters[1 - p.owner], att = F.fighters[p.owner];
+  if (p.t < MOSH.stare) p.cx = clamp(target.x, WALL_L, WALL_R);         // the walls follow you until they charge
+  if (p.t < MOSH.enter) {
+    for (const m of p.ms) { const goal = moshWall(p, m.side, m.k); m.x += (goal - m.x) * Math.min(1, dt * 9); }
+    if (Math.random() < dt * 20) spawnDust(rand(0, W), FLOOR_Y, 0.4);
+  } else if (p.t < MOSH.stare) {
+    if (p.phase !== "stare") { p.phase = "stare"; popup(p.cx, FLOOR_Y - 310, "СТЕНКА НА СТЕНКУ!", "#b4c94a", 34); playSfx("crowdReact"); }
+    for (const m of p.ms) m.x = moshWall(p, m.side, m.k) + Math.sin(p.t * 30 + m.ph) * 3;
+  } else if (p.t < MOSH.clash) {
+    p.phase = "charge";
+    const k = (p.t - MOSH.stare) / (MOSH.clash - MOSH.stare);
+    for (const m of p.ms) { const from = moshWall(p, m.side, m.k); m.x = from + (p.cx + m.side * (18 + m.k * 34) - from) * k * k; }
+    F.shake = Math.max(F.shake, 4);
+  } else if (p.phase !== "pile" && p.phase !== "scatter") {
+    p.phase = "pile"; p.pileT = 0;
+    F.shake = Math.max(F.shake, 18); F.flash = Math.max(F.flash, 0.12);
+    spawnDust(p.cx, FLOOR_Y, 2.2); playSfx("hitHeavy"); playSfx("crowdReact");
+    const grounded = target.y > FLOOR_Y - 55 && Math.abs(target.x - p.cx) < 150;
+    p.caught = grounded && !target.ko && F.phase === "fight";
+    if (!p.caught) popup(p.cx, FLOOR_Y - 310, "МИМО!", "#fff6c8", 30);
+    else popup(p.cx, FLOOR_Y - 310, "СЛЭМ!", "#b4c94a", 44);
+  }
+  if (p.phase === "pile") {
+    p.pileT += dt;
+    for (const m of p.ms) { m.x = p.cx + m.side * (14 + m.k * 26) + Math.sin(p.t * 26 + m.ph) * 22; m.rot = Math.sin(p.t * 19 + m.ph) * 0.5; m.y = -Math.abs(Math.sin(p.t * 17 + m.ph)) * 26; }
+    if (Math.random() < dt * 25) spawnDust(p.cx + rand(-120, 120), FLOOR_Y, 0.7);
+    if (p.caught) {
+      target.vx = 0; target.x = clamp(p.cx + Math.sin(p.t * 22) * 26, WALL_L, WALL_R);
+      const tick = Math.floor(p.pileT / 0.18);
+      if (tick < 5 && tick >= p.ticks) {
+        p.ticks = tick + 1;
+        const last = tick === 4, dir = tick % 2 ? 1 : -1;
+        applyHit(att, target, { dmg: last ? 6 : 3, height: "unblockable", hitstun: last ? 0.8 : 0.4, blockstun: 0, knock: last ? 420 : 0,
+          dir: last ? (att.x < target.x ? 1 : -1) : dir, sfx: last ? "hitHeavy" : "hitLight", stop: last ? 0.1 : 0.03, chip: 0, noScale: true,
+          launch: last ? -640 : 0, sparkX: target.x + rand(-40, 40), sparkY: target.y - rand(80, 200) });
+        if (last) { p.caught = false; p.pileT = 9; }
+      }
+    }
+    if (p.pileT > 0.95) {
+      p.phase = "scatter";
+      for (const m of p.ms) { m.vx = m.side * rand(500, 900) * (Math.random() < 0.3 ? -1 : 1); m.vy = rand(-900, -500); m.spin = rand(-12, 12); m.y = 0; }
+    }
+  }
+  if (p.phase === "scatter") {
+    for (const m of p.ms) { m.vy += 2000 * dt; m.x += m.vx * dt; m.y += m.vy * dt; m.rot += m.spin * dt; }
+    if (p.ms.every((m) => m.y > 300 || m.x < -200 || m.x > W + 200)) p.life = 0;
+  }
+}
+function drawMosh(p) {
+  const im = img("fx.monkey");
+  // strobe while the pile is going
+  if (p.phase === "pile" && Math.floor(p.t * 16) % 2 === 0) {
+    ctx.save(); ctx.globalAlpha = 0.1; ctx.fillStyle = Math.floor(p.t * 8) % 2 ? "#ffffff" : "#b4c94a"; ctx.fillRect(-100, -100, W + 200, H + 200); ctx.restore();
+  }
+  if (p.phase === "stare") {
+    const a = 0.35 + 0.25 * Math.sin(p.t * 20);
+    ctx.fillStyle = `rgba(180,201,74,${a})`;
+    ctx.beginPath(); ctx.ellipse(p.cx, FLOOR_Y + 4, 110, 12, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  for (const m of [...p.ms].sort((a, b) => a.y - b.y)) {
+    const run = p.phase === "enter" || p.phase === "charge";
+    const bob = run ? Math.abs(Math.sin(p.t * 15 + m.ph)) * 14 : p.phase === "stare" ? Math.abs(Math.sin(p.t * 9 + m.ph)) * 6 : 0;
+    if (p.phase !== "scatter") { ctx.fillStyle = "rgba(0,0,0,0.28)"; ctx.beginPath(); ctx.ellipse(m.x, FLOOR_Y + 4, 66 * m.sc, 8, 0, 0, Math.PI * 2); ctx.fill(); }
+    ctx.save();
+    ctx.translate(m.x, FLOOR_Y + 2 + m.y - bob);
+    const face = p.phase === "scatter" ? Math.sign(m.vx) || 1 : -m.side;   // face the middle
+    if (face < 0) ctx.scale(-1, 1);
+    ctx.rotate(m.rot * face + (run ? Math.sin(p.t * 15 + m.ph) * 0.06 : 0));
+    ctx.scale(m.sc, m.sc);
+    if (m.k === 1) ctx.filter = "brightness(0.8)";
+    if (im) ctx.drawImage(im, -im.width / 2, -im.height);
+    ctx.restore();
+  }
+}
 function updateKanye(p, dt) {
   p.t += dt;
   if (p.phase === "fly") {
@@ -2610,6 +2689,7 @@ function updateProjectiles(dt) {
     if (p.kind === "nuke") { updateNuke(p, dt); continue; }
     if (p.kind === "quake") { updateQuake(p, dt); continue; }
     if (p.kind === "kanye") { updateKanye(p, dt); continue; }
+    if (p.kind === "mosh") { updateMosh(p, dt); continue; }
     p.t = (p.t || 0) + dt;
     p.x += p.vx * dt;
     p.life -= dt;
@@ -2852,6 +2932,10 @@ function updateBot(bot, opp, dt) {
     for (const p of F.projectiles) {
       if (p.owner === bot.slot) continue;
       if (p.kind === "burger") continue;   // handled every frame below
+      if (p.kind === "mosh") {
+        if (p.t > MOSH.clash - 0.22 && p.t < MOSH.clash - 0.1 && !p.jumpRolled) { p.jumpRolled = true; if (Math.random() < d.dodge * 0.75) ai.jump = true; }
+        continue;
+      }
       if (p.kind === "kanye") {
         if (p.phase === "fly" && !p.hit && p.vy > -200 && Math.abs(bot.x - (p.x + p.vx * 0.3)) < 180 && Math.random() < d.block) { ai.holdBack = 0.6; ai.holdDown = 0; }
         continue;
@@ -3431,6 +3515,7 @@ function drawProjectiles() {
     }
     if (p.kind === "nuke") { drawNuke(p); continue; }
     if (p.kind === "quake") { drawQuake(p); continue; }
+    if (p.kind === "mosh") { drawMosh(p); continue; }
     if (p.kind === "kanye") {
       ctx.save();
       if (p.phase === "fly") {
