@@ -46,6 +46,23 @@ const store = {
 /* Data                                                                */
 /* ------------------------------------------------------------------ */
 const CHARS = {
+  babangida: {
+    id: "babangida", name: "БАБАНГИДА", special: "БУСИДО", color: "#c8c8b0",
+    speed: 270, power: 1.08, specialCd: 6.5, tough: 1.04, jump: 0.92, weight: 1.2, dash: 0.95,
+    stats: { "СКОРОСТЬ": 2, "СИЛА": 4, "ЗДОРОВЬЕ": 4 },
+    perk: "ФИШКА: слухи о его смерти преувеличены — раз за бой встаёт после нокаута",
+    blurb: "Гость из подполья.",
+    loseTitle: "СЛУХИ ПОДТВЕРДИЛИСЬ",
+    quotes: ["Я РЭП", "БУСИДО", "ПУТЬ ВОИНА", "СЛУХИ ПРЕУВЕЛИЧЕНЫ"],
+    moves: {
+      // heavy straight right: long wind-up, whole body weight behind it
+      light: { frame: "light", startup: 0.11, active: 0.09, recovery: 0.22, dmg: 8, reach: 122,
+        y0: -225, y1: -165, hitstun: 0.42, blockstun: 0.18, knock: 300, height: "high", sfx: "hitHeavy", stop: 0.09 },
+      // muay thai knee in the clinch: short range, lifts the opponent
+      heavy: { frame: "heavy", startup: 0.14, active: 0.1, recovery: 0.3, dmg: 10, reach: 92, lunge: 160,
+        y0: -190, y1: -110, hitstun: 0.5, blockstun: 0.22, knock: 260, height: "mid", sfx: "hitBody", stop: 0.1, launch: -380 },
+    },
+  },
   husky: {
     id: "husky", name: "ХАСКИ", special: "КАНЬЕ", color: "#9fb8d8",
     speed: 310, power: 1.04, specialCd: 6.0, tough: 1.03, jump: 1.05, weight: 0.95, dash: 1.05,
@@ -259,7 +276,8 @@ const BASE_IDS = ["guf", "noize", "oxxxy", "morgen", "maybe", "kreed", "slava", 
 // Chipinkos is the arcade boss; he joins the roster once he has been beaten in the arcade
 const CHAR_IDS = [...BASE_IDS];
 function chipUnlocked() { return CHAR_IDS.includes("chip"); }
-const CLOSE_SPECIAL = new Set(["oxxxy", "maybe"]); // specials that hit at mid range, not projectiles
+function babUnlocked() { return CHAR_IDS.includes("babangida"); }
+const CLOSE_SPECIAL = new Set(["oxxxy", "maybe", "babangida"]); // specials that hit at mid range, not projectiles
 
 const STAGES = {
   moscow: { id: "moscow", name: "ГОРОД ДОРОГ", ambient: "snow" },
@@ -316,6 +334,7 @@ const SPECIALS = {
   chip: { startup: 0.25, total: 1.3, sfx: "special_chip" },
   ramirez: { startup: 0.35, total: 0.85, sfx: "special_slava" },
   husky: { startup: 0.32, total: 0.75, sfx: "throw" },
+  babangida: { startup: 0.45, total: 1.25, sfx: "whooshHeavy" },
   maybe: { startup: 0.21, active: 0.14, total: 0.7, sfx: "special_maybe" },
 };
 
@@ -373,6 +392,7 @@ const ASSET_PATHS = {
   "portrait.chip": "assets/portraits/chip_portrait.png",
   "portrait.ramirez": "assets/portraits/ramirez_portrait.png",
   "portrait.husky": "assets/portraits/husky_portrait.png",
+  "portrait.babangida": "assets/portraits/babangida_portrait.png",
   "fx.burger": "assets/effects/burger.png",
   "fx.nuke": "assets/effects/nuke_bomb.png",
   "portrait.kreed": "assets/portraits/kreed_portrait.png",
@@ -628,7 +648,7 @@ const AMB_VOL = { bar: 0.32, yard: 0.6, circus: 0.38, concert: 0.2, londograd: 0
 const REACT = { bar: "crowdReact", yard: "react_yard", circus: "react_circus", concert: "react_concert", fountains: "react_fountains" };
 const REACT_CD = { bar: 4, yard: 14, circus: 16, concert: 6, fountains: 6 };   // seconds between crowd reactions
 // Fighter voices (grunts): voice set per fighter; only sets with files are used
-const VOICE = { guf: "a", korzh: "a", atl: "a", chip: "a", noize: "b", oxxxy: "b", face: "b", kreed: "v", slava: "v", morgen: "v", maybe: "g", ramirez: "a", husky: "b" };
+const VOICE = { guf: "a", korzh: "a", atl: "a", chip: "a", noize: "b", oxxxy: "b", face: "b", kreed: "v", slava: "v", morgen: "v", maybe: "g", ramirez: "a", husky: "b", babangida: "a" };
 // a voice set without one of the sounds borrows it: v has no hurt (→ b), g has no attack shout (→ her gasp)
 const VOICE_FALLBACK = { voice_v_hurt: "voice_b_hurt", voice_g_hurt: "none", voice_g_ko: "none" };
 function voice(f, what, chance = 1) {
@@ -1286,6 +1306,10 @@ function updateFighter(f, opp, dt) {
     f.waterUsed = true; f.healT = 1.2;
     popup(f.x, f.y - 320, "ЖИВАЯ ВОДА!", "#7fd8ff", 30);
   }
+  if (f.fakeT > 0) {
+    f.fakeT -= dt; f.invulnT = Math.max(f.invulnT || 0, 0.1);
+    if (f.fakeT <= 0) { f.hp = 18; popup(f.x, f.y - 320, "СЛУХИ ПРЕУВЕЛИЧЕНЫ!", "#c8c8b0", 30); }
+  }
   if (f.healT > 0) {
     f.healT -= dt;
     if (!f.ko) f.hp = Math.min(100, f.hp + 12 * dt / 1.2);
@@ -1573,6 +1597,27 @@ function updateSpecial(f, opp, a) {
     }
     return;
   }
+  if (f.cid === "babangida") {
+    // Bushido: iai stance (screen darkens), a flash, he is already behind the opponent; a beat later the cut lands
+    if (!a.dashed && a.t >= sp.startup) {
+      a.dashed = true;
+      const fromX = f.x;
+      const inRange = Math.abs(opp.x - f.x) < 640 && (opp.x - f.x) * f.dir > -30 && !opp.ko;
+      f.x = inRange ? clamp(opp.x + f.dir * 150, WALL_L, WALL_R) : clamp(f.x + f.dir * 420, WALL_L, WALL_R);
+      for (let i = 0; i < 26; i++) { const k = i / 25; F.particles.push({ type: "sq", x: fromX + (f.x - fromX) * k, y: f.y - rand(120, 200), vx: 0, vy: 0, life: 0.35, max: 0.35, size: pick([3, 4, 6]), color: pick(["#ffffff", "#ff3a3a", "#ffd0d0"]) }); }
+      F.flash = Math.max(F.flash, 0.1); playSfx("whoosh");
+      a.cut = inRange && opp.onGround ? a.t + 0.4 : null;     // a jump at the right moment dodges it
+      if (inRange && !a.cut) popup(opp.x, opp.y - 330, "МИМО!", "#fff6c8", 28);
+    }
+    if (a.cut && a.t >= a.cut) {
+      a.cut = null;
+      const res = applyHit(f, opp, { dmg: 18, height: "mid", hitstun: 0.85, blockstun: 0.3, knock: 320, dir: Math.sign(opp.x - f.x) || -f.dir,
+        sfx: "hitCrit", stop: 0.18, chip: 4, noScale: true, launch: -620, sparkX: opp.x, sparkY: opp.y - 150 });
+      F.projectiles.push({ kind: "cut", owner: f.slot, x: opp.x, y: opp.y - 150, w: 1, h: 1, vx: 0, t: 0, life: 0.6, hit: true, pierce: true });
+      if (res === "hit") { popup(opp.x, opp.y - 330, "БУСИДО", "#ff3a3a", 40); F.shake = Math.max(F.shake, 12); }
+    }
+    return;
+  }
   if (f.cid === "oxxxy") {
     if (a.t >= sp.startup && a.t < sp.startup + sp.active && !a.hitDone) {
       const near = f.x + f.dir * 70;
@@ -1679,6 +1724,17 @@ function warnTime(f) {
   return f.action && f.action.type === "special" && (f.cid === "morgen" || f.cid === "kreed") && !f.action.spawned && !G.cheats.tea;
 }
 
+// Babangida's perk: the news of his death was fake — once per match he gets back up after a KO
+function fakeDeath(f) {
+  if (f.cid !== "babangida") return false;
+  F.fakeUsed = F.fakeUsed || {};
+  if (F.fakeUsed[f.slot]) return false;
+  F.fakeUsed[f.slot] = true;
+  f.hp = 1; f.fakeT = 1.9;
+  F.ticker = { text: "БАБАНГИДА УМЕР  •  ПРОДЮСЕР ОПРОВЕРГАЕТ  •  БАБАНГИДА УМЕР", t: 0 };
+  return true;
+}
+
 function applyHit(att, def, h) {
   if (def.ko) return "miss";
   if (def.invulnT > 0) return "miss";
@@ -1762,6 +1818,7 @@ function applyHit(att, def, h) {
   if (att.cid === "ramirez" && h.melee && G.time - (att.hurtAt ?? -9) < 1.6) { perk *= 1.25; popup(def.x, def.y - 320, "ЗВЕРЕЕТ!", "#b4c94a", 24); att.hurtAt = -9; }
   let dmg = Math.max(1, Math.round(h.dmg * DMG_SCALE * att.data.power * scale * perk * (counter ? 1.25 : 1) / (def.data.tough || 1)));
   def.hp = Math.max(0, def.hp - dmg);
+  if (def.hp <= 0 && fakeDeath(def)) h = { ...h, knockdown: true };
   def.hurtAt = G.time;
   def.trailDelay = 0.45;
   def.hitstun = h.hitstun;
@@ -2007,7 +2064,7 @@ const SUPER_NAMES = {
   guf: "ХЛЕБНИ ЧАЯ!", noize: "MAKE SOME NOIZE", oxxxy: "РАУНД, С*КА", morgen: "АЛИШЕР ТАГИРОВИЧ",
   maybe: "БИЛЕТ В МЭЙБИЛЭНД!", kreed: "СЮДА, БЛИН", slava: "ПРИДИ И ОХЛАДИ МОЙ ПЫЛ", atl: "Я ТЕБЯ ОТПЕЛ",
   korzh: "МАЛЫЙ ПОВЗРОСЛЕЛ", face: "Я РОНЯЮ ЗАПАД", chip: "ЭТО МОЁ ГЭНГСТА!",
-  ramirez: "ДИКИЙ СЛЭМ!", husky: "ПУЛЯ-ДУРА",
+  ramirez: "ДИКИЙ СЛЭМ!", husky: "ПУЛЯ-ДУРА", babangida: "ТЕНЬ",
 };
 
 function addSuper(f, v) {
@@ -2204,7 +2261,7 @@ const FINISHERS = {
   guf: "ЭТО ЦЕНТР!", noize: "ВЫДЫХАЙСЯ!", oxxxy: "ГОРГОРОД!", morgen: "ДОРОГО-БОГАТО!",
   maybe: "БЭЙБИ-КОМБО!", kreed: "ХОЛОСТЯК!", slava: "ГНОЙНЫЙ!", atl: "МАРАБУ!",
   korzh: "ЖИТЬ В КАЙФ!", face: "ЮМОРИСТ!", chip: "ГАНГСТА!",
-  ramirez: "ВЕРТУШКА!", husky: "ПАНЕЛЬКА!",
+  ramirez: "ВЕРТУШКА!", husky: "ПАНЕЛЬКА!", babangida: "ПУТЬ ВОИНА!",
 };
 
 function startDash(f, d) {
@@ -2262,6 +2319,7 @@ function updatePull(f, dt) {
     f.hitstun = 0.5;
     const dmg = 8;
     f.hp = Math.max(0, f.hp - dmg);
+    if (f.hp <= 0) fakeDeath(f);
     f.flash = 0.1;
     popup(f.x, f.y - 240, `-${dmg}`, "#ffef7a", 30);
     spawnDust(f.x, FLOOR_Y, 1.6);
@@ -2690,6 +2748,7 @@ function updateProjectiles(dt) {
     if (p.kind === "quake") { updateQuake(p, dt); continue; }
     if (p.kind === "kanye") { updateKanye(p, dt); continue; }
     if (p.kind === "mosh") { updateMosh(p, dt); continue; }
+    if (p.kind === "cut") { p.t += dt; p.life -= dt; continue; }
     p.t = (p.t || 0) + dt;
     p.x += p.vx * dt;
     p.life -= dt;
@@ -2882,7 +2941,7 @@ function drawAmbient() {
 const BOT_STYLE = {
   korzh: { aggro: 1.35, dash: 0.6 }, morgen: { aggro: 1.25, dash: 2.2 }, oxxxy: { aggro: 1.2 }, noize: { aggro: 1.1 },
   maybe: { jump: 2.5 }, guf: { erratic: true }, slava: { dash: 1.8 }, face: { aggro: 1.1 },
-  atl: { keep: 190 }, chip: { keep: 280 }, kreed: {}, ramirez: { aggro: 1.3 }, husky: { aggro: 1.15, jump: 1.3 },
+  atl: { keep: 190 }, chip: { keep: 280 }, kreed: {}, ramirez: { aggro: 1.3 }, husky: { aggro: 1.15, jump: 1.3 }, babangida: { aggro: 1.2 },
 };
 function updateBot(bot, opp, dt) {
   const c = bot.ctrl;
@@ -3255,7 +3314,7 @@ function poseName(f) {
   }
   if (f.hitstun > 0) return (!f.onGround && (f.hurtK || 0) >= 0.9 && hasPose(f.cid, "fall")) ? "fall" : "hurt";
   if (f.action) {
-    if (f.action.type === "special") return "special";
+    if (f.action.type === "special") return f.cid === "babangida" && f.action.dashed && hasPose(f.cid, "slash") ? "slash" : "special";
     // wind-up frame during the first part of a grounded light / heavy
     const a = f.action, mv = a.move;
     if ((a.type === "light" || a.type === "heavy") && !a.air && !mv.sweep && !mv.noWindup && a.t < mv.startup * 0.9 &&
@@ -3461,6 +3520,23 @@ function drawFighter(f) {
 }
 
 function drawProjectiles() {
+  for (const f of F.fighters) {
+    const a = f.action;
+    if (f.cid === "babangida" && a && a.type === "special" && !a.dashed) {
+      ctx.save(); ctx.globalAlpha = 0.45 * Math.min(1, a.t / 0.3); ctx.fillStyle = "#05030a"; ctx.fillRect(-100, -100, W + 200, H + 200); ctx.restore();
+      drawFighter(f);   // he stays lit
+    }
+  }
+  if (F.ticker && F.ticker.t < 4) {
+    F.ticker.t += 1 / 60;
+    const y = H - 120;
+    ctx.fillStyle = "rgba(160,0,0,0.9)"; ctx.fillRect(0, y, W, 44);
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, y, 150, 44);
+    text("СРОЧНО", 75, y + 24, { size: 22, align: "center", color: "#a00000" });
+    ctx.save(); ctx.beginPath(); ctx.rect(150, y, W - 150, 44); ctx.clip();
+    text(F.ticker.text, W + 40 - F.ticker.t * 420, y + 24, { size: 24, color: "#fff", stroke: "#000", strokeW: 3 });
+    ctx.restore();
+  }
   for (const p of F.projectiles) {
     if (p.kind === "cadillac") {
       const car = img("fx.cadillac");
@@ -3516,6 +3592,15 @@ function drawProjectiles() {
     if (p.kind === "nuke") { drawNuke(p); continue; }
     if (p.kind === "quake") { drawQuake(p); continue; }
     if (p.kind === "mosh") { drawMosh(p); continue; }
+    if (p.kind === "cut") {
+      const k = p.t / 0.6, len = 260 * Math.min(1, p.t / 0.08);
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(-0.35);
+      ctx.globalAlpha = 1 - k;
+      ctx.fillStyle = "#ff2a2a"; ctx.fillRect(-len / 2, -5, len, 10);
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(-len / 2, -2, len, 4);
+      ctx.restore();
+      continue;
+    }
     if (p.kind === "kanye") {
       ctx.save();
       if (p.phase === "fly") {
@@ -4475,6 +4560,8 @@ function drawTutorial() {
 // Texts are drafts awaiting approval (see the texts doc)
 const ARCADE_TEXT = {
   bossVs: "ФИНАЛЬНЫЙ БОСС",
+  secretVs: "ГОСТЬ ИЗ ПОДПОЛЬЯ",
+  secretUnlocked: "ОТКРЫТ СЕКРЕТНЫЙ БОЕЦ: БАБАНГИДА!",
   unlocked: "ОТКРЫТ НОВЫЙ БОЕЦ: ЧИПИНКОС!",
   champion: "ЧЕМПИОН!",
 };
@@ -4492,6 +4579,7 @@ const ARCADE_ENDINGS = {
   chip: "Чипинкос тупо лучший.",
   ramirez: "Грязный Рамирес превратил турнир в один большой слэм.",
   husky: "Хаски вернулся на панельку чемпионом.",
+  babangida: "Бабангида снова исчез. Говорят, он и не появлялся.",
 };
 const ARCADE_FIGHTS = 6;   // 5 opponents + the boss
 function arcadeDifficulty(i) { return i < 3 ? "easy" : "normal"; }
@@ -4514,6 +4602,7 @@ function arcadeFight() {
   G.chars = [A.cid, step.cid];
   G.twin = !!step.boss && A.cid === step.cid;      // playing as Chipinkos: the boss is his evil twin
   G.arcadeBoss = !!step.boss;
+  G.arcadeSecret = !!step.secret;
   G.stage = step.stage;
   G.difficulty = step.boss ? "normal" : arcadeDifficulty(A.idx);
   startVs();
@@ -4524,7 +4613,15 @@ function arcadeEndItems() {
   const won = F && F.matchWinner === 0;
   const last = A.idx >= A.ladder.length - 1;
   const toMenu = ["МЕНЮ", () => { confirmSfx(); G.difficulty = A.prevDiff; G.arcade = null; G.arcadeBoss = false; setScreen("mode"); }];
-  if (won && last) return [["ФИНАЛ", () => { confirmSfx(); G.arcadeBoss = false;
+  if (A.checkedIdx !== A.idx && F) { A.checkedIdx = A.idx; if (F.wins[1] > 0) A.flawless = false; }
+  // a flawless run (no round lost) summons the secret boss after Chipinkos
+  if (won && last && A.flawless !== false && !A.secretAdded && A.cid !== "babangida" && !babUnlocked()) {
+    return [["???", () => { confirmSfx(); G.arcadeBoss = false;
+      if (!chipUnlocked()) { CHAR_IDS.splice(CHAR_IDS.indexOf("babangida") >= 0 ? CHAR_IDS.indexOf("babangida") : CHAR_IDS.length, 0, "chip"); store.set("chip_unlocked", true); A.newUnlock = true; }
+      A.secretAdded = true; A.ladder.push({ cid: "babangida", stage: "yard", boss: true, secret: true }); A.idx++; A.wins++; setScreen("ladder"); }], toMenu];
+  }
+  if (won && last) return [["ФИНАЛ", () => {
+    if (A.ladder[A.idx].secret && !babUnlocked()) { CHAR_IDS.push("babangida"); store.set("bab_unlocked", true); A.newBab = true; } confirmSfx(); G.arcadeBoss = false;
     if (!chipUnlocked()) { CHAR_IDS.push("chip"); store.set("chip_unlocked", true); A.newUnlock = true; } G.difficulty = A.prevDiff; G.arcadeEndT = G.time; unlockSecret("champion"); setScreen("arcadeEnd"); }], toMenu];
   if (won) return [["СЛЕДУЮЩИЙ БОЙ", () => { confirmSfx(); A.idx++; A.wins++; G.arcadeBoss = false; setScreen("ladder"); }], ["СОХРАНИТЬ", shareResult], toMenu];
   return [["ЕЩЁ РАЗ", () => { A.retries++; arcadeFight(); }], toMenu];
@@ -4558,7 +4655,7 @@ function drawLadder() {
     if (cur) { ctx.shadowColor = GOLD; ctx.shadowBlur = 18 + Math.sin(G.time * 6) * 6; }
     ctx.strokeRect(x + 1.5, y + 1.5, tile - 3, tile - 3);
     ctx.restore();
-    const label = st.boss ? "БОСС" : String(i + 1);
+    const label = st.secret ? "???" : st.boss ? "БОСС" : String(i + 1);
     text(label, x + tile / 2, y + tile + 22, { size: st.boss ? 16 : 14, font: FONT_PIX, align: "center", color: st.boss ? "#ff5a3d" : cur ? GOLD : "#9d97c9" });
     if (i < n - 1) { ctx.fillStyle = "rgba(255,213,74,0.4)"; ctx.fillRect(x + tile + 4, y + tile / 2 - 2, gap - 8, 4); }
   });
@@ -4597,10 +4694,10 @@ function drawArcadeEnd() {
   text(CHARS[cid].name, 860, 240, { size: 40, align: "center", color: CHARS[cid].color, stroke: "#000", strokeW: 6 });
   wrapText(ARCADE_ENDINGS[cid] || "", 860, 320, 640, 34, { size: 26, align: "center", color: "#fff6c8", stroke: "#000", strokeW: 4 });
   text(`ПЕРЕИГРОВОК: ${A ? A.retries : 0}`, 860, 470, { size: 14, font: FONT_PIX, align: "center", color: "#c9c2ff" });
-  if (A && A.newUnlock) {
+  if (A && (A.newUnlock || A.newBab)) {
     const k = 1 + 0.05 * Math.sin(G.time * 6);
     ctx.save(); ctx.translate(860, 548); ctx.scale(k, k);
-    text(ARCADE_TEXT.unlocked, 0, 0, { size: 30, align: "center", gradient: ["#fff6c8", "#ff9a3d", "#ff5a3d"], stroke: "#1a0830", strokeW: 6 });
+    text(A.newBab ? ARCADE_TEXT.secretUnlocked : ARCADE_TEXT.unlocked, 0, 0, { size: 30, align: "center", gradient: ["#fff6c8", "#ff9a3d", "#ff5a3d"], stroke: "#1a0830", strokeW: 6 });
     ctx.restore();
   }
   if (A && A.retries === 0) text("БЕЗ ЕДИНОГО ПОРАЖЕНИЯ!", 860, 505, { size: 22, align: "center", color: "#8dff7a", stroke: "#000", strokeW: 4 });
@@ -5041,7 +5138,8 @@ function startVs() {
   const [c0, c1] = G.chars;
   const key = [c0, c1].sort().join();
   let line, by = null;
-  if (G.arcadeBoss) line = ARCADE_TEXT.bossVs;
+  if (G.arcade && G.arcadeSecret) line = ARCADE_TEXT.secretVs;
+  else if (G.arcadeBoss) line = ARCADE_TEXT.bossVs;
   else if (c0 === c1) line = G.twin ? "ЗЛОЙ ДВОЙНИК ВЫХОДИТ НА СЦЕНУ" : "КТО ИЗ ВАС ТРУШНЫЙ?";
   else line = pick(VS_LINES);   // only impersonal lines here — no quotes of real artists
   G.vs = { t0: G.time, line, by, slam: false };
@@ -5293,6 +5391,7 @@ function checkMatchSecrets() {
   }
 }
 if (store.get("chip_unlocked", false) && !CHAR_IDS.includes("chip")) CHAR_IDS.push("chip");
+if ((store.get("bab_unlocked", false) || /[?&]unlock/.test(location.search)) && !CHAR_IDS.includes("babangida")) CHAR_IDS.push("babangida");
 const secrets = new Set(store.get("secrets", []).filter((id) => SECRETS.some((s) => s.id === id)));
 G.cheats = { madness: false, tea: false };
 G.banner = null;
@@ -5354,7 +5453,7 @@ function checkCodes(code) {
 
 /* Evil twin */
 const TWIN_TINT = { color: "#2a0645", a: 0.5 };
-const ACCUSATIVE = { guf: "ГУФА", noize: "НОЙЗА", oxxxy: "ОКСИ", morgen: "МОРГЕНА", maybe: "МЭЙБИ БЭЙБИ", kreed: "ЕГОРА", slava: "СЛАВУ КПСС", atl: "ATL", korzh: "МАКСА КОРЖА", face: "FACE", chip: "ЧИПИНКОСА", ramirez: "ГРЯЗНОГО РАМИРЕСА", husky: "ХАСКИ" };
+const ACCUSATIVE = { guf: "ГУФА", noize: "НОЙЗА", oxxxy: "ОКСИ", morgen: "МОРГЕНА", maybe: "МЭЙБИ БЭЙБИ", kreed: "ЕГОРА", slava: "СЛАВУ КПСС", atl: "ATL", korzh: "МАКСА КОРЖА", face: "FACE", chip: "ЧИПИНКОСА", ramirez: "ГРЯЗНОГО РАМИРЕСА", husky: "ХАСКИ", babangida: "БАБАНГИДУ" };
 const FEMININE = new Set(["maybe"]);
 function twinData(cid) {
   const base = CHARS[cid];
