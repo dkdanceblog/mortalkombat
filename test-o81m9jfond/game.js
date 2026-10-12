@@ -65,19 +65,19 @@ const CHARS = {
   },
   husky: {
     id: "husky", name: "ХАСКИ", special: "КАНЬЕ", color: "#9fb8d8",
-    speed: 310, power: 1.04, specialCd: 6.0, tough: 1.03, jump: 1.05, weight: 0.95, dash: 1.05,
+    speed: 310, power: 1.0, specialCd: 6.0, tough: 1.0, jump: 1.05, weight: 0.95, dash: 1.05,
     stats: { "СКОРОСТЬ": 3, "СИЛА": 3, "ЗДОРОВЬЕ": 3 },
     perk: "ФИШКА: раз в раунд на последнем издыхании пьёт живую воду",
     blurb: "Поэт с панельки.",
     loseTitle: "ХАСКИ СКУЛИТ",
     quotes: ["ЛОВИ КАНЬЕ!", "ПАНЕЛЬКА ВСЁ ПОМНИТ", "Я ИЗ ПАНЕЛЬКИ", "ЖИВАЯ ВОДА!"],
     moves: {
-      // street headbutt: lunges with the shaved forehead
-      light: { frame: "light", startup: 0.09, active: 0.08, recovery: 0.2, dmg: 7, reach: 104, lunge: 200,
-        y0: -235, y1: -165, hitstun: 0.4, blockstun: 0.16, knock: 230, height: "high", sfx: "hitHeavy", stop: 0.08 },
-      // dropkick: both feet, body horizontal — big knockback, but he lands on his back (long recovery)
-      heavy: { frame: "heavy", startup: 0.2, active: 0.12, recovery: 0.34, dmg: 11, reach: 150, lunge: 560, lift: 70,
-        y0: -190, y1: -95, hitstun: 0.5, blockstun: 0.24, knock: 620, height: "high", sfx: "hitKick", stop: 0.1, wall: true },
+      // straight right: quick and clean
+      light: { frame: "light", startup: 0.07, active: 0.08, recovery: 0.17, dmg: 6, reach: 112,
+        y0: -215, y1: -160, hitstun: 0.34, blockstun: 0.15, knock: 190, height: "high", sfx: "hitLight", stop: 0.06 },
+      // side kick to the body
+      heavy: { frame: "heavy", startup: 0.14, active: 0.1, recovery: 0.27, dmg: 9, reach: 138, lunge: 60,
+        y0: -175, y1: -105, hitstun: 0.45, blockstun: 0.2, knock: 380, height: "mid", sfx: "hitKick", stop: 0.08 },
     },
   },
   ramirez: {
@@ -87,14 +87,14 @@ const CHARS = {
     perk: "ФИШКА: пропустил удар — звереет и бьёт сильнее",
     blurb: "Король слэма.",
     loseTitle: "РАМИРЕС ОТМЫЛСЯ",
-    quotes: ["В СЛЭМ!", "ОБЕЗЬЯНЫ, ФАС!", "ГРЯЗЬ НЕ СМЫВАЕТСЯ", "КРУТИ ВЕРТУШКУ!"],
+    quotes: ["В СЛЭМ!", "ОБЕЗЬЯНЫ, ФАС!", "ГРЯЗЬ НЕ СМЫВАЕТСЯ", "СТЕНКА НА СТЕНКУ!"],
     moves: {
       // windmill (hardcore dancing): the arm swings a full circle and comes down from above — reaches crouchers
       light: { frame: "light", startup: 0.1, active: 0.1, recovery: 0.2, dmg: 7, reach: 118,
         y0: -240, y1: -100, hitstun: 0.36, blockstun: 0.16, knock: 200, height: "mid", sfx: "hitLight", stop: 0.07 },
-      // hurricane: mid-air spin kick, two hits while he drills forward
-      heavy: { frame: "heavy", startup: 0.16, active: 0.18, recovery: 0.32, dmg: 5, hits: 2, reach: 130, lunge: 300,
-        y0: -215, y1: -115, hitstun: 0.45, blockstun: 0.2, knock: 150, height: "high", sfx: "hitHeavy", stop: 0.07 },
+      // front push kick: shoves the opponent away
+      heavy: { frame: "heavy", startup: 0.15, active: 0.1, recovery: 0.3, dmg: 10, reach: 136,
+        y0: -170, y1: -100, hitstun: 0.45, blockstun: 0.22, knock: 520, height: "mid", sfx: "hitKick", stop: 0.09 },
     },
   },
   guf: {
