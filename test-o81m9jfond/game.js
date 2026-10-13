@@ -411,6 +411,8 @@ const ASSET_PATHS = {
   "fx.monkey": "assets/effects/monkey_run.png",
   "fx.kanye_fly": "assets/effects/kanye_fly.png",
   "fx.echpochmak": "assets/effects/echpochmak.png",
+  "fx.pigeon_1": "assets/effects/pigeon_1.png",
+  "fx.pigeon_2": "assets/effects/pigeon_2.png",
   "fx.kanye_lie": "assets/effects/kanye_lie.png",
   "fx.kanye_walk": "assets/effects/kanye_walk.png",
   "fx.sinyak": "assets/effects/sinyak_projectile.png",
