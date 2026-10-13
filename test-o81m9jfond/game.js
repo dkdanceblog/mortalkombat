@@ -1290,7 +1290,7 @@ function startAttack(f, type) {
   const fwd = f.dir === 1 ? f.ctrl.held.right : f.ctrl.held.left;
   if (type === "heavy" && f.onGround && f.ctrl.held.down) mv = SWEEP;
   else if (type === "light" && f.onGround && f.ctrl.held.down) mv = CMD_MOVES.crouchLight;
-  else if (type === "heavy" && f.onGround && fwd) mv = CMD_MOVES.overhead;
+  // (forward + kick used to be an overhead strike — removed: it hijacked every kick while walking in)
   else if (type === "light" && f.launchReady) mv = CMD_MOVES.launcher;
   else if (type === "heavy" && !f.onGround) mv = CMD_MOVES.airKick;
   f.launchReady = false;
@@ -3149,7 +3149,6 @@ function updateBot(bot, opp, dt) {
     c.pressed[ai.wantAttack] = true;
     const roll = Math.random();
     if (ai.wantAttack === "heavy" && roll < 0.22) c.held.down = true;                         // low sweep
-    else if (ai.wantAttack === "heavy" && roll < 0.4 && opp.crouch) c.held[towards] = true;    // overhead vs a croucher
     else if (ai.wantAttack === "light" && roll < 0.2) c.held.down = true;                     // crouching jab
     if (ai.wantAttack === "light" && Math.random() < d.combo) ai.plan = "chain";
     ai.wantAttack = null;
