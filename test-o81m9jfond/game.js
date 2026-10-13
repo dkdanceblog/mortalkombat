@@ -46,6 +46,21 @@ const store = {
 /* Data                                                                */
 /* ------------------------------------------------------------------ */
 const CHARS = {
+  tito: {
+    id: "tito", name: "БОГДАН ТИТОМИР", short: "ТИТОМИР", special: "ДЕЛАЙ КАК Я", color: "#e8c050",
+    speed: 305, power: 1.03, specialCd: 5.5, tough: 1.0, jump: 1.05, weight: 0.95, dash: 1.05,
+    stats: { "СКОРОСТЬ": 3, "СИЛА": 3, "ЗДОРОВЬЕ": 3 },
+    perk: "ФИШКА: высокая энергия — после попадания двойника бьёт сильнее",
+    blurb: "Звезда девяностых.",
+    loseTitle: "ТИТОМИР УСТАЛ",
+    quotes: ["ДЕЛАЙ КАК Я!", "ВЫСОКАЯ ЭНЕРГИЯ!", "ЕРУНДА!", "ЭТО ДЕВЯНОСТЫЕ, ДЕТКА"],
+    moves: {
+      light: { frame: "light", startup: 0.07, active: 0.08, recovery: 0.17, dmg: 6, reach: 118,
+        y0: -215, y1: -160, hitstun: 0.34, blockstun: 0.15, knock: 190, height: "high", sfx: "hitLight", stop: 0.06 },
+      heavy: { frame: "heavy", startup: 0.14, active: 0.1, recovery: 0.27, dmg: 9, reach: 142, lunge: 50,
+        y0: -190, y1: -120, hitstun: 0.45, blockstun: 0.2, knock: 360, height: "mid", sfx: "hitKick", stop: 0.08 },
+    },
+  },
   krip: {
     id: "krip", name: "КРИП-А-КРИП", special: "ГЛЕБЗИЛЛА", color: "#c0c4c8",
     speed: 290, power: 1.04, specialCd: 6.5, tough: 1.04, jump: 0.95, weight: 1.1, dash: 1.0,
@@ -319,7 +334,7 @@ for (const d of Object.values(CHARS)) {
     "ЗДОРОВЬЕ": st(3 + ((d.tough || 1) - 1) / 0.04),
   };
 }
-const BASE_IDS = ["guf", "noize", "oxxxy", "morgen", "maybe", "kreed", "slava", "atl", "korzh", "face", "ramirez", "husky", "sqwoz", "shilo", "krip"];
+const BASE_IDS = ["guf", "noize", "oxxxy", "morgen", "maybe", "kreed", "slava", "atl", "korzh", "face", "ramirez", "husky", "sqwoz", "shilo", "krip", "tito"];
 // Chipinkos is the arcade boss; he joins the roster once he has been beaten in the arcade
 const CHAR_IDS = [...BASE_IDS];
 function chipUnlocked() { return CHAR_IDS.includes("chip"); }
@@ -385,6 +400,7 @@ const SPECIALS = {
   sqwoz: { startup: 0.42, total: 0.8, sfx: "throw" },
   shilo: { startup: 0.45, total: 0.85, sfx: "whoosh" },
   krip: { startup: 0.55, total: 1.0, sfx: "superStart" },
+  tito: { startup: 0.4, total: 0.8, sfx: "superStart" },
   maybe: { startup: 0.21, active: 0.14, total: 0.7, sfx: "special_maybe" },
 };
 
@@ -451,6 +467,7 @@ const ASSET_PATHS = {
   "portrait.sqwoz": "assets/portraits/sqwoz_portrait.png",
   "portrait.shilo": "assets/portraits/shilo_portrait.png",
   "portrait.krip": "assets/portraits/krip_portrait.png",
+  "portrait.tito": "assets/portraits/tito_portrait.png",
   "fx.burger": "assets/effects/burger.png",
   "fx.nuke": "assets/effects/nuke_bomb.png",
   "portrait.kreed": "assets/portraits/kreed_portrait.png",
@@ -706,7 +723,7 @@ const AMB_VOL = { bar: 0.32, yard: 0.6, circus: 0.38, concert: 0.2, londograd: 0
 const REACT = { bar: "crowdReact", yard: "react_yard", circus: "react_circus", concert: "react_concert", fountains: "react_fountains" };
 const REACT_CD = { bar: 4, yard: 14, circus: 16, concert: 6, fountains: 6 };   // seconds between crowd reactions
 // Fighter voices (grunts): voice set per fighter; only sets with files are used
-const VOICE = { guf: "a", korzh: "a", atl: "a", chip: "a", noize: "b", oxxxy: "b", face: "b", kreed: "v", slava: "v", morgen: "v", maybe: "g", ramirez: "a", husky: "b", babangida: "a", sqwoz: "b", shilo: "b", krip: "a" };
+const VOICE = { guf: "a", korzh: "a", atl: "a", chip: "a", noize: "b", oxxxy: "b", face: "b", kreed: "v", slava: "v", morgen: "v", maybe: "g", ramirez: "a", husky: "b", babangida: "a", sqwoz: "b", shilo: "b", krip: "a", tito: "b" };
 // a voice set without one of the sounds borrows it: v has no hurt (→ b), g has no attack shout (→ her gasp)
 const VOICE_FALLBACK = { voice_v_hurt: "voice_b_hurt", voice_g_hurt: "none", voice_g_ko: "none" };
 function voice(f, what, chance = 1) {
@@ -1361,6 +1378,7 @@ function updateFighter(f, opp, dt) {
   f.comboT = Math.max(0, f.comboT - dt);
   f.buffT = Math.max(0, f.buffT - dt);
   if (f.fedT > 0) f.fedT -= dt;
+  if (f.energyT > 0) f.energyT -= dt;
   if (f.zillaT > 0) { f.zillaT -= dt; f.invulnT = Math.max(f.invulnT || 0, 0.05); f.vx = 0; }
   if (f.cid === "husky" && !f.waterUsed && !f.ko && f.hp > 0 && f.hp <= 25 && F.phase === "fight") {
     f.waterUsed = true; f.healT = 1.2;
@@ -1735,6 +1753,11 @@ function updateSpecial(f, opp, a) {
         last: i === 2,
       });
     });
+  } else if (f.cid === "tito") {
+    // "Do like me": a glowing double steps out from behind him and flies in with a kick at head height — duck or block
+    F.projectiles.push({ kind: "double", owner: f.slot, dir: f.dir, x: f.x - f.dir * 40, y: FLOOR_Y - 175,
+      vx: f.dir * 980, w: 150, h: 80, dmg: 14, life: 1.6, hit: false, height: "high", pierce: true, t: 0 });
+    F.flash = Math.max(F.flash, 0.08);
   } else if (f.cid === "krip") {
     // Glebzilla: Krip turns into a giant monster that charges across the arena and rams the opponent.
     // Block to take only a scratch; otherwise you're sent flying.
@@ -1890,6 +1913,7 @@ function applyHit(att, def, h) {
   const aa = att.action;
   if (h.melee) {
     if (att.cid === "noize" && aa && aa.move && aa.move.finisher) perk = 1.25;
+    if (att.cid === "tito" && att.energyT > 0) perk *= 1.2;
     if (att.cid === "morgen" && G.time - (att.dashAt || -9) < 0.5) { perk = 1.3; popup(def.x, def.y - 320, "ДОРОГО!", "#ff86d8", 24); att.dashAt = -9; }
     if (att.cid === "maybe" && aa && aa.air) perk = 1.2;
     if (att.cid === "face" && (def.x < WALL_L + 130 || def.x > WALL_R - 130)) perk = att.data.wallMul || 1.25;
@@ -2145,7 +2169,7 @@ const SUPER_NAMES = {
   guf: "ХЛЕБНИ ЧАЯ!", noize: "MAKE SOME NOIZE", oxxxy: "РАУНД, С*КА", morgen: "АЛИШЕР ТАГИРОВИЧ",
   maybe: "БИЛЕТ В МЭЙБИЛЭНД!", kreed: "СЮДА, БЛИН", slava: "ПРИДИ И ОХЛАДИ МОЙ ПЫЛ", atl: "Я ТЕБЯ ОТПЕЛ",
   korzh: "МАЛЫЙ ПОВЗРОСЛЕЛ", face: "Я РОНЯЮ ЗАПАД", chip: "ЭТО МОЁ ГЭНГСТА!",
-  ramirez: "ДИКИЙ СЛЭМ!", husky: "ПУЛЯ-ДУРА", babangida: "ТЕНЬ", sqwoz: "ТАТАРСКИЙ БОГАТЫРЬ", shilo: "ЖЕЛЕЗНЫЙ ПОДХОД", krip: "КАССЕТНЫЙ ЗАЛП",
+  ramirez: "ДИКИЙ СЛЭМ!", husky: "ПУЛЯ-ДУРА", babangida: "ТЕНЬ", sqwoz: "ТАТАРСКИЙ БОГАТЫРЬ", shilo: "ЖЕЛЕЗНЫЙ ПОДХОД", krip: "КАССЕТНЫЙ ЗАЛП", tito: "ВЫСОКАЯ ЭНЕРГИЯ",
 };
 
 function addSuper(f, v) {
@@ -2342,7 +2366,7 @@ const FINISHERS = {
   guf: "ЭТО ЦЕНТР!", noize: "ВЫДЫХАЙСЯ!", oxxxy: "ГОРГОРОД!", morgen: "ДОРОГО-БОГАТО!",
   maybe: "БЭЙБИ-КОМБО!", kreed: "ХОЛОСТЯК!", slava: "ГНОЙНЫЙ!", atl: "МАРАБУ!",
   korzh: "ЖИТЬ В КАЙФ!", face: "ЮМОРИСТ!", chip: "ГАНГСТА!",
-  ramirez: "ВЕРТУШКА!", husky: "ПАНЕЛЬКА!", babangida: "ПУТЬ ВОИНА!", sqwoz: "С ПЫЛУ С ЖАРУ!", shilo: "ЕЩЁ ПОДХОД!", krip: "НА ПОВТОР!",
+  ramirez: "ВЕРТУШКА!", husky: "ПАНЕЛЬКА!", babangida: "ПУТЬ ВОИНА!", sqwoz: "С ПЫЛУ С ЖАРУ!", shilo: "ЕЩЁ ПОДХОД!", krip: "НА ПОВТОР!", tito: "ЕРУНДА!",
 };
 
 function startDash(f, d) {
@@ -2940,6 +2964,7 @@ function updateProjectiles(dt) {
           sparkX: target.x - p.dir * 20, sparkY: p.kind === "cadillac" ? target.y - 80 : p.y,
         });
         if (p.kind !== "cadillac" && !p.pierce) p.life = 0;
+        if (res === "hit" && p.kind === "double") { popup(target.x, target.y - 300, "ДЕЛАЙ КАК Я!", "#e8c050", 34); F.fighters[p.owner].energyT = 3; }
         if (res === "hit" && p.kind === "zilla") { popup(target.x, target.y - 300, "РАСТОПТАЛ!", "#7ccf5a", 36); F.shake = Math.max(F.shake, 16); }
         if (res === "hit" && p.kind === "pie") { popup(target.x, target.y - 300, "ЭЧПОЧМАК!", "#e0a050", 34); F.fighters[p.owner].fedT = 3;
           for (let i = 0; i < 22; i++) F.particles.push({ type: "sq", x: p.x + rand(-50, 50), y: p.y + rand(-40, 40), vx: rand(-260, 260), vy: rand(-420, -60), g: 900,
@@ -3071,7 +3096,7 @@ function drawAmbient() {
 const BOT_STYLE = {
   korzh: { aggro: 1.35, dash: 0.6 }, morgen: { aggro: 1.25, dash: 2.2 }, oxxxy: { aggro: 1.2 }, noize: { aggro: 1.1 },
   maybe: { jump: 2.5 }, guf: { erratic: true }, slava: { dash: 1.8 }, face: { aggro: 1.1 },
-  atl: { keep: 190 }, chip: { keep: 280 }, kreed: {}, ramirez: { aggro: 1.3 }, husky: { aggro: 1.15, jump: 1.3 }, babangida: { aggro: 1.2 }, sqwoz: { keep: 240 }, shilo: { aggro: 1.15 }, krip: { aggro: 1.1 },
+  atl: { keep: 190 }, chip: { keep: 280 }, kreed: {}, ramirez: { aggro: 1.3 }, husky: { aggro: 1.15, jump: 1.3 }, babangida: { aggro: 1.2 }, sqwoz: { keep: 240 }, shilo: { aggro: 1.15 }, krip: { aggro: 1.1 }, tito: { aggro: 1.15, jump: 1.3 },
 };
 function updateBot(bot, opp, dt) {
   const c = bot.ctrl;
@@ -3152,6 +3177,10 @@ function updateBot(bot, opp, dt) {
         if (!p.hit && p.t > 0.5 && Math.abs(bot.x - p.x) < p.w / 2 + 30 && Math.random() < d.dodge) {
           ai.fleeT = 0.7; ai.fleeDir = bot.x > p.x ? (bot.x > WALL_R - 150 ? -1 : 1) : (bot.x < WALL_L + 150 ? 1 : -1);
         }
+        continue;
+      }
+      if (p.kind === "double") {
+        if (Math.sign(bot.x - p.x) === Math.sign(p.vx) && Math.abs(bot.x - p.x) < 450 && Math.random() < d.dodge) { ai.holdDown = 0.5; ai.holdBack = 0; }
         continue;
       }
       if (p.kind === "zilla") {
@@ -3733,6 +3762,19 @@ function drawProjectiles() {
     if (p.kind === "nuke") { drawNuke(p); continue; }
     if (p.kind === "quake") { drawQuake(p); continue; }
     if (p.kind === "mosh") { drawMosh(p); continue; }
+    if (p.kind === "double") {
+      const fr = frameOf("tito", "air_kick");
+      if (fr) {
+        ctx.save();
+        ctx.globalAlpha = 0.8 * Math.min(1, p.life / 0.3);
+        ctx.translate(p.x, p.y + 175); if (p.dir < 0) ctx.scale(-1, 1);
+        ctx.drawImage(silhouette(fr.image, "#ffd86a"), -fr.ax - 6, -fr.ay - 4, fr.image.width + 12, fr.image.height + 8);
+        ctx.drawImage(fr.image, -fr.ax, -fr.ay);
+        ctx.restore();
+      }
+      if (Math.random() < 0.6) F.particles.push({ type: "sq", x: p.x - p.dir * rand(30, 90), y: p.y + rand(-40, 60), vx: -p.dir * 60, vy: rand(-40, 40), life: 0.4, max: 0.4, size: pick([3, 4, 6]), color: pick(["#ffd86a", "#fff6c8", "#ff9ad8"]) });
+      continue;
+    }
     if (p.kind === "zilla") {
       const im = img("fx.zilla");
       if (!im) continue;
@@ -4894,6 +4936,7 @@ const ARCADE_ENDINGS = {
   sqwoz: "Татарский богатырь накормил всех эчпочмаками.",
   shilo: "Шило вернулся во двор, а голуби — на крышу.",
   krip: "Глебзилла растоптал турнир и ушёл в закат с бумбоксом.",
+  tito: "Титомир показал всем, как надо. Делай как он.",
 };
 const ARCADE_FIGHTS = 6;   // 5 opponents + the boss
 function arcadeDifficulty(i) { return i < 3 ? "easy" : "normal"; }
@@ -5767,7 +5810,7 @@ function checkCodes(code) {
 
 /* Evil twin */
 const TWIN_TINT = { color: "#2a0645", a: 0.5 };
-const ACCUSATIVE = { guf: "ГУФА", noize: "НОЙЗА", oxxxy: "ОКСИ", morgen: "МОРГЕНА", maybe: "МЭЙБИ БЭЙБИ", kreed: "ЕГОРА", slava: "СЛАВУ КПСС", atl: "ATL", korzh: "МАКСА КОРЖА", face: "FACE", chip: "ЧИПИНКОСА", ramirez: "ГРЯЗНОГО РАМИРЕСА", husky: "ХАСКИ", babangida: "БАБАНГИДУ", sqwoz: "SQWOZ BAB", shilo: "ШИЛО", krip: "КРИП-А-КРИПА" };
+const ACCUSATIVE = { guf: "ГУФА", noize: "НОЙЗА", oxxxy: "ОКСИ", morgen: "МОРГЕНА", maybe: "МЭЙБИ БЭЙБИ", kreed: "ЕГОРА", slava: "СЛАВУ КПСС", atl: "ATL", korzh: "МАКСА КОРЖА", face: "FACE", chip: "ЧИПИНКОСА", ramirez: "ГРЯЗНОГО РАМИРЕСА", husky: "ХАСКИ", babangida: "БАБАНГИДУ", sqwoz: "SQWOZ BAB", shilo: "ШИЛО", krip: "КРИП-А-КРИПА", tito: "ТИТОМИРА" };
 const FEMININE = new Set(["maybe"]);
 function twinData(cid) {
   const base = CHARS[cid];
