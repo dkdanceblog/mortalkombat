@@ -46,6 +46,22 @@ const store = {
 /* Data                                                                */
 /* ------------------------------------------------------------------ */
 const CHARS = {
+  krip: {
+    id: "krip", name: "КРИП-А-КРИП", special: "ГЛЕБЗИЛЛА", color: "#c0c4c8",
+    speed: 290, power: 1.04, specialCd: 6.5, tough: 1.04, jump: 0.95, weight: 1.1, dash: 1.0,
+    stats: { "СКОРОСТЬ": 3, "СИЛА": 3, "ЗДОРОВЬЕ": 3 },
+    perk: "ФИШКА: бумбокс — щит: блок отталкивает противника дальше",
+    blurb: "Хозяин бумбокса.",
+    loseTitle: "БУМБОКС СЕЛ",
+    quotes: ["ГЛЕБЗИЛЛА!", "СДЕЛАЙ ГРОМЧЕ", "КАССЕТА ЗАЕЛА?", "КРИП-А-КРИП!"],
+    moves: {
+      // swing with the boombox
+      light: { frame: "light", startup: 0.09, active: 0.09, recovery: 0.2, dmg: 7, reach: 130,
+        y0: -220, y1: -150, hitstun: 0.38, blockstun: 0.18, knock: 240, height: "high", sfx: "hitHeavy", stop: 0.08 },
+      heavy: { frame: "heavy", startup: 0.14, active: 0.1, recovery: 0.27, dmg: 9, reach: 140, lunge: 50,
+        y0: -185, y1: -115, hitstun: 0.45, blockstun: 0.2, knock: 360, height: "mid", sfx: "hitKick", stop: 0.08 },
+    },
+  },
   shilo: {
     id: "shilo", name: "ШИЛО", special: "ЗЛЫЕ ГОЛУБИ", color: "#d8443a",
     speed: 295, power: 1.06, specialCd: 4.8, tough: 1.04, jump: 1.0, weight: 0.95, dash: 1.0,
@@ -303,7 +319,7 @@ for (const d of Object.values(CHARS)) {
     "ЗДОРОВЬЕ": st(3 + ((d.tough || 1) - 1) / 0.04),
   };
 }
-const BASE_IDS = ["guf", "noize", "oxxxy", "morgen", "maybe", "kreed", "slava", "atl", "korzh", "face", "ramirez", "husky", "sqwoz", "shilo"];
+const BASE_IDS = ["guf", "noize", "oxxxy", "morgen", "maybe", "kreed", "slava", "atl", "korzh", "face", "ramirez", "husky", "sqwoz", "shilo", "krip"];
 // Chipinkos is the arcade boss; he joins the roster once he has been beaten in the arcade
 const CHAR_IDS = [...BASE_IDS];
 function chipUnlocked() { return CHAR_IDS.includes("chip"); }
@@ -368,6 +384,7 @@ const SPECIALS = {
   babangida: { startup: 0.45, total: 1.25, sfx: "whooshHeavy" },
   sqwoz: { startup: 0.42, total: 0.8, sfx: "throw" },
   shilo: { startup: 0.45, total: 0.85, sfx: "whoosh" },
+  krip: { startup: 0.55, total: 1.0, sfx: "superStart" },
   maybe: { startup: 0.21, active: 0.14, total: 0.7, sfx: "special_maybe" },
 };
 
@@ -431,6 +448,7 @@ const ASSET_PATHS = {
   "portrait.babangida": "assets/portraits/babangida_portrait.png",
   "portrait.sqwoz": "assets/portraits/sqwoz_portrait.png",
   "portrait.shilo": "assets/portraits/shilo_portrait.png",
+  "portrait.krip": "assets/portraits/krip_portrait.png",
   "fx.burger": "assets/effects/burger.png",
   "fx.nuke": "assets/effects/nuke_bomb.png",
   "portrait.kreed": "assets/portraits/kreed_portrait.png",
@@ -686,7 +704,7 @@ const AMB_VOL = { bar: 0.32, yard: 0.6, circus: 0.38, concert: 0.2, londograd: 0
 const REACT = { bar: "crowdReact", yard: "react_yard", circus: "react_circus", concert: "react_concert", fountains: "react_fountains" };
 const REACT_CD = { bar: 4, yard: 14, circus: 16, concert: 6, fountains: 6 };   // seconds between crowd reactions
 // Fighter voices (grunts): voice set per fighter; only sets with files are used
-const VOICE = { guf: "a", korzh: "a", atl: "a", chip: "a", noize: "b", oxxxy: "b", face: "b", kreed: "v", slava: "v", morgen: "v", maybe: "g", ramirez: "a", husky: "b", babangida: "a", sqwoz: "b", shilo: "b" };
+const VOICE = { guf: "a", korzh: "a", atl: "a", chip: "a", noize: "b", oxxxy: "b", face: "b", kreed: "v", slava: "v", morgen: "v", maybe: "g", ramirez: "a", husky: "b", babangida: "a", sqwoz: "b", shilo: "b", krip: "a" };
 // a voice set without one of the sounds borrows it: v has no hurt (→ b), g has no attack shout (→ her gasp)
 const VOICE_FALLBACK = { voice_v_hurt: "voice_b_hurt", voice_g_hurt: "none", voice_g_ko: "none" };
 function voice(f, what, chance = 1) {
@@ -1714,6 +1732,12 @@ function updateSpecial(f, opp, a) {
         last: i === 2,
       });
     });
+  } else if (f.cid === "krip") {
+    // Glebzilla: a giant version of him rises behind the arena and sweeps the floor with a huge foot — jump it
+    F.projectiles.push({ kind: "zilla", owner: f.slot, dir: f.dir, x: f.dir === 1 ? -420 : W + 420, y: FLOOR_Y,
+      vx: f.dir * 1150, w: 240, h: 85, dmg: 18, life: 2.6, hit: false, pierce: true, height: "unblockable", t: 0, delay: 0.35 });
+    F.shake = Math.max(F.shake, 14); F.flash = Math.max(F.flash, 0.1);
+    popup(f.x, f.y - 330, "ГЛЕБЗИЛЛА!", "#7ccf5a", 40);
   } else if (f.cid === "shilo") {
     // a flock of angry pigeons sweeps in at head height and pecks: duck under it or block
     const birds = [];
@@ -1827,6 +1851,7 @@ function applyHit(att, def, h) {
     def.hp = Math.max(1, def.hp - chip); // chip damage never kills
     def.blockstun = h.blockstun;
     def.vx = h.dir * Math.abs(h.knock) * 0.55;
+    if (def.cid === "krip" && h.melee) { att.vx = -h.dir * 420; popup(def.x, def.y - 300, "ГРОМЧЕ!", "#c0c4c8", 22); }
     if (chip) { def.trailDelay = 0.4; popup(def.x, def.y - 230, `-${chip}`, "#9fd8ff", 24); }
     blockSpark(h.sparkX, h.sparkY);
     playSfx("block");
@@ -2115,7 +2140,7 @@ const SUPER_NAMES = {
   guf: "ХЛЕБНИ ЧАЯ!", noize: "MAKE SOME NOIZE", oxxxy: "РАУНД, С*КА", morgen: "АЛИШЕР ТАГИРОВИЧ",
   maybe: "БИЛЕТ В МЭЙБИЛЭНД!", kreed: "СЮДА, БЛИН", slava: "ПРИДИ И ОХЛАДИ МОЙ ПЫЛ", atl: "Я ТЕБЯ ОТПЕЛ",
   korzh: "МАЛЫЙ ПОВЗРОСЛЕЛ", face: "Я РОНЯЮ ЗАПАД", chip: "ЭТО МОЁ ГЭНГСТА!",
-  ramirez: "ДИКИЙ СЛЭМ!", husky: "ПУЛЯ-ДУРА", babangida: "ТЕНЬ", sqwoz: "ТАТАРСКИЙ БОГАТЫРЬ", shilo: "ЖЕЛЕЗНЫЙ ПОДХОД",
+  ramirez: "ДИКИЙ СЛЭМ!", husky: "ПУЛЯ-ДУРА", babangida: "ТЕНЬ", sqwoz: "ТАТАРСКИЙ БОГАТЫРЬ", shilo: "ЖЕЛЕЗНЫЙ ПОДХОД", krip: "КАССЕТНЫЙ ЗАЛП",
 };
 
 function addSuper(f, v) {
@@ -2312,7 +2337,7 @@ const FINISHERS = {
   guf: "ЭТО ЦЕНТР!", noize: "ВЫДЫХАЙСЯ!", oxxxy: "ГОРГОРОД!", morgen: "ДОРОГО-БОГАТО!",
   maybe: "БЭЙБИ-КОМБО!", kreed: "ХОЛОСТЯК!", slava: "ГНОЙНЫЙ!", atl: "МАРАБУ!",
   korzh: "ЖИТЬ В КАЙФ!", face: "ЮМОРИСТ!", chip: "ГАНГСТА!",
-  ramirez: "ВЕРТУШКА!", husky: "ПАНЕЛЬКА!", babangida: "ПУТЬ ВОИНА!", sqwoz: "С ПЫЛУ С ЖАРУ!", shilo: "ЕЩЁ ПОДХОД!",
+  ramirez: "ВЕРТУШКА!", husky: "ПАНЕЛЬКА!", babangida: "ПУТЬ ВОИНА!", sqwoz: "С ПЫЛУ С ЖАРУ!", shilo: "ЕЩЁ ПОДХОД!", krip: "НА ПОВТОР!",
 };
 
 function startDash(f, d) {
@@ -2681,6 +2706,7 @@ function drawNuke(p) {
 /* Projectiles                                                         */
 /* ------------------------------------------------------------------ */
 function projBox(p) {
+  if (p.kind === "zilla") return { x0: p.x - p.w / 2, x1: p.x + p.w / 2, y0: FLOOR_Y - p.h, y1: FLOOR_Y };
   if (p.kind === "cadillac") return { x0: p.x - p.w / 2, x1: p.x + p.w / 2, y0: FLOOR_Y - p.h, y1: FLOOR_Y };
   return { x0: p.x - p.w / 2, x1: p.x + p.w / 2, y0: p.y - p.h / 2, y1: p.y + p.h / 2 };
 }
@@ -2869,6 +2895,7 @@ function updateProjectiles(dt) {
     if (p.kind === "sinyak" && Math.random() < dt * 25) {
       F.particles.push({ type: "sq", x: p.x - p.dir * rand(120, 260), y: p.y + rand(-40, 40), vx: -p.dir * 300, vy: 0, life: 0.2, max: 0.2, size: 4, color: "rgba(255,255,255,0.7)" });
     }
+    if (p.kind === "zilla") { F.shake = Math.max(F.shake, 5); if (Math.random() < dt * 30) spawnDust(p.x - p.dir * 120, FLOOR_Y, 0.9); }
     if (p.kind === "monkey" && Math.random() < dt * 14) spawnDust(p.x - p.dir * 30, FLOOR_Y, 0.4);
     if (p.kind === "cadillac") {
       if (Math.random() < dt * 40) spawnDust(p.x - p.dir * 180, FLOOR_Y, 0.55);
@@ -2895,13 +2922,14 @@ function updateProjectiles(dt) {
         p.hit = true;
         const res = applyHit(F.fighters[p.owner], target, {
           dmg: p.dmg, height: p.height, hitstun: p.kind === "monkey" ? (p.last ? 0.8 : 0.4) : p.pierce || p.kind === "cadillac" ? 0.8 : 0.5,
-          blockstun: 0.24, knock: p.kind === "burger" ? 480 : p.kind === "monkey" ? (p.last ? 420 : 90) : p.kind === "runner" ? 260 : p.kind === "sinyak" ? 640 : p.kind === "cadillac" ? 520 : 300, dir: p.dir,
+          blockstun: 0.24, knock: p.kind === "zilla" ? 760 : p.kind === "burger" ? 480 : p.kind === "monkey" ? (p.last ? 420 : 90) : p.kind === "runner" ? 260 : p.kind === "sinyak" ? 640 : p.kind === "cadillac" ? 520 : 300, dir: p.dir,
           sfx: ({ kettle: "special_guf_hit", guitar: "special_noize_hit", cadillac: "special_morgen_hit", sinyak: "special_kreed_hit", burger: "special_face_hit" })[p.kind] || "hitHeavy",
           stop: p.kind === "runner" || p.kind === "monkey" ? 0.06 : p.pierce || p.kind === "cadillac" ? 0.12 : 0.08, chip: p.kind === "runner" || p.kind === "monkey" ? 1 : 3,
-          launch: p.kind === "burger" ? -620 : p.kind === "sinyak" ? -820 : p.kind === "cadillac" ? -720 : p.kind === "runner" || p.kind === "monkey" ? (p.last ? -600 : 0) : -380,
+          launch: p.kind === "zilla" ? -900 : p.kind === "burger" ? -620 : p.kind === "sinyak" ? -820 : p.kind === "cadillac" ? -720 : p.kind === "runner" || p.kind === "monkey" ? (p.last ? -600 : 0) : -380,
           sparkX: target.x - p.dir * 20, sparkY: p.kind === "cadillac" ? target.y - 80 : p.y,
         });
         if (p.kind !== "cadillac" && !p.pierce) p.life = 0;
+        if (res === "hit" && p.kind === "zilla") { popup(target.x, target.y - 300, "РАСТОПТАЛ!", "#7ccf5a", 36); F.shake = Math.max(F.shake, 16); }
         if (res === "hit" && p.kind === "pie") { popup(target.x, target.y - 300, "ЭЧПОЧМАК!", "#e0a050", 34); F.fighters[p.owner].fedT = 3;
           for (let i = 0; i < 22; i++) F.particles.push({ type: "sq", x: p.x + rand(-50, 50), y: p.y + rand(-40, 40), vx: rand(-260, 260), vy: rand(-420, -60), g: 900,
             life: rand(0.5, 0.9), max: 0.9, size: pick([4, 6, 8]), color: pick(["#e0a050", "#c07a30", "#f6d29a", "#6b3a1f", "#ffffff"]) }); }
@@ -3032,7 +3060,7 @@ function drawAmbient() {
 const BOT_STYLE = {
   korzh: { aggro: 1.35, dash: 0.6 }, morgen: { aggro: 1.25, dash: 2.2 }, oxxxy: { aggro: 1.2 }, noize: { aggro: 1.1 },
   maybe: { jump: 2.5 }, guf: { erratic: true }, slava: { dash: 1.8 }, face: { aggro: 1.1 },
-  atl: { keep: 190 }, chip: { keep: 280 }, kreed: {}, ramirez: { aggro: 1.3 }, husky: { aggro: 1.15, jump: 1.3 }, babangida: { aggro: 1.2 }, sqwoz: { keep: 240 }, shilo: { aggro: 1.15 },
+  atl: { keep: 190 }, chip: { keep: 280 }, kreed: {}, ramirez: { aggro: 1.3 }, husky: { aggro: 1.15, jump: 1.3 }, babangida: { aggro: 1.2 }, sqwoz: { keep: 240 }, shilo: { aggro: 1.15 }, krip: { aggro: 1.1 },
 };
 function updateBot(bot, opp, dt) {
   const c = bot.ctrl;
@@ -3113,6 +3141,10 @@ function updateBot(bot, opp, dt) {
         if (!p.hit && p.t > 0.5 && Math.abs(bot.x - p.x) < p.w / 2 + 30 && Math.random() < d.dodge) {
           ai.fleeT = 0.7; ai.fleeDir = bot.x > p.x ? (bot.x > WALL_R - 150 ? -1 : 1) : (bot.x < WALL_L + 150 ? 1 : -1);
         }
+        continue;
+      }
+      if (p.kind === "zilla") {
+        if (p.delay <= 0 && Math.sign(bot.x - p.x) === Math.sign(p.vx)) { const front = Math.abs(bot.x - p.x) - p.w / 2; if (front < 330 && front > 80 && Math.random() < d.dodge * 0.6) ai.jump = true; }
         continue;
       }
       if (p.kind === "pigeons") {
@@ -3689,6 +3721,23 @@ function drawProjectiles() {
     if (p.kind === "nuke") { drawNuke(p); continue; }
     if (p.kind === "quake") { drawQuake(p); continue; }
     if (p.kind === "mosh") { drawMosh(p); continue; }
+    if (p.kind === "zilla") {
+      const owner = F.fighters[p.owner];
+      const fx = img("fx.zilla"), foot = img("fx.zilla_foot");
+      const rise = Math.min(1, (p.t + 0.35) / 0.5);
+      ctx.save(); ctx.globalAlpha = 0.55 * rise;
+      const big = fx || img("spr.krip.special");
+      if (big) { const k = (H * 1.15) / big.height; ctx.translate(owner.x - owner.dir * 160, FLOOR_Y + 40 + (1 - rise) * 300); if (owner.dir < 0) ctx.scale(-1, 1); ctx.scale(k, k);
+        if (!fx) ctx.filter = "brightness(0.5) sepia(1) hue-rotate(60deg) saturate(3)"; ctx.drawImage(big, -big.width / 2, -big.height); }
+      ctx.restore();
+      if (p.delay > 0) continue;
+      const leg = foot || img("spr.krip.heavy");
+      if (leg) { ctx.save(); ctx.translate(p.x, FLOOR_Y + 6); if (p.dir < 0) ctx.scale(-1, 1);
+        const k = foot ? 380 / leg.width : 2.4; ctx.scale(k, k);
+        if (!foot) ctx.filter = "sepia(1) hue-rotate(60deg) saturate(2.5) brightness(0.8)";
+        ctx.drawImage(leg, -leg.width * 0.75, -leg.height * (foot ? 1 : 0.62)); ctx.restore(); }
+      continue;
+    }
     if (p.kind === "pigeons") {
       for (const b of p.birds) drawPigeon(p.x + b.dx + Math.sin(p.t * 7 + b.ph) * 10, p.y + b.dy + Math.cos(p.t * 9 + b.ph) * 8, p.dir, p.t * 26 + b.ph, b.s);
       continue;
@@ -4692,6 +4741,7 @@ const ARCADE_ENDINGS = {
   babangida: "Бабангида снова исчез. Говорят, он и не появлялся.",
   sqwoz: "Татарский богатырь накормил всех эчпочмаками.",
   shilo: "Шило вернулся во двор, а голуби — на крышу.",
+  krip: "Глебзилла растоптал турнир и ушёл в закат с бумбоксом.",
 };
 const ARCADE_FIGHTS = 6;   // 5 opponents + the boss
 function arcadeDifficulty(i) { return i < 3 ? "easy" : "normal"; }
@@ -5565,7 +5615,7 @@ function checkCodes(code) {
 
 /* Evil twin */
 const TWIN_TINT = { color: "#2a0645", a: 0.5 };
-const ACCUSATIVE = { guf: "ГУФА", noize: "НОЙЗА", oxxxy: "ОКСИ", morgen: "МОРГЕНА", maybe: "МЭЙБИ БЭЙБИ", kreed: "ЕГОРА", slava: "СЛАВУ КПСС", atl: "ATL", korzh: "МАКСА КОРЖА", face: "FACE", chip: "ЧИПИНКОСА", ramirez: "ГРЯЗНОГО РАМИРЕСА", husky: "ХАСКИ", babangida: "БАБАНГИДУ", sqwoz: "SQWOZ BAB", shilo: "ШИЛО" };
+const ACCUSATIVE = { guf: "ГУФА", noize: "НОЙЗА", oxxxy: "ОКСИ", morgen: "МОРГЕНА", maybe: "МЭЙБИ БЭЙБИ", kreed: "ЕГОРА", slava: "СЛАВУ КПСС", atl: "ATL", korzh: "МАКСА КОРЖА", face: "FACE", chip: "ЧИПИНКОСА", ramirez: "ГРЯЗНОГО РАМИРЕСА", husky: "ХАСКИ", babangida: "БАБАНГИДУ", sqwoz: "SQWOZ BAB", shilo: "ШИЛО", krip: "КРИП-А-КРИПА" };
 const FEMININE = new Set(["maybe"]);
 function twinData(cid) {
   const base = CHARS[cid];
