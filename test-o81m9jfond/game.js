@@ -4456,31 +4456,157 @@ function titleBackdrop(zoom, ox, oy) {
 }
 
 // Fighters lined up on the title screen; reads CHAR_IDS so new fighters appear automatically.
-function drawTitleLineup() {
-  const n = CHAR_IDS.length;
-  const back = CHAR_IDS.filter((_, i) => i % 2 === 1);
-  const front = CHAR_IDS.filter((_, i) => i % 2 === 0);
-  const rows = [
-    { ids: back, y: 585, scale: 0.6, dark: 0.35, spread: W - 260 },
-    { ids: front, y: 700, scale: 0.74, dark: 0, spread: W - 140 },
-  ];
-  rows.forEach((row, r) => {
-    const k = row.ids.length;
-    row.ids.forEach((cid, i) => {
-      const x = W / 2 + (k > 1 ? (i / (k - 1) - 0.5) * row.spread : 0) + (r === 0 ? 0 : 0);
-      const dir = x < W / 2 ? 1 : -1;
-      const ph = G.time * 2.2 + i * 1.3 + r * 0.7;
-      const pose = (Math.floor(G.time * 0.35 + i * 0.37 + r * 0.5) % 7 === 0) ? "win" : "idle";
-      // floor shadow
-      ctx.fillStyle = "rgba(0,0,0,0.45)";
-      ctx.beginPath();
-      ctx.ellipse(x, row.y + 2, 70 * row.scale, 12 * row.scale, 0, 0, Math.PI * 2);
-      ctx.fill();
-      drawPose(cid, pose, x, row.y, { dir, scale: row.scale, sy: 1 + Math.sin(ph) * 0.012,
-        tint: row.dark ? { color: "#120a2c", a: row.dark } : undefined });
-    });
+/* ---- Title screen show: rotating lineup, little fights, fly-bys, spotlights, intro ---- */
+const TITLE_SLOTS = [
+  { row: 0, y: 585, scale: 0.6, dark: 0.35 }, { row: 0, y: 585, scale: 0.6, dark: 0.35 }, { row: 0, y: 585, scale: 0.6, dark: 0.35 }, { row: 0, y: 585, scale: 0.6, dark: 0.35 },
+  { row: 1, y: 700, scale: 0.74, dark: 0 }, { row: 1, y: 700, scale: 0.74, dark: 0 }, { row: 1, y: 700, scale: 0.74, dark: 0 }, { row: 1, y: 700, scale: 0.74, dark: 0 }, { row: 1, y: 700, scale: 0.74, dark: 0 },
+];
+let TT = null;   // title state
+function titleState() {
+  if (TT) return TT;
+  const pool = [...CHAR_IDS].sort(() => Math.random() - 0.5);
+  const n = Math.min(TITLE_SLOTS.length, pool.length);
+  const rowCount = [0, 0];
+  const slots = [];
+  for (let i = 0; i < n; i++) slots.push({ ...TITLE_SLOTS[i] });
+  slots.forEach((sl) => rowCount[sl.row]++);
+  const idx = [0, 0];
+  slots.forEach((sl) => {
+    const k = rowCount[sl.row], i = idx[sl.row]++;
+    const spread = sl.row === 0 ? W - 360 : W - 160;
+    sl.x = W / 2 + (k > 1 ? (i / (k - 1) - 0.5) * spread : 0);
   });
-  void n;
+  slots.forEach((sl, i) => { sl.cid = pool[i]; sl.state = "enter"; sl.t = -(0.55 + i * 0.09); sl.act = null; });
+  TT = { t: 0, last: G.time, slots, pool, nextSwap: 5, nextAct: 2.4, nextFly: 3.5, fly: null, shake: 0, lights: [0, 1, 2].map((i) => ({ x: W * (0.2 + i * 0.3), target: null, hold: 0 })), intro: true };
+  return TT;
+}
+function titleUpdate() {
+  const T = titleState();
+  const dt = Math.min(0.05, Math.max(0, G.time - T.last)); T.last = G.time; T.t += dt;
+  T.shake = Math.max(0, T.shake - dt * 30);
+  if (T.intro && T.t > 0.55 && !T.slam) { T.slam = true; T.shake = 16; T.flash = 0.6; playSfx("koHit"); playSfx("crowdReact"); }
+  T.flash = Math.max(0, (T.flash || 0) - dt * 1.6);
+  for (const sl of T.slots) {
+    sl.t += dt;
+    if (sl.state === "enter" && sl.t >= 0.45) { sl.state = "idle"; sl.t = 0; }
+    if (sl.state === "exit" && sl.t >= 0.45) {
+      // swap in someone who isn't on stage
+      const onStage = new Set(T.slots.map((q) => q.cid));
+      const free = CHAR_IDS.filter((c) => !onStage.has(c));
+      if (free.length) sl.cid = pick(free);
+      sl.state = "enter"; sl.t = 0; sl.act = null;
+    }
+    if (sl.act) { sl.act.t += dt; if (sl.act.t >= sl.act.dur) sl.act = null; }
+  }
+  // rotation: someone leaves, someone new jumps in
+  T.nextSwap -= dt;
+  if (T.nextSwap <= 0) {
+    T.nextSwap = 3.2 + Math.random() * 1.6;
+    if (CHAR_IDS.length > T.slots.length) {
+      const c = T.slots.filter((q) => q.state === "idle" && !q.act);
+      if (c.length) { const q = pick(c); q.state = "exit"; q.t = 0; }
+    }
+  }
+  // little moments: a punch, a kick, a victory pose, or two neighbours squaring off
+  T.nextAct -= dt;
+  if (T.nextAct <= 0) {
+    T.nextAct = 0.9 + Math.random() * 0.9;
+    const c = T.slots.filter((q) => q.state === "idle" && !q.act);
+    if (c.length) {
+      const q = pick(c), r = Math.random();
+      if (r < 0.25) {
+        const nb = c.filter((o) => o !== q && o.row === q.row && Math.abs(o.x - q.x) < (q.row ? 300 : 260));
+        if (nb.length) {
+          const o = pick(nb), seq = [["light_0", 0.12], ["light", 0.22], ["idle", 0.2], ["heavy_0", 0.14], ["heavy", 0.25]];
+          q.act = { kind: "duel", seq, t: 0, dur: 0.95, face: Math.sign(o.x - q.x) };
+          o.act = { kind: "hurt", t: -0.3, dur: 1.0, face: Math.sign(q.x - o.x) };
+        }
+      } else if (r < 0.55) q.act = { kind: "seq", seq: [["light_0", 0.12], ["light", 0.3]], t: 0, dur: 0.42 };
+      else if (r < 0.8) q.act = { kind: "seq", seq: [["heavy_0", 0.14], ["heavy", 0.34]], t: 0, dur: 0.48 };
+      else q.act = { kind: "seq", seq: [["win", 1.6]], t: 0, dur: 1.6 };
+    }
+  }
+  // fly-bys across the stage
+  T.nextFly -= dt;
+  if (!T.fly && T.nextFly <= 0) {
+    const kinds = ["cadillac", "pigeons", "kanye", "zilla", "monkeys", "pie", "burger"].filter((k) => img(TITLE_FLY_IMG[k]));
+    if (kinds.length) {
+      const kind = pick(kinds.filter((k) => k !== T.lastFly) .length ? kinds.filter((k) => k !== T.lastFly) : kinds);
+      T.lastFly = kind;
+      T.fly = { kind, t: 0, dir: Math.random() < 0.5 ? 1 : -1 };
+    }
+    T.nextFly = 4.5 + Math.random() * 3;
+  }
+  if (T.fly) { T.fly.t += dt; if (T.fly.t > (T.fly.kind === "zilla" ? 4 : 2.6)) T.fly = null; }
+  // spotlights wander between fighters, pause on one, then move on
+  T.lights.forEach((L, i) => {
+    L.hold -= dt;
+    if (L.hold <= 0 || !L.target) {
+      const c = T.slots.filter((q) => q.state === "idle" && (i !== 1 || q.row === 1));
+      L.target = c.length ? pick(c) : null; L.hold = 2.2 + Math.random() * 1.8;
+    }
+    const tx = L.target ? L.target.x : W / 2;
+    L.x += (tx - L.x) * Math.min(1, dt * 2.2);
+  });
+}
+const TITLE_FLY_IMG = { cadillac: "fx.cadillac", pigeons: "fx.pigeon_1", kanye: "fx.kanye_fly", zilla: "fx.zilla", monkeys: "fx.monkey", pie: "fx.echpochmak", burger: "fx.burger" };
+function drawTitleFly(layer) {
+  const T = TT, f = T && T.fly;
+  if (!f) return;
+  const k = f.t / 2.6, dir = f.dir;
+  const sx = (u) => dir > 0 ? -300 + u * (W + 600) : W + 300 - u * (W + 600);
+  ctx.save();
+  if (f.kind === "zilla" && layer === "back") {
+    const im = img("fx.zilla"); const r = f.t < 0.8 ? f.t / 0.8 : f.t > 3.2 ? Math.max(0, (4 - f.t) / 0.8) : 1;
+    const hgt = 430, sc = hgt / im.height, x = dir > 0 ? 170 : W - 170;
+    ctx.globalAlpha = 0.85; ctx.translate(x, 560 + (1 - r) * 460); if (dir < 0) ctx.scale(-1, 1); ctx.scale(sc, sc);
+    ctx.filter = "brightness(0.55)"; ctx.drawImage(im, -im.width / 2, -im.height);
+  } else if (f.kind === "cadillac" && layer === "mid") {
+    const im = img("fx.cadillac"); ctx.translate(sx(k), 640); if (dir < 0) ctx.scale(-1, 1);
+    ctx.drawImage(im, -220, -150, 440, 152);
+  } else if (f.kind === "monkeys" && layer === "mid") {
+    const im = img("fx.monkey");
+    for (let i = 0; i < 5; i++) { const u = k * 1.15 - i * 0.06; ctx.save(); ctx.translate(sx(u), 650 - Math.abs(Math.sin(f.t * 15 + i)) * 12); if (dir < 0) ctx.scale(-1, 1); ctx.scale(0.8, 0.8); ctx.drawImage(im, -im.width / 2, -im.height); ctx.restore(); }
+  } else if (f.kind === "pigeons" && layer === "front") {
+    for (let i = 0; i < 9; i++) { const u = k - (i % 3) * 0.05; drawPigeon(sx(u) + Math.sin(i * 7) * 60, 470 + Math.sin(i * 3.1) * 50 + Math.sin(f.t * 8 + i) * 8, dir, f.t * 26 + i, 0.8); }
+  } else if ((f.kind === "kanye" || f.kind === "pie" || f.kind === "burger") && layer === "front") {
+    const im = img(TITLE_FLY_IMG[f.kind]); const x = sx(k), y = 520 - Math.sin(k * Math.PI) * 300;
+    ctx.translate(x, y); ctx.rotate(f.t * 6 * dir); const sc = f.kind === "kanye" ? 0.8 : 0.9; ctx.scale(sc, sc); ctx.drawImage(im, -im.width / 2, -im.height / 2);
+  }
+  ctx.restore();
+}
+function drawTitleRow(row) {
+  const T = TT;
+  for (const sl of T.slots) {
+    if (sl.row !== row) continue;
+    let y = sl.y, alpha = 1, pose = "idle", dir = sl.x < W / 2 ? 1 : -1, ox = 0;
+    if (sl.state === "enter") { const u = clamp(sl.t / 0.45, 0, 1); if (sl.t < 0) continue; y = sl.y + (1 - u) * 260 - Math.sin(u * Math.PI) * 60; pose = "jump"; }
+    if (sl.state === "exit") { const u = clamp(sl.t / 0.45, 0, 1); y = sl.y + u * 280; alpha = 1 - u; pose = "jump"; }
+    const a = sl.act;
+    if (a && a.t >= 0) {
+      if (a.face) dir = a.face;
+      if (a.kind === "hurt") { pose = a.t > 0.42 && a.t < 0.75 ? "hurt" : "block"; if (pose === "hurt") ox = -dir * 14; }
+      else { let acc = 0; for (const [nm, d] of a.seq) { acc += d; if (a.t < acc) { pose = nm; break; } } if (pose === "light" || pose === "heavy") ox = dir * 10; }
+    }
+    const ph = G.time * 2.2 + sl.x * 0.01;
+    ctx.fillStyle = `rgba(0,0,0,${0.45 * alpha})`;
+    ctx.beginPath(); ctx.ellipse(sl.x, sl.y + 2, 70 * sl.scale, 12 * sl.scale, 0, 0, Math.PI * 2); ctx.fill();
+    drawPose(sl.cid, pose, sl.x + ox, y, { dir, scale: sl.scale, sy: 1 + Math.sin(ph) * 0.012, alpha,
+      tint: sl.dark ? { color: "#120a2c", a: sl.dark } : undefined });
+  }
+}
+function drawTitleLineup() {
+  drawTitleFly("back");
+  drawTitleRow(0);
+  drawTitleFly("mid");
+  drawTitleRow(1);
+  drawTitleFly("front");
+  // name of the fighter the centre spotlight rests on
+  const L = TT.lights[1], q = L.target;
+  if (q && q.row === 1 && Math.abs(L.x - q.x) < 20 && q.state === "idle") {
+    const fr = SPRITE_META[q.cid].idle;
+    text(CHARS[q.cid].name, q.x, q.y - (fr ? fr.ay : 240) * q.scale - 14, { size: q.row ? 20 : 16, align: "center", color: CHARS[q.cid].color, stroke: "#000", strokeW: 5 });
+  }
 }
 
 function drawTitleLogo(cx, cy, scale) {
@@ -4527,6 +4653,10 @@ function drawTitleLogo(cx, cy, scale) {
 }
 
 function drawTitle() {
+  titleUpdate();
+  const T = TT;
+  ctx.save();
+  if (T.shake > 0) ctx.translate(rand(-T.shake, T.shake), rand(-T.shake, T.shake));
   titleBackdrop(1.08, Math.sin(G.time * 0.25) * 14, 0);
   // darken + colour grade
   const vg = ctx.createLinearGradient(0, 0, 0, H);
@@ -4538,8 +4668,8 @@ function drawTitle() {
   // sweeping spotlights
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
-  [[200, "255,120,60"], [W - 200, "120,140,255"], [W / 2, "255,220,140"]].forEach(([bx, col], i) => {
-    const sway = Math.sin(G.time * (0.6 + i * 0.2) + i * 2) * 260;
+  [[200, "255,120,60"], [W / 2, "255,220,140"], [W - 200, "120,140,255"]].forEach(([bx, col], i) => {
+    const sway = T.lights[i].x - bx;
     const gr = ctx.createLinearGradient(0, 0, 0, H);
     gr.addColorStop(0, `rgba(${col},0.22)`);
     gr.addColorStop(1, `rgba(${col},0)`);
@@ -4560,7 +4690,14 @@ function drawTitle() {
   }
 
   drawTitleLineup();
-  drawTitleLogo(W / 2, 160 + Math.sin(G.time * 1.6) * 4, 1);
+  {
+    // intro: the logo slams down from above
+    const u = clamp(T.t / 0.55, 0, 1), drop = T.intro ? (1 - u * u) * -420 : 0;
+    const sc = T.intro && T.t < 0.85 && T.t > 0.55 ? 1 + 0.12 * Math.sin((T.t - 0.55) / 0.3 * Math.PI) : 1;
+    drawTitleLogo(W / 2, 160 + drop + Math.sin(G.time * 1.6) * 4, sc);
+  }
+  if (T.flash > 0) { ctx.fillStyle = `rgba(255,240,200,${T.flash * 0.6})`; ctx.fillRect(0, 0, W, H); }
+  ctx.restore();
 
   // start button
   const pulse = 0.5 + 0.5 * Math.sin(G.time * 4);
@@ -6278,5 +6415,5 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 // Debug/test hook (harmless in production): lets automated checks read state.
-window.__game = { G, makeShareCard: (s) => makeShareCard(s), regions: () => hitRegions.map((r) => ({ id: r.id, x: r.x, y: r.y, w: r.w, h: r.h })), get F() { return F; }, CHARS, startMatch, sayQuote, updateFight, shareResult, endRound,
+window.__game = { G, get TT() { return TT; }, makeShareCard: (s) => makeShareCard(s), regions: () => hitRegions.map((r) => ({ id: r.id, x: r.x, y: r.y, w: r.w, h: r.h })), get F() { return F; }, CHARS, startMatch, sayQuote, updateFight, shareResult, endRound,
   audio: () => ({ state: actx && actx.state, loaded: Object.values(sfxBuf).filter((b) => b.length).length, total: Object.keys(sfxBuf).length, voices }) };
