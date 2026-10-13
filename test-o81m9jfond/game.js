@@ -429,6 +429,8 @@ const ASSET_PATHS = {
   "fx.kanye_fly": "assets/effects/kanye_fly.png",
   "fx.echpochmak": "assets/effects/echpochmak.png",
   "fx.pigeon_1": "assets/effects/pigeon_1.png",
+  "fx.zilla": "assets/effects/zilla.png",
+  "fx.zilla_foot": "assets/effects/zilla_foot.png",
   "fx.pigeon_2": "assets/effects/pigeon_2.png",
   "fx.kanye_lie": "assets/effects/kanye_lie.png",
   "fx.kanye_walk": "assets/effects/kanye_walk.png",
@@ -3648,6 +3650,23 @@ function drawFighter(f) {
   }
 }
 
+// Glebzilla rises behind the fighters while his foot sweeps the floor
+function drawZillaBack() {
+  for (const p of F.projectiles) {
+    if (p.kind !== "zilla") continue;
+    const owner = F.fighters[p.owner];
+    const fx = img("fx.zilla"), big = fx || img("spr.krip.special");
+    if (!big) continue;
+    const rise = Math.min(1, (p.t + 0.35) / 0.5);
+    ctx.save(); ctx.globalAlpha = (fx ? 1 : 0.55) * Math.min(1, p.life / 0.5);
+    const k = (H * (fx ? 0.8 : 1.1)) / big.height;
+    const cx = clamp(owner.x - owner.dir * 120, big.width * k * 0.3, W - big.width * k * 0.3);
+    ctx.translate(cx, FLOOR_Y + 30 + (1 - rise) * H * 0.8); if (owner.dir < 0) ctx.scale(-1, 1); ctx.scale(k, k);
+    if (!fx) ctx.filter = "brightness(0.5) sepia(1) hue-rotate(60deg) saturate(3)";
+    ctx.drawImage(big, -big.width / 2, -big.height);
+    ctx.restore();
+  }
+}
 function drawProjectiles() {
   for (const f of F.fighters) {
     const a = f.action;
@@ -3722,15 +3741,8 @@ function drawProjectiles() {
     if (p.kind === "quake") { drawQuake(p); continue; }
     if (p.kind === "mosh") { drawMosh(p); continue; }
     if (p.kind === "zilla") {
-      const owner = F.fighters[p.owner];
-      const fx = img("fx.zilla"), foot = img("fx.zilla_foot");
-      const rise = Math.min(1, (p.t + 0.35) / 0.5);
-      ctx.save(); ctx.globalAlpha = 0.55 * rise;
-      const big = fx || img("spr.krip.special");
-      if (big) { const k = (H * 1.15) / big.height; ctx.translate(owner.x - owner.dir * 160, FLOOR_Y + 40 + (1 - rise) * 300); if (owner.dir < 0) ctx.scale(-1, 1); ctx.scale(k, k);
-        if (!fx) ctx.filter = "brightness(0.5) sepia(1) hue-rotate(60deg) saturate(3)"; ctx.drawImage(big, -big.width / 2, -big.height); }
-      ctx.restore();
       if (p.delay > 0) continue;
+      const foot = img("fx.zilla_foot");
       const leg = foot || img("spr.krip.heavy");
       if (leg) { ctx.save(); ctx.translate(p.x, FLOOR_Y + 6); if (p.dir < 0) ctx.scale(-1, 1);
         const k = foot ? 380 / leg.width : 2.4; ctx.scale(k, k);
@@ -3998,6 +4010,7 @@ function drawFight() {
 
   // draw the attacking fighter on top
   const order = [a, b].sort((p, q) => (p.action ? 1 : 0) - (q.action ? 1 : 0) || (p.ko ? -1 : 0));
+  drawZillaBack();
   for (const f of order) drawFighter(f);
   drawProjectiles();
   drawParticles();
