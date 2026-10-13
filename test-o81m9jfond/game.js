@@ -1361,6 +1361,7 @@ function updateFighter(f, opp, dt) {
   f.comboT = Math.max(0, f.comboT - dt);
   f.buffT = Math.max(0, f.buffT - dt);
   if (f.fedT > 0) f.fedT -= dt;
+  if (f.zillaT > 0) { f.zillaT -= dt; f.invulnT = Math.max(f.invulnT || 0, 0.05); f.vx = 0; }
   if (f.cid === "husky" && !f.waterUsed && !f.ko && f.hp > 0 && f.hp <= 25 && F.phase === "fight") {
     f.waterUsed = true; f.healT = 1.2;
     popup(f.x, f.y - 320, "ЖИВАЯ ВОДА!", "#7fd8ff", 30);
@@ -1735,10 +1736,12 @@ function updateSpecial(f, opp, a) {
       });
     });
   } else if (f.cid === "krip") {
-    // Glebzilla: a giant version of him rises behind the arena and sweeps the floor with a huge foot — jump it
-    F.projectiles.push({ kind: "zilla", owner: f.slot, dir: f.dir, x: f.dir === 1 ? -420 : W + 420, y: FLOOR_Y,
-      vx: f.dir * 1150, w: 240, h: 85, dmg: 18, life: 2.6, hit: false, pierce: true, height: "unblockable", t: 0, delay: 0.35 });
-    F.shake = Math.max(F.shake, 14); F.flash = Math.max(F.flash, 0.1);
+    // Glebzilla: Krip turns into a giant monster that charges across the arena and rams the opponent.
+    // Block to take only a scratch; otherwise you're sent flying.
+    F.projectiles.push({ kind: "zilla", owner: f.slot, dir: f.dir, x: f.x, y: FLOOR_Y, x0: f.x,
+      vx: 0, w: 230, h: 380, dmg: 18, life: 2.2, hit: false, pierce: true, height: "mid", t: 0, phase: "grow" });
+    f.zillaT = 2.2;
+    F.shake = Math.max(F.shake, 14); F.flash = Math.max(F.flash, 0.12);
     popup(f.x, f.y - 330, "ГЛЕБЗИЛЛА!", "#7ccf5a", 40);
   } else if (f.cid === "shilo") {
     // a flock of angry pigeons sweeps in at head height and pecks: duck under it or block
@@ -2708,7 +2711,7 @@ function drawNuke(p) {
 /* Projectiles                                                         */
 /* ------------------------------------------------------------------ */
 function projBox(p) {
-  if (p.kind === "zilla") return { x0: p.x - p.w / 2, x1: p.x + p.w / 2, y0: FLOOR_Y - p.h, y1: FLOOR_Y };
+  if (p.kind === "zilla") { const fr = p.x + p.dir * 170; return { x0: Math.min(fr, fr - p.dir * p.w), x1: Math.max(fr, fr - p.dir * p.w), y0: FLOOR_Y - p.h, y1: FLOOR_Y }; }
   if (p.kind === "cadillac") return { x0: p.x - p.w / 2, x1: p.x + p.w / 2, y0: FLOOR_Y - p.h, y1: FLOOR_Y };
   return { x0: p.x - p.w / 2, x1: p.x + p.w / 2, y0: p.y - p.h / 2, y1: p.y + p.h / 2 };
 }
@@ -2897,7 +2900,13 @@ function updateProjectiles(dt) {
     if (p.kind === "sinyak" && Math.random() < dt * 25) {
       F.particles.push({ type: "sq", x: p.x - p.dir * rand(120, 260), y: p.y + rand(-40, 40), vx: -p.dir * 300, vy: 0, life: 0.2, max: 0.2, size: 4, color: "rgba(255,255,255,0.7)" });
     }
-    if (p.kind === "zilla") { F.shake = Math.max(F.shake, 5); if (Math.random() < dt * 30) spawnDust(p.x - p.dir * 120, FLOOR_Y, 0.9); }
+    if (p.kind === "zilla") {
+      const owner = F.fighters[p.owner];
+      if (p.phase === "grow") { p.vx = 0; p.x = owner.x; if (p.t > 0.45) { p.phase = "charge"; p.vx = p.dir * 1000; playSfx("hitHeavy"); } }
+      if (p.phase === "charge") { F.shake = Math.max(F.shake, 6); if (Math.random() < dt * 30) spawnDust(p.x - p.dir * 80, FLOOR_Y, 1);
+        if (p.x < WALL_L - 60 || p.x > WALL_R + 60 || p.t > 1.6) { p.phase = "shrink"; p.vx = 0; p.shrinkT = 0; } }
+      if (p.phase === "shrink") { p.vx = 0; p.shrinkT += dt; if (p.shrinkT > 0.3) { p.life = 0; owner.zillaT = 0; } }
+    }
     if (p.kind === "monkey" && Math.random() < dt * 14) spawnDust(p.x - p.dir * 30, FLOOR_Y, 0.4);
     if (p.kind === "cadillac") {
       if (Math.random() < dt * 40) spawnDust(p.x - p.dir * 180, FLOOR_Y, 0.55);
@@ -2918,15 +2927,15 @@ function updateProjectiles(dt) {
       }
       continue;
     }
-    if (!p.hit && F.phase === "fight") {
+    if (!p.hit && F.phase === "fight" && !(p.kind === "zilla" && p.phase !== "charge")) {
       const target = F.fighters[1 - p.owner];
       if (overlap(projBox(p), hurtbox(target))) {
         p.hit = true;
         const res = applyHit(F.fighters[p.owner], target, {
           dmg: p.dmg, height: p.height, hitstun: p.kind === "monkey" ? (p.last ? 0.8 : 0.4) : p.pierce || p.kind === "cadillac" ? 0.8 : 0.5,
-          blockstun: 0.24, knock: p.kind === "zilla" ? 760 : p.kind === "burger" ? 480 : p.kind === "monkey" ? (p.last ? 420 : 90) : p.kind === "runner" ? 260 : p.kind === "sinyak" ? 640 : p.kind === "cadillac" ? 520 : 300, dir: p.dir,
+          blockstun: 0.24, knock: p.kind === "zilla" ? 820 : p.kind === "burger" ? 480 : p.kind === "monkey" ? (p.last ? 420 : 90) : p.kind === "runner" ? 260 : p.kind === "sinyak" ? 640 : p.kind === "cadillac" ? 520 : 300, dir: p.dir,
           sfx: ({ kettle: "special_guf_hit", guitar: "special_noize_hit", cadillac: "special_morgen_hit", sinyak: "special_kreed_hit", burger: "special_face_hit" })[p.kind] || "hitHeavy",
-          stop: p.kind === "runner" || p.kind === "monkey" ? 0.06 : p.pierce || p.kind === "cadillac" ? 0.12 : 0.08, chip: p.kind === "runner" || p.kind === "monkey" ? 1 : 3,
+          stop: p.kind === "runner" || p.kind === "monkey" ? 0.06 : p.pierce || p.kind === "cadillac" ? 0.12 : 0.08, chip: p.kind === "zilla" ? 5 : p.kind === "runner" || p.kind === "monkey" ? 1 : 3,
           launch: p.kind === "zilla" ? -900 : p.kind === "burger" ? -620 : p.kind === "sinyak" ? -820 : p.kind === "cadillac" ? -720 : p.kind === "runner" || p.kind === "monkey" ? (p.last ? -600 : 0) : -380,
           sparkX: target.x - p.dir * 20, sparkY: p.kind === "cadillac" ? target.y - 80 : p.y,
         });
@@ -3146,7 +3155,7 @@ function updateBot(bot, opp, dt) {
         continue;
       }
       if (p.kind === "zilla") {
-        if (p.delay <= 0 && Math.sign(bot.x - p.x) === Math.sign(p.vx)) { const front = Math.abs(bot.x - p.x) - p.w / 2; if (front < 330 && front > 80 && Math.random() < d.dodge * 0.6) ai.jump = true; }
+        if (p.phase !== "shrink" && Math.abs(bot.x - p.x) < 650 && Math.random() < d.block) { ai.holdBack = 0.6; ai.holdDown = 0; }
         continue;
       }
       if (p.kind === "pigeons") {
@@ -3460,6 +3469,7 @@ function poseName(f) {
 }
 
 function drawFighter(f) {
+  if (f.zillaT > 0) return;          // he IS the monster right now
   const name = poseName(f);
   let sx = 1, sy = 1, ox = 0, oy = 0, rot = 0;
 
@@ -3650,23 +3660,6 @@ function drawFighter(f) {
   }
 }
 
-// Glebzilla rises behind the fighters while his foot sweeps the floor
-function drawZillaBack() {
-  for (const p of F.projectiles) {
-    if (p.kind !== "zilla") continue;
-    const owner = F.fighters[p.owner];
-    const fx = img("fx.zilla"), big = fx || img("spr.krip.special");
-    if (!big) continue;
-    const rise = Math.min(1, (p.t + 0.35) / 0.5);
-    ctx.save(); ctx.globalAlpha = (fx ? 1 : 0.55) * Math.min(1, p.life / 0.5);
-    const k = (H * (fx ? 0.8 : 1.1)) / big.height;
-    const cx = clamp(owner.x - owner.dir * 120, big.width * k * 0.3, W - big.width * k * 0.3);
-    ctx.translate(cx, FLOOR_Y + 30 + (1 - rise) * H * 0.8); if (owner.dir < 0) ctx.scale(-1, 1); ctx.scale(k, k);
-    if (!fx) ctx.filter = "brightness(0.5) sepia(1) hue-rotate(60deg) saturate(3)";
-    ctx.drawImage(big, -big.width / 2, -big.height);
-    ctx.restore();
-  }
-}
 function drawProjectiles() {
   for (const f of F.fighters) {
     const a = f.action;
@@ -3741,13 +3734,23 @@ function drawProjectiles() {
     if (p.kind === "quake") { drawQuake(p); continue; }
     if (p.kind === "mosh") { drawMosh(p); continue; }
     if (p.kind === "zilla") {
-      if (p.delay > 0) continue;
-      const foot = img("fx.zilla_foot");
-      const leg = foot || img("spr.krip.heavy");
-      if (leg) { ctx.save(); ctx.translate(p.x, FLOOR_Y + 6); if (p.dir < 0) ctx.scale(-1, 1);
-        const k = foot ? 380 / leg.width : 2.4; ctx.scale(k, k);
-        if (!foot) ctx.filter = "sepia(1) hue-rotate(60deg) saturate(2.5) brightness(0.8)";
-        ctx.drawImage(leg, -leg.width * 0.75, -leg.height * (foot ? 1 : 0.62)); ctx.restore(); }
+      const im = img("fx.zilla");
+      if (!im) continue;
+      let g = 1;
+      if (p.phase === "grow") g = Math.min(1, p.t / 0.4);
+      if (p.phase === "shrink") g = Math.max(0, 1 - p.shrinkT / 0.3);
+      const hgt = 470 * (0.35 + 0.65 * g);
+      const k = hgt / im.height;
+      const bob = p.phase === "charge" ? Math.abs(Math.sin(p.t * 14)) * 10 : 0;
+      ctx.save();
+      ctx.globalAlpha = p.phase === "shrink" ? g : 1;
+      ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(p.x, FLOOR_Y + 6, 220 * k * im.width / 620 * 1.6, 16, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.translate(p.x, FLOOR_Y + 10 - bob);
+      if (p.dir < 0) ctx.scale(-1, 1);
+      if (p.phase === "charge") ctx.rotate(0.08);
+      ctx.scale(k, k);
+      ctx.drawImage(im, -im.width * 0.55, -im.height);
+      ctx.restore();
       continue;
     }
     if (p.kind === "pigeons") {
@@ -4010,7 +4013,6 @@ function drawFight() {
 
   // draw the attacking fighter on top
   const order = [a, b].sort((p, q) => (p.action ? 1 : 0) - (q.action ? 1 : 0) || (p.ko ? -1 : 0));
-  drawZillaBack();
   for (const f of order) drawFighter(f);
   drawProjectiles();
   drawParticles();
