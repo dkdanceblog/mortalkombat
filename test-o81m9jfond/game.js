@@ -143,12 +143,12 @@ const CHARS = {
     },
   },
   ramirez: {
-    id: "ramirez", name: "ГРЯЗНЫЙ РАМИРЕС", short: "РАМИРЕС", special: "ОБЕЗЬЯНЫ", color: "#b4c94a",
+    id: "ramirez", name: "РЭМ", special: "ОБЕЗЬЯНЫ", color: "#b4c94a",
     speed: 280, power: 1.04, specialCd: 6.0, tough: 1.04, jump: 0.95, weight: 1.2, dash: 0.95,
     stats: { "СКОРОСТЬ": 2, "СИЛА": 4, "ЗДОРОВЬЕ": 4 },
     perk: "ФИШКА: пропустил удар — звереет и бьёт сильнее",
     blurb: "Король слэма.",
-    loseTitle: "РАМИРЕС ОТМЫЛСЯ",
+    loseTitle: "РЭМ ОТМЫЛСЯ",
     quotes: ["В СЛЭМ!", "ОБЕЗЬЯНЫ, ФАС!", "ГРЯЗЬ НЕ СМЫВАЕТСЯ", "СТЕНКА НА СТЕНКУ!"],
     moves: {
       // windmill (hardcore dancing): the arm swings a full circle and comes down from above — reaches crouchers
@@ -5233,7 +5233,7 @@ const ARCADE_ENDINGS = {
   korzh: "Ему реально горы по колено.",
   face: "Фэйс всех уронил.",
   chip: "Чипинкос тупо лучший.",
-  ramirez: "Грязный Рамирес превратил турнир в один большой слэм.",
+  ramirez: "Рэм превратил турнир в один большой слэм.",
   husky: "Хаски вернулся на панельку чемпионом.",
   babangida: "Бабангида снова исчез. Говорят, он и не появлялся.",
   sqwoz: "Татарский богатырь накормил всех эчпочмаками.",
@@ -6115,7 +6115,7 @@ function checkCodes(code) {
 
 /* Evil twin */
 const TWIN_TINT = { color: "#2a0645", a: 0.5 };
-const ACCUSATIVE = { guf: "ГУФА", noize: "НОЙЗА", oxxxy: "ОКСИ", morgen: "МОРГЕНА", maybe: "МЭЙБИ БЭЙБИ", kreed: "ЕГОРА", slava: "СЛАВУ КПСС", atl: "ATL", korzh: "МАКСА КОРЖА", face: "FACE", chip: "ЧИПИНКОСА", ramirez: "ГРЯЗНОГО РАМИРЕСА", husky: "ХАСКИ", babangida: "БАБАНГИДУ", sqwoz: "SQWOZ BAB", shilo: "ШИЛО", krip: "КРИП-А-КРИПА", tito: "ТИТОМИРА" };
+const ACCUSATIVE = { guf: "ГУФА", noize: "НОЙЗА", oxxxy: "ОКСИ", morgen: "МОРГЕНА", maybe: "МЭЙБИ БЭЙБИ", kreed: "ЕГОРА", slava: "СЛАВУ КПСС", atl: "ATL", korzh: "МАКСА КОРЖА", face: "FACE", chip: "ЧИПИНКОСА", ramirez: "РЭМА", husky: "ХАСКИ", babangida: "БАБАНГИДУ", sqwoz: "SQWOZ BAB", shilo: "ШИЛО", krip: "КРИП-А-КРИПА", tito: "ТИТОМИРА" };
 const FEMININE = new Set(["maybe"]);
 function twinData(cid) {
   const base = CHARS[cid];
