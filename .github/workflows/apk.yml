@@ -1,0 +1,43 @@
+name: build-apk
+on:
+  push:
+    branches: [apk-build]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: site
+          sparse-checkout: test-o81m9jfond
+      - name: Copy the game into the app
+        run: |
+          mkdir -p app/src/main/assets/www
+          rsync -a --exclude tools --exclude CHANGELOG.md --exclude sw.js --exclude assets_png_full site/test-o81m9jfond/ app/src/main/assets/www/
+          rm -rf site
+          du -sh app/src/main/assets/www
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+      - name: Build
+        env:
+          RNV_CODE: ${{ github.run_number }}
+        run: gradle --no-daemon assembleRelease
+      - name: Publish to branch apk-out
+        run: |
+          mkdir out && cp app/build/outputs/apk/release/app-release.apk out/rnv.apk
+          cd out
+          echo "${{ github.run_number }} ${{ github.sha }}" > build.txt
+          git init -q -b apk-out
+          git config user.name "apk-bot"; git config user.email "apk-bot@users.noreply.github.com"
+          git add . && git commit -qm "apk build ${{ github.run_number }}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" apk-out

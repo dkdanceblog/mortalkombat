@@ -1,0 +1,14 @@
+plugins { id "com.android.application" }
+android {
+  namespace "ru.dkdance.rnv"
+  compileSdk 34
+  defaultConfig {
+    applicationId "ru.dkdance.rnv"
+    minSdk 24
+    targetSdk 34
+    versionCode (System.getenv("RNV_CODE") ?: "1").toInteger()
+    versionName "1." + (System.getenv("RNV_CODE") ?: "1")
+  }
+  buildTypes { release { minifyEnabled false; signingConfig signingConfigs.debug } }
+  androidResources { noCompress += ["webp", "png", "mp3", "ogg", "m4a", "js", "json"] }
+}
