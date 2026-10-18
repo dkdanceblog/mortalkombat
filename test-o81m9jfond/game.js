@@ -350,11 +350,11 @@ const STAGES = {
   circus: { id: "circus", name: "ЦИРК", ambient: "confetti" },
   yard: { id: "yard", name: "ПАДИК", ambient: "leaves" },
   fountains: { id: "fountains", name: "МЁРТВЫЕ ФОНТАНЫ", ambient: "motes" },
-  wasteland: { id: "wasteland", name: "ЯДЕРНАЯ ПУСТОШЬ", ambient: "ash" },
+  wasteland: { id: "wasteland", name: "АПОКАЛИПСИС", ambient: "ash" },
   gorgorod: { id: "gorgorod", name: "ГОРГОРОД", ambient: "rain" },
   mansion: { id: "mansion", name: "ОСОБНЯК МОРГЕНА", ambient: "motes" },
-  train: { id: "train", name: "АНТИХАЙП-ТРЕЙН", ambient: "none" },
-  roof: { id: "roof", name: "МАЛИНОВЫЙ ЗАКАТ", ambient: "motes" },
+  train: { id: "train", name: "АНТИХАЙП-ПОЕЗД", ambient: "none" },
+  roof: { id: "roof", name: "ЗАКАТ", ambient: "motes" },
 };
 const STAGE_IDS = ["moscow", "thailand", "concert", "londograd", "bar", "circus", "yard", "fountains", "wasteland", "gorgorod", "mansion", "train", "roof"];
 // Circus garland bulbs found in the background art: [x, y, size] in 1280x720 image space
