@@ -1401,8 +1401,10 @@ function hurtbox(f) {
   return { x0: f.x - 46, x1: f.x + 46, y0: f.y - 215, y1: f.y };
 }
 
+// "finish" = ДОБЕЙ ЕГО: the fight is still on for the winner
+function liveFight() { return F.phase === "fight" || F.phase === "finish"; }
 function canAct(f) {
-  return F.phase === "fight" && !f.ko && !f.action && f.hitstun <= 0 && f.blockstun <= 0;
+  return liveFight() && !f.ko && !f.dazed && !f.action && f.hitstun <= 0 && f.blockstun <= 0;
 }
 
 // Crouching heavy: a low sweep that knocks the opponent down
@@ -1491,7 +1493,7 @@ function updateFighter(f, opp, dt) {
   else f.trailHp = Math.max(f.hp, f.trailHp - 45 * dt);
 
   if (f.grab) { updateGrab(f, c, dt); if (f.grab) { f.crouch = false; f.blocking = false; f.blockBtn = false; return; } }
-  const fighting = F.phase === "fight" && !f.ko;
+  const fighting = liveFight() && !f.ko;
   const free = canAct(f);
 
   // Face the opponent while grounded and not committed to an action.
@@ -1927,6 +1929,7 @@ function fakeDeath(f) {
 }
 
 function applyHit(att, def, h) {
+  if (def.dazed) { if (F.phase === "finish") finishKO(def, h.dir || att.dir); return "miss"; }
   if (def.ko) return "miss";
   if (def.invulnT > 0) return "miss";
   if (def.downT > 0) return "miss";                                   // lying on the floor
@@ -2588,7 +2591,7 @@ function resolveThrow(f, opp) {      // f = attacker, opp = the grabbed one
 // Called for the grabbed fighter every frame while the grab lasts
 function updateGrab(f, c, dt) {
   const g = f.grab, att = F.fighters[g.by];
-  if (!att.action || att.action.type !== "throw" || !att.action.grab || att.ko || f.ko || F.phase !== "fight") { f.grab = null; return; }
+  if (!att.action || att.action.type !== "throw" || !att.action.grab || att.ko || f.ko || !liveFight()) { f.grab = null; return; }
   g.t -= dt;
   f.vx = 0; f.noPushT = 0.1;
   f.x = lerp(f.x, clamp(att.x + att.dir * 70, WALL_L, WALL_R), 1 - Math.pow(0.001, dt));
@@ -2647,7 +2650,7 @@ function updateSuper(f, opp, dt) {
     } else if (reach && !opp.ko && !(opp.downT > 0) && !(opp.invulnT > 0) && opp.y > FLOOR_Y - 170) {
       a.phase = "combo"; a.t = 0; a.hits = 0; playSfx("superHit");
       opp.vx = 0; opp.vy = 0; opp.hitstun = 3; opp.action = null; opp.pull = null; opp.dashT = 0;
-    } else if (a.t > 0.5 || (f.dir > 0 ? f.x >= WALL_R : f.x <= WALL_L) || F.phase !== "fight") {
+    } else if (a.t > 0.5 || (f.dir > 0 ? f.x >= WALL_R : f.x <= WALL_L) || !liveFight()) {
       a.phase = "recover"; a.t = 0; a.move.frame = "heavy";
       popup(f.x, f.y - 300, "МИМО!", "#9d97c9", 26);
     }
@@ -2659,7 +2662,7 @@ function updateSuper(f, opp, dt) {
     while (a.hits <= idx && a.hits < 7 && a.phase === "combo") {
       const last = a.hits === 6;
       a.move.frame = last ? "special" : (a.hits % 2 ? "heavy" : "light");
-      if (F.phase !== "fight") { a.phase = "recover"; a.t = 0; break; }
+      if (!liveFight()) { a.phase = "recover"; a.t = 0; break; }
       applyHit(f, opp, last
         ? { dmg: 14, height: "unblockable", hitstun: 0.9, blockstun: 0, knock: 700, launch: -900, dir: f.dir, sfx: "hitHeavy", stop: 0.22, chip: 0, noScale: true, sparkX: opp.x, sparkY: opp.y - 140 }
         : { dmg: 3, height: "unblockable", hitstun: 3, blockstun: 0, knock: 0, dir: f.dir, sfx: a.hits % 2 ? "hitHeavy" : "hitLight", stop: 0.03, chip: 0, noScale: true, sparkX: opp.x - f.dir * 10, sparkY: opp.y - rand(110, 190) });
@@ -2973,7 +2976,7 @@ function updateQuake(p, dt) {
   }
   const target = F.fighters[1 - p.owner];
   const d = Math.abs(target.x - p.x);
-  if (!p.hit && F.phase === "fight" && d <= front && d >= front - 140) {
+  if (!p.hit && liveFight() && d <= front && d >= front - 140) {
     if (target.onGround) {
       p.hit = true;
       const res = applyHit(F.fighters[p.owner], target, {
@@ -3038,13 +3041,13 @@ function updateNuke(p, dt) {
       F.particles.push({ type: "sq", x: p.x, y: FLOOR_Y - 10, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, g: 900,
         life: rand(0.4, 0.9), max: 0.9, size: pick([6, 8, 10]), color: pick(["#fff6b0", "#ffd54a", "#ff9a3d", "#ff4a2a", "#5a3a2a"]) });
     }
-    if (Math.abs(target.x - p.x) < p.w / 2 && F.phase === "fight") {
+    if (Math.abs(target.x - p.x) < p.w / 2 && liveFight()) {
       const res = applyHit(F.fighters[p.owner], target, {
         dmg: p.dmg, height: "unblockable", hitstun: 0.9, blockstun: 0.3, knock: 420, dir: target.x >= p.x ? 1 : -1,
         sfx: "hitHeavy", stop: 0.16, chip: 0, launch: -950, sparkX: target.x, sparkY: target.y - 100,
       });
       if (res === "hit") popup(target.x, target.y - 300, "ЯДЕРКА!", "#ffd54a", 38);
-    } else if (F.phase === "fight") {
+    } else if (liveFight()) {
       popup(target.x, target.y - 280, "МИМО!", "#8dff7a", 30);
     }
   }
@@ -3136,7 +3139,7 @@ function updateMosh(p, dt) {
     F.shake = Math.max(F.shake, 18); F.flash = Math.max(F.flash, 0.12);
     spawnDust(p.cx, FLOOR_Y, 2.2); playSfx("hitHeavy"); playSfx("crowdReact");
     const grounded = target.y > FLOOR_Y - 55 && Math.abs(target.x - p.cx) < 150;
-    p.caught = grounded && !target.ko && F.phase === "fight";
+    p.caught = grounded && !target.ko && liveFight();
     if (!p.caught) popup(p.cx, FLOOR_Y - 310, "МИМО!", "#fff6c8", 30);
     else popup(p.cx, FLOOR_Y - 310, "СЛЭМ!", "#b4c94a", 44);
   }
@@ -3200,7 +3203,7 @@ function updatePigeons(p, dt) {
   p.x += p.vx * dt * (on && p.hits < 5 ? 0.25 : 1);
   if (Math.random() < dt * 12) F.particles.push({ type: "sq", x: p.x + rand(-100, 100), y: p.y + rand(-30, 30), vx: rand(-80, 80), vy: rand(20, 90), life: 0.9, max: 0.9, size: pick([4, 6]), color: pick(["#d8dce4", "#9aa3b2", "#ffffff"]) });
   p.nextHit -= dt;
-  if (on && F.phase === "fight" && p.hits < 5 && p.nextHit <= 0) {
+  if (on && liveFight() && p.hits < 5 && p.nextHit <= 0) {
     p.nextHit = 0.13; p.hits++;
     const last = p.hits === 5;
     const res = applyHit(F.fighters[p.owner], target, { dmg: last ? 5 : p.dmg, height: "high", hitstun: last ? 0.6 : 0.3, blockstun: 0.18,
@@ -3234,7 +3237,7 @@ function updateMolotov(p, dt) {
     p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += 12 * dt * Math.sign(p.vx || 1);
     if (Math.random() < dt * 40) F.particles.push({ type: "sq", x: p.x - Math.sign(p.vx) * 20, y: p.y - 20, vx: rand(-30, 30), vy: rand(-80, -30), life: 0.3, max: 0.3, size: pick([3, 4]), color: pick(["#ffb030", "#ff6a20", "#ffe080"]) });
     let burst = false;
-    if (!p.hit && F.phase === "fight" && overlap(projBox(p), hurtbox(target))) {
+    if (!p.hit && liveFight() && overlap(projBox(p), hurtbox(target))) {
       p.hit = true; burst = true;
       const res = applyHit(att, target, { dmg: p.dmg, height: "mid", hitstun: 0.6, blockstun: 0.24, knock: 300, dir: Math.sign(p.vx) || p.dir,
         sfx: "hitHeavy", stop: 0.1, chip: 3, launch: -420, sparkX: target.x, sparkY: p.y });
@@ -3251,7 +3254,7 @@ function updateMolotov(p, dt) {
   p.life -= dt;
   p.tick -= dt;
   const inFire = target.onGround && !target.ko && Math.abs(target.x - p.x) < p.w / 2 + 20;
-  if (inFire && p.tick <= 0 && F.phase === "fight") {
+  if (inFire && p.tick <= 0 && liveFight()) {
     p.tick = 0.4;
     applyHit(att, target, { dmg: 3, height: "unblockable", hitstun: 0.22, blockstun: 0, knock: Math.sign(target.x - p.x || 1) * 140, dir: Math.sign(target.x - p.x) || 1,
       sfx: "hitLight", stop: 0.02, chip: 0, noScale: true, sparkX: target.x, sparkY: FLOOR_Y - 40 });
@@ -3282,7 +3285,7 @@ function updateKanye(p, dt) {
     p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += 7 * dt * Math.sign(p.vx || 1);
     if (p.x < WALL_L - 40 || p.x > WALL_R + 40) { p.vx = -p.vx * 0.4; p.x = clamp(p.x, WALL_L - 40, WALL_R + 40); }
     const target = F.fighters[1 - p.owner];
-    if (!p.hit && F.phase === "fight" && p.vy > 0 && overlap(projBox(p), hurtbox(target))) {
+    if (!p.hit && liveFight() && p.vy > 0 && overlap(projBox(p), hurtbox(target))) {
       p.hit = true;
       const res = applyHit(F.fighters[p.owner], target, { dmg: p.dmg, height: "overhead", hitstun: 0.8, blockstun: 0.26, knock: 360,
         dir: Math.sign(p.vx) || p.dir, sfx: "hitHeavy", stop: 0.12, chip: 3, launch: -520, sparkX: target.x, sparkY: target.y - 200 });
@@ -3357,7 +3360,7 @@ function updateProjectiles(dt) {
       if (Math.abs(p.x - W / 2) < W / 2 + 100) F.shake = Math.max(F.shake, 3);
     }
 
-    if (!p.hit && F.phase === "fight" && p.kind === "letter") {
+    if (!p.hit && liveFight() && p.kind === "letter") {
       const target = F.fighters[1 - p.owner];
       if (overlap(projBox(p), hurtbox(target))) {
         p.hit = true; p.life = 0;
@@ -3371,7 +3374,7 @@ function updateProjectiles(dt) {
       }
       continue;
     }
-    if (!p.hit && F.phase === "fight" && !(p.kind === "zilla" && p.phase !== "charge")) {
+    if (!p.hit && liveFight() && !(p.kind === "zilla" && p.phase !== "charge")) {
       const target = F.fighters[1 - p.owner];
       if (overlap(projBox(p), hurtbox(target))) {
         p.hit = true;
@@ -3526,7 +3529,7 @@ function updateBot(bot, opp, dt) {
   const d = F.diff;
   const ai = bot.ai;
   for (const a of ACTIONS) { c.held[a] = false; c.pressed[a] = false; }
-  if (F.phase !== "fight" || bot.ko) return;
+  if (!liveFight() || bot.ko) return;
 
   const dist = Math.abs(opp.x - bot.x);
   const towards = opp.x > bot.x ? "right" : "left";
@@ -3755,6 +3758,7 @@ function endRound(type, winnerSlot, dir = 1) {
     F.perfect = w.hp >= 100;
     w.won = true;
     w.action = null;
+    if (type === "ko" && !G.tutorial && F.wins[winnerSlot] >= ROUNDS_TO_WIN) { startFinishHim(w, l); stopMusic(); return; }
     if (type === "ko") {
       l.ko = true;
       l.action = null;
@@ -3824,6 +3828,8 @@ function updateFight(rawDt) {
     return;
   }
 
+  if (F.phase === "fatality") { F.phaseT += rawDt; updateFatality(rawDt); updateEffects(rawDt); return; }
+
   let dt = rawDt * GAME_SPEED;
   if (F.slow > 0) { F.slow -= rawDt; dt *= 0.3; }
 
@@ -3841,15 +3847,22 @@ function updateFight(rawDt) {
     if (F.timer <= 0) endRound("time", -1);
     F.quoteCd -= dt;
     if (F.quoteCd <= 0 && !F.quote) { if (Math.random() < dt * 0.5) sayQuote(pick(F.fighters)); }
+  } else if (F.phase === "finish") {
+    if (F.phaseT >= FINISH_TIME) finishFall();
   } else if (F.phase === "ko") {
-    if (F.phaseT >= 2.8) { afterRound(); return; }
+    if (F.phaseT >= (F.fatDone ? 3.2 : 2.8)) { afterRound(); return; }
   }
 
   // Controllers
   if (G.mode === 2) { copyCtrl(ctrls[0], a.ctrl); copyCtrl(ctrls[1], b.ctrl); }
   else { copyCtrl(ctrls[0], a.ctrl); updateBot(b, a, dt); }
   if (G.botVsBot && G.mode === 1) updateBot(a, b, dt);           // test hook: CPU vs CPU
-  if (F.phase !== "fight") { for (const f of F.fighters) for (const k of ACTIONS) { f.ctrl.held[k] = false; f.ctrl.pressed[k] = false; } }
+  if (F.phase === "finish") finishControls();
+  if (F.phase !== "fight") { for (const f of F.fighters) { if (F.phase === "finish" && f.slot === F.finish.w) continue; for (const k of ACTIONS) { f.ctrl.held[k] = false; f.ctrl.pressed[k] = false; } } }
+  if (F.phase === "finish") {
+    const w = F.fighters[F.finish.w];
+    if (w.ctrl.pressed.special && FATALITIES[w.cid] && canAct(w) && w.onGround) { startFatality(w, F.fighters[F.finish.l]); return; }
+  }
 
   updateFighter(a, b, dt);
   updateFighter(b, a, dt);
@@ -3899,6 +3912,7 @@ function poseName(f) {
     return "ko";
   }
   if (f.won && F.phase === "ko") return "win";
+  if (f.dazed && f.onGround) return "hurt";
   if (f.grab) return "hurt";          // caught in a throw
   const foe = F && F.fighters && F.fighters[1 - f.slot];
   const guarding = f.blocking && !f.action && f.hitstun <= 0 && foe && (foe.action || F.projectiles.some((q) => q.owner !== f.slot)) &&
@@ -3926,6 +3940,7 @@ function poseName(f) {
 }
 
 function drawFighter(f) {
+  if (F.fat) { drawFatFighter(f); return; }
   if (f.zillaT > 0) return;          // he IS the monster right now
   const name = poseName(f);
   let sx = 1, sy = 1, ox = 0, oy = 0, rot = 0;
@@ -3985,6 +4000,7 @@ function drawFighter(f) {
     }
   }
   if (f.land > 0) { const k = f.land / 0.12 * (f.data.weight || 1); sy *= 1 - 0.08 * k; sx *= 1 + 0.06 * k; }
+  if (f.dazed && f.onGround) { rot = Math.sin(G.time * 2.6) * 0.09; ox = Math.sin(G.time * 2.6 + 0.5) * 10; sx = 1; }
   if (f.bigT > 0) {   // "Алик в ударе": swells up, then shrinks back
     f.bigT -= 1 / 60;
     const k = Math.min(1, Math.min(5 - f.bigT, f.bigT) / 0.35);
@@ -4072,6 +4088,8 @@ function drawFighter(f) {
     flash: f.flash > 0 ? 0.7 : (blockingNow ? 0.25 : 0),
     flashColor: blockingNow ? "#8fd3ff" : "#ffffff",
   });
+
+  if (f.dazed && f.onGround) drawDazedStars(f);
 
   // Noize's guitar swing
   if (am && am.guitar && f.hitstun <= 0 && f.action.t >= am.startup * 0.9) {
@@ -4476,6 +4494,378 @@ function drawCadillacWarning() {
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* ДОБЕЙ ЕГО! / ФАТАЛИТИ                                               */
+/* ------------------------------------------------------------------ */
+// The match-deciding KO leaves the loser dazed for a few seconds: a plain hit = victory, the special = fatality.
+const FINISH_TIME = 5;
+const FATALITIES = {
+  guf:    { kind: "ice",   caption: "АЙС БЭЙБИ",              dur: 3.4, titleAt: 1.9 },
+  noize:  { kind: "tv",    caption: "КОНЕЦ ЭФИРА",            dur: 3.3, titleAt: 2.4 },
+  oxxxy:  { kind: "stomp", caption: "СОПЕРНИК ПОД ПОДОШВОЙ",  dur: 3.1, titleAt: 1.5 },
+  morgen: { kind: "burn",  caption: "ЛЕГЕНДАРНАЯ ПЫЛЬ",       dur: 3.9, titleAt: 2.7 },
+};
+
+function startFinishHim(w, l) {
+  F.phase = "finish"; F.phaseT = 0;
+  F.finish = { w: w.slot, l: l.slot, botFat: null };
+  w.won = false;                       // still fighting for a moment
+  l.dazed = true; l.hp = 0; l.action = null; l.super = 0;
+  l.hitstun = Math.min(l.hitstun, 0.3); l.vx *= 0.3; l.grab = null;
+  F.slow = 0.6; F.flash = 0.3; F.shake = 14;
+  playSfx("koHit"); buzz([60, 40, 120]);
+  voice(l, "hurt");
+}
+
+// bot winner: sometimes finishes with the fatality, otherwise just hits
+function finishControls() {
+  const w = F.fighters[F.finish.w];
+  if (!(w.isBot || G.botVsBot)) return;
+  if (F.finish.botFat === null) F.finish.botFat = !!FATALITIES[w.cid] && Math.random() < 0.5;
+  if (!F.finish.botFat) return;
+  for (const k of ACTIONS) { w.ctrl.held[k] = false; w.ctrl.pressed[k] = false; }
+  if (F.phaseT > 1.1) w.ctrl.pressed.special = true;
+}
+
+// a hit landed: the loser flies like a normal KO
+function finishKO(l, dir) {
+  const w = F.fighters[1 - l.slot];
+  l.dazed = false; l.ko = true; l.action = null;
+  l.vx = dir * 620; l.vy = -900; l.onGround = false;
+  w.won = true;
+  F.phase = "ko"; F.phaseT = 0; F.endType = "ko";
+  F.slow = 1.1; F.flash = 0.35; F.shake = 18;
+  hitSpark(l.x, l.y - 150, 12);
+  playSfx("koHit"); buzz([80, 50, 160]);
+  if (REACT[G.stage]) playSfx(REACT[G.stage]);
+  voice(l, "ko");
+  if (Math.random() < 0.6) { F.quote = null; sayQuote(w); }
+}
+
+// time ran out: he just collapses
+function finishFall() {
+  const l = F.fighters[F.finish.l], w = F.fighters[F.finish.w];
+  l.dazed = false; l.ko = true; l.action = null;
+  w.won = true;
+  F.phase = "ko"; F.phaseT = 0; F.endType = "ko";
+  playSfx("ko");
+}
+
+function startFatality(w, l) {
+  const fd = FATALITIES[w.cid];
+  const dir = l.x >= w.x ? 1 : -1;
+  const gap = fd.kind === "stomp" ? 300 : fd.kind === "burn" ? 250 : fd.kind === "tv" ? 120 : 170;
+  const c = clamp((w.x + l.x) / 2, WALL_L + gap / 2 + 40, WALL_R - gap / 2 - 40);
+  for (const f of [w, l]) {
+    f.action = null; f.vx = 0; f.vy = 0; f.y = FLOOR_Y; f.onGround = true; f.hitstun = 0; f.blockstun = 0;
+    f.downT = 0; f.crouch = false; f.grab = null; f.zillaT = 0; f.dashT = 0;
+  }
+  w.x = c - dir * gap / 2; l.x = c + dir * gap / 2;
+  w.dir = dir; l.dir = -dir;
+  l.dazed = false; l.ko = true; l.hp = 0;
+  w.won = true;
+  F.projectiles = [];
+  F.phase = "fatality"; F.phaseT = 0; F.endType = "ko";
+  F.fat = { kind: fd.kind, caption: fd.caption, dur: fd.dur, titleAt: fd.titleAt, t: 0, w: w.slot, l: l.slot, dir, x0: w.x, ev: {}, chunks: null };
+  F.slow = 0; F.flash = 0.5; F.shake = 10;
+  F.stats.fatality = (F.stats.fatality || 0) + 1;
+  playSfx("superStart");
+}
+
+function fatClock() { return F.fat ? F.fat.t : 0; }
+
+function updateFatality(dt) {
+  const fat = F.fat;
+  fat.t += dt;
+  const t = fat.t, w = F.fighters[fat.w], l = F.fighters[fat.l], dir = fat.dir;
+  const once = (k, at, fn) => { if (!fat.ev[k] && t >= at) { fat.ev[k] = true; fn(); } };
+  const head = (f) => { const fr = frameOf(f.cid, "hurt"); return f.y - (fr ? fr.ay : 230); };
+  once("title", fat.titleAt, () => { playSfx("superHit"); F.shake = Math.max(F.shake, 8); });
+
+  if (fat.kind === "ice") {
+    once("blow", 0.1, () => playSfx("special_guf"));
+    if (t > 0.15 && t < 0.85) for (let i = 0; i < 3; i++) F.particles.push({ type: "sq", x: w.x + dir * rand(70, 100), y: w.y - rand(185, 215),
+      vx: dir * rand(500, 800), vy: rand(-60, 60), life: Math.abs(l.x - w.x) / 650, max: 0.5, size: pick([4, 6, 8]), color: pick(["#ffffff", "#d8f2ff", "#9fd8ff"]) });
+    once("freeze", 0.75, () => { playSfx("parry"); F.flash = 0.25; });
+    once("kick", 1.5, () => {
+      playSfx("hitCrit"); playSfx("block"); F.shake = 26; F.flash = 0.4; buzz([60, 30, 200]);
+      const top = head(l);
+      for (let i = 0; i < 110; i++) F.particles.push({ type: "sq", x: l.x + rand(-70, 70), y: rand(top, l.y), vx: rand(-420, 420) + dir * 260, vy: rand(-820, -120), g: 1500,
+        life: rand(0.8, 1.6), max: 1.6, size: pick([4, 6, 8, 10, 12]), color: pick(["#eefaff", "#bfe6ff", "#8fd0ff", "#ffffff", "#6fb4e8"]) });
+      fat.chunks = Array.from({ length: 9 }, () => ({ dx: rand(-120, 120) + dir * 40, s: rand(10, 24), r: rand(0, 3) }));
+    });
+  } else if (fat.kind === "tv") {
+    once("lift", 0.05, () => playSfx("whoosh"));
+    once("swing", 0.6, () => playSfx("whooshHeavy"));
+    once("smash", 0.82, () => {
+      playSfx("hitCrit"); playSfx("wallHit"); F.shake = 24; F.flash = 0.35; buzz([60, 30, 180]);
+      hitSpark(l.x, head(l) + 30, 14);
+      for (let i = 0; i < 40; i++) F.particles.push({ type: "sq", x: l.x + rand(-50, 50), y: head(l) + rand(0, 70), vx: rand(-380, 380), vy: rand(-600, -100), g: 1400,
+        life: rand(0.5, 1.1), max: 1.1, size: pick([3, 4, 6]), color: pick(["#dfe8ee", "#a9c0cc", "#ffffff", "#ffe27a"]) });
+    });
+    if (t > 0.85 && t < 2.0 && Math.random() < dt * 6) hitSpark(l.x + rand(-40, 40), head(l) + rand(10, 70), 2);
+    once("fall", 2.35, () => { playSfx("bodyfall"); playSfx("landHeavy"); F.shake = 16; spawnDust(l.x + dir * 120, FLOOR_Y, 1.6); });
+  } else if (fat.kind === "stomp") {
+    once("jump", 0.3, () => { playSfx("jump"); playSfx("whooshHeavy"); spawnDust(fat.x0, FLOOR_Y, 1.2); });
+    once("land", 0.9, () => {
+      playSfx("landHeavy"); playSfx("hitCrit"); playSfx("bodyfall"); F.shake = 30; F.flash = 0.3; buzz([90, 40, 220]);
+      spawnDust(l.x - 70, FLOOR_Y, 2); spawnDust(l.x + 70, FLOOR_Y, 2);
+      for (let i = 0; i < 40; i++) F.particles.push({ type: "sq", x: l.x + rand(-110, 110), y: FLOOR_Y - rand(0, 20), vx: rand(-500, 500), vy: rand(-500, -120), g: 1500,
+        life: rand(0.4, 0.9), max: 0.9, size: pick([4, 6, 8]), color: pick(["#8a7a6a", "#b5a48f", "#5a4c40", "#ffffff"]) });
+    });
+    if (t > 1.2 && t < 2.3 && Math.random() < dt * 8) F.particles.push({ type: "sq", x: l.x + rand(-120, 120), y: FLOOR_Y - 4, vx: rand(-200, 200), vy: rand(-200, -60), g: 900,
+      life: 0.5, max: 0.5, size: pick([4, 6]), color: pick(["#8a7a6a", "#b5a48f"]) });
+    once("grind", 1.25, () => playSfx("sweep"));
+  } else if (fat.kind === "burn") {
+    once("snap", 0.35, () => playSfx("special_morgen"));
+    once("ignite", 0.55, () => { playSfx("atl_boom"); F.flash = 0.35; F.shake = 14; });
+    if (t > 0.6 && t < 2.6 && Math.random() < dt * 30) F.particles.push({ type: "sq", x: l.x + rand(-60, 60), y: l.y - rand(20, 240), vx: rand(-40, 40), vy: rand(-260, -120),
+      life: 0.6, max: 0.6, size: pick([3, 4, 6]), color: pick(["#ffb030", "#ffe080", "#ff6a20", "rgba(50,40,36,0.8)"]) });
+    if (t > 1.7 && t < 2.6) for (let i = 0; i < 4; i++) F.particles.push({ type: "sq", x: l.x + rand(-55, 55), y: l.y - rand(0, 230) * (1 - (t - 1.7) / 0.9), vx: rand(-90, 90), vy: rand(-140, 60), g: 120,
+      life: rand(0.8, 1.6), max: 1.6, size: pick([3, 4, 6]), color: pick(["#3a3430", "#5c5550", "#1c1816", "#8a827c"]) });
+    once("dust", 2.4, () => playSfx("bodyfall"));
+  }
+  if (t >= fat.dur) { F.phase = "ko"; F.phaseT = 0; F.fatDone = true; F.quote = null; }
+}
+
+// height of the squashed KO pose Oxxxy stands on
+function pancakeH(l) { const fr = frameOf(l.cid, "ko"); return fr ? Math.round(fr.ay * 0.6 * 0.8) : 30; }
+function drawShadowAt(x, w, a = 0.38) {
+  ctx.save(); ctx.fillStyle = `rgba(0,0,0,${a})`;
+  ctx.beginPath(); ctx.ellipse(x, FLOOR_Y + 4, w, 11, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+}
+
+// draws both fighters during (and after) a fatality
+function drawFatFighter(f) {
+  const fat = F.fat;
+  const t = F.phase === "fatality" ? fat.t : fat.dur + F.phaseT;
+  const isW = f.slot === fat.w, dir = fat.dir;
+  const P = (name, x, y, o = {}) => drawPose(f.cid, hasPose(f.cid, name) ? name : "idle", x, y, Object.assign({ dir: f.dir }, o));
+  const fr = frameOf(f.cid, "hurt"), hH = fr ? fr.ay : 230, hW = fr ? fr.image.width : 180;
+  const sway = Math.sin(G.time * 2.6) * 0.07;
+  const end = t > fat.dur - 0.4;
+
+  if (fat.kind === "ice") {
+    if (isW) {
+      drawShadowAt(f.x, 64);
+      P(end ? "win" : t < 0.95 ? "special" : t < 1.38 ? "heavy_0" : t < 1.9 ? "heavy" : "idle", f.x, f.y);
+      return;
+    }
+    if (t < 1.5) {
+      const k = clamp((t - 0.35) / 0.5, 0, 1);
+      drawShadowAt(f.x, 70);
+      P("hurt", f.x, f.y, { rot: sway * (1 - k), tint: { color: "#9ad8ff", a: 0.6 * k } });
+      if (k > 0) drawIceBlock(f.x, f.y, hW * 0.85 + 24, hH + 24, k, t > 1.2 ? (t - 1.2) / 0.3 : 0);
+    } else if (fat.chunks) {
+      for (const c of fat.chunks) drawIceChunk(f.x + c.dx, FLOOR_Y, c.s, c.r);
+    }
+    return;
+  }
+
+  if (fat.kind === "tv") {
+    const hx = (g) => f.x + g;
+    if (isW) {
+      drawShadowAt(f.x, 64);
+      const fw = frameOf(f.cid, "heavy_0"), wh = fw ? fw.ay : 240;
+      if (t < 0.6) {
+        P("heavy_0", f.x, f.y);
+        const k = clamp(t / 0.35, 0, 1);
+        drawTV(f.x - dir * 10, f.y - wh - 40 - 20 * k, 150, 118, 0, 0, false);
+      } else P(end ? "win" : t < 1.3 ? "light" : "idle", f.x, f.y);
+      if (t >= 0.6 && t < 0.82) {
+        const k = (t - 0.6) / 0.22;
+        const x0 = f.x - dir * 10, y0 = f.y - wh - 60, l = F.fighters[fat.l], x1 = l.x, y1 = l.y - hH + 34;
+        drawTV(lerp(x0, x1, k), lerp(y0, y1, k) - Math.sin(k * Math.PI) * 60, 150, 118, dir * k * 0.6, 0, false);
+      }
+      return;
+    }
+    // victim
+    const fall = clamp((t - 1.95) / 0.4, 0, 1), ang = dir * (Math.PI / 2) * fall * fall;
+    drawShadowAt(f.x + dir * 110 * fall, 70 + 50 * fall);
+    ctx.save(); ctx.translate(f.x, f.y - 46 * fall); ctx.rotate(ang + (t < 1.95 ? sway * 1.4 : 0));
+    P("hurt", 0, 0);
+    if (t >= 0.82) drawTV(0, -hH + 34, 150, 118, 0.12 * Math.sin(t * 9) * (1 - fall), 1, true);
+    ctx.restore();
+    if (t < 0.82) {} // TV still flying (drawn with the winner)
+    return;
+  }
+
+  if (fat.kind === "stomp") {
+    const l = F.fighters[fat.l];
+    if (isW) {
+      let x = fat.x0, y = FLOOR_Y, name = "crouch", rot = 0;
+      if (t >= 0.3 && t < 0.9) {
+        const k = (t - 0.3) / 0.6;
+        x = lerp(fat.x0, l.x, k); y = lerp(FLOOR_Y, FLOOR_Y - pancakeH(l), k) - 300 * Math.sin(k * Math.PI); name = "jump";
+        rot = dir * 0.25 * Math.sin(k * Math.PI);
+      } else if (t >= 0.9) {
+        x = l.x; y = FLOOR_Y - pancakeH(l);
+        name = t < 1.2 ? "crouch" : end ? "win" : "idle";
+        if (t > 1.25 && t < 2.3) rot = Math.sin((t - 1.25) * 14) * 0.08;
+      }
+      drawShadowAt(x, 64 * (y < FLOOR_Y - 100 ? 0.6 : 1));
+      P(name, x, y, { rot });
+      return;
+    }
+    if (t < 0.9) { drawShadowAt(f.x, 70); P("hurt", f.x, f.y, { rot: sway }); return; }
+    const g = clamp((t - 1.25) / 1.0, 0, 1);
+    drawShadowAt(f.x, 170 + 40 * g, 0.55);
+    for (const [dx, dy] of [[-3, 0], [3, 0], [0, -3]]) P("ko", f.x + dx, f.y + 2 + dy, { sy: 0.6, sx: 1.25 + 0.35 * g, flash: 1, flashColor: "#ffe2b8", alpha: 0.55 });
+    P("ko", f.x, f.y + 2, { sy: 0.6, sx: 1.25 + 0.35 * g });
+    // cartoon splat marks
+    ctx.save(); ctx.strokeStyle = "rgba(255,255,255,0.75)"; ctx.lineWidth = 3;
+    for (const s2 of [-1, 1]) for (let i = 0; i < 3; i++) {
+      const x0 = f.x + s2 * (150 + 30 * g + i * 4), y0 = FLOOR_Y - 10 - i * 14;
+      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + s2 * (22 + i * 6), y0 - 8 - i * 6); ctx.stroke();
+    }
+    ctx.restore();
+    return;
+  }
+
+  if (fat.kind === "burn") {
+    if (isW) { drawShadowAt(f.x, 64); P(end ? "win" : t < 1.1 ? "special" : "idle", f.x, f.y); return; }
+    const char = clamp((t - 0.6) / 1.2, 0, 1), gone = clamp((t - 1.8) / 0.7, 0, 1);
+    const fire = clamp((t - 0.55) / 0.25, 0, 1) * (1 - clamp((t - 2.3) / 0.6, 0, 1));
+    if (gone < 1) { drawShadowAt(f.x, 70 * (1 - gone)); P("hurt", f.x + rand(-2, 2) * fire, f.y, { rot: sway * (1 - char), alpha: 1 - gone, tint: { color: "#140c08", a: 0.95 * char } }); }
+    if (fire > 0) drawBodyFire(f.x, f.y, hH, fire);
+    const pile = clamp((t - 2.0) / 0.6, 0, 1);
+    if (pile > 0) drawDustPile(f.x, FLOOR_Y, pile, t);
+    return;
+  }
+}
+
+function drawIceBlock(x, y, w, h, k, crack) {
+  const hh = h * k, top = y + 6 - hh;
+  ctx.save();
+  ctx.fillStyle = "rgba(170,225,255,0.33)";
+  ctx.fillRect(x - w / 2, top, w, hh);
+  const g = ctx.createLinearGradient(x - w / 2, top, x + w / 2, y);
+  g.addColorStop(0, "rgba(255,255,255,0.35)"); g.addColorStop(0.5, "rgba(255,255,255,0)"); g.addColorStop(1, "rgba(120,190,240,0.3)");
+  ctx.fillStyle = g; ctx.fillRect(x - w / 2, top, w, hh);
+  ctx.strokeStyle = "rgba(235,250,255,0.9)"; ctx.lineWidth = 4;
+  ctx.strokeRect(x - w / 2, top, w, hh);
+  ctx.strokeStyle = "rgba(255,255,255,0.55)"; ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.moveTo(x - w / 2 + 14, top + 40); ctx.lineTo(x - w / 2 + 44, top + 10); ctx.stroke();
+  ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - w / 2 + 14, top + 70); ctx.lineTo(x - w / 2 + 70, top + 14); ctx.stroke();
+  if (crack > 0) {
+    ctx.strokeStyle = "rgba(255,255,255,0.95)"; ctx.lineWidth = 2;
+    const cx = x, cy = top + hh * 0.45;
+    for (let i = 0; i < 7; i++) {
+      const a = i * 0.9 + 0.3, len = (40 + (i % 3) * 30) * Math.min(1, crack);
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * len * 0.5 + 6, cy + Math.sin(a) * len * 0.5); ctx.lineTo(cx + Math.cos(a) * len, cy + Math.sin(a) * len); ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+function drawIceChunk(x, y, s, r) {
+  ctx.save(); ctx.translate(x, y - s * 0.4); ctx.rotate(r);
+  ctx.fillStyle = "rgba(190,232,255,0.85)"; ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(-s, s * 0.4); ctx.lineTo(-s * 0.4, -s * 0.6); ctx.lineTo(s * 0.7, -s * 0.3); ctx.lineTo(s, s * 0.4); ctx.closePath();
+  ctx.fill(); ctx.stroke(); ctx.restore();
+}
+
+// old CRT television: body, screen (static + cracks when smashed), antennas
+function drawTV(x, y, w, h, rot, cracked, on) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.strokeStyle = "#2a2a2a"; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(-6, -h / 2); ctx.lineTo(-w * 0.28, -h / 2 - 46); ctx.moveTo(6, -h / 2); ctx.lineTo(w * 0.24, -h / 2 - 50); ctx.stroke();
+  ctx.fillStyle = "#1a1a1a"; ctx.fillRect(-w * 0.28 - 3, -h / 2 - 49, 6, 6); ctx.fillRect(w * 0.24 - 3, -h / 2 - 53, 6, 6);
+  ctx.fillStyle = "#5a3418"; ctx.fillRect(-w / 2, -h / 2, w, h);
+  ctx.fillStyle = "#7a4a26"; ctx.fillRect(-w / 2 + 4, -h / 2 + 4, w - 8, 10);
+  ctx.strokeStyle = "#2b170a"; ctx.lineWidth = 4; ctx.strokeRect(-w / 2, -h / 2, w, h);
+  const sx = -w / 2 + 12, sy = -h / 2 + 14, sw = w * 0.66, sh = h - 28;
+  ctx.fillStyle = on ? "#556066" : "#2c3a36"; ctx.fillRect(sx, sy, sw, sh);
+  if (on) {
+    for (let i = 0; i < 60; i++) { ctx.fillStyle = Math.random() < 0.5 ? "rgba(255,255,255,0.75)" : "rgba(20,20,20,0.6)"; ctx.fillRect(sx + Math.random() * (sw - 4), sy + Math.random() * (sh - 3), 4, 3); }
+  } else { ctx.fillStyle = "rgba(255,255,255,0.18)"; ctx.fillRect(sx + 8, sy + 6, sw * 0.35, 6); }
+  if (cracked) {
+    ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 2;
+    const cx = sx + sw * 0.45, cy = sy + sh * 0.45;
+    for (let i = 0; i < 6; i++) { const a = i * 1.05 + 0.2; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * sw * 0.3, cy + Math.sin(a) * sh * 0.45); ctx.stroke(); }
+  }
+  ctx.strokeStyle = "#1a1008"; ctx.lineWidth = 3; ctx.strokeRect(sx, sy, sw, sh);
+  ctx.fillStyle = "#c9a35a";
+  ctx.beginPath(); ctx.arc(w / 2 - 22, -h / 2 + 30, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(w / 2 - 22, -h / 2 + 56, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#2b170a"; for (let i = 0; i < 4; i++) ctx.fillRect(w / 2 - 32, h / 2 - 34 + i * 6, 20, 2);
+  ctx.restore();
+}
+
+function drawBodyFire(x, y, h, k) {
+  ctx.save(); ctx.globalCompositeOperation = "lighter";
+  const g = ctx.createRadialGradient(x, y - h * 0.5, 10, x, y - h * 0.5, h * 0.9);
+  g.addColorStop(0, `rgba(255,150,50,${0.5 * k})`); g.addColorStop(1, "rgba(255,80,20,0)");
+  ctx.fillStyle = g; ctx.fillRect(x - h, y - h * 1.5, h * 2, h * 1.6);
+  ctx.restore();
+  for (let i = 0; i < 11; i++) {
+    const fx = x - 80 + i * 16 + Math.sin(G.time * 5 + i) * 4;
+    const base = y + 4 - (i % 3) * 30;
+    const fh = (h * 0.55 + h * 0.45 * Math.abs(Math.sin(G.time * 8 + i * 1.9))) * k * (1 - Math.abs(i - 5) / 9);
+    const fw = 40;
+    ctx.fillStyle = `rgba(255,${80 + (i % 3) * 35},20,${0.85 * k})`;
+    ctx.beginPath(); ctx.moveTo(fx - fw / 2, base); ctx.quadraticCurveTo(fx - fw / 3, base - fh * 0.6, fx + Math.sin(G.time * 7 + i) * 8, base - fh);
+    ctx.quadraticCurveTo(fx + fw / 3, base - fh * 0.6, fx + fw / 2, base); ctx.fill();
+    ctx.fillStyle = `rgba(255,230,140,${0.75 * k})`;
+    ctx.beginPath(); ctx.moveTo(fx - fw / 4, base); ctx.quadraticCurveTo(fx, base - fh * 0.5, fx + fw / 4, base); ctx.fill();
+  }
+}
+
+function drawDustPile(x, y, k, t) {
+  const w = 62 * k, h = 30 * k;
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(x, y + 3, w + 8, 7, 0, 0, Math.PI * 2); ctx.fill();
+  const g = ctx.createLinearGradient(0, y - h, 0, y);
+  g.addColorStop(0, "#9a928a"); g.addColorStop(1, "#4a4440");
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.moveTo(x - w, y + 2); ctx.quadraticCurveTo(x - w * 0.5, y - h * 0.6, x, y - h); ctx.quadraticCurveTo(x + w * 0.5, y - h * 0.6, x + w, y + 2); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "rgba(30,26,24,0.7)";
+  for (let i = 0; i < 12; i++) { const a = (i * 37) % 100 / 100; ctx.fillRect(x - w * 0.7 + a * w * 1.4, y - h * 0.15 - ((i * 13) % 10) / 10 * h * 0.6, 3, 3); }
+  // thin smoke
+  if (k >= 1) for (let i = 0; i < 3; i++) {
+    const s = ((t * 0.5 + i / 3) % 1);
+    ctx.fillStyle = `rgba(180,175,170,${0.35 * (1 - s)})`;
+    ctx.beginPath(); ctx.arc(x + Math.sin(t * 2 + i * 2) * 10, y - h - s * 90, 6 + s * 12, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawDazedStars(f) {
+  const fr = frameOf(f.cid, "hurt"), y = f.y - (fr ? fr.ay : 230) - 6;
+  for (let i = 0; i < 4; i++) {
+    const a = G.time * 3.2 + i * Math.PI / 2;
+    const x = f.x + Math.cos(a) * 46, yy = y + Math.sin(a) * 10;
+    text("★", x, yy, { size: 20, align: "center", color: Math.sin(a) > 0 ? "#ffe27a" : "#fff6c8", shadow: false });
+  }
+}
+
+function drawFinishHim() {
+  const t = F.phaseT;
+  const k = easeOut(clamp(t / 0.35, 0, 1));
+  const pulse = 1 + 0.05 * Math.sin(G.time * 10);
+  bigText("ДОБЕЙ ЕГО!", 205, 110, ["#fff0f0", "#ff5a4a", "#a00000"], (2 - k) * pulse, Math.min(1, t * 4));
+  const w = F.fighters[F.finish.w];
+  if (t > 0.5 && !w.isBot && !G.botVsBot) {
+    const hint = FATALITIES[w.cid] ? "УДАР — ПОБЕДА    •    СПЕЦ — ФАТАЛИТИ" : "БЕЙ!";
+    text(hint, W / 2, 278, { size: 24, align: "center", color: "#fff6c8", stroke: "#000", strokeW: 5, alpha: clamp((t - 0.5) * 3, 0, 1) });
+  }
+  // countdown bar
+  const left = clamp(1 - t / FINISH_TIME, 0, 1);
+  ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(W / 2 - 160, 302, 320, 8);
+  ctx.fillStyle = "#ff4a3d"; ctx.fillRect(W / 2 - 160, 302, 320 * left, 8);
+}
+
+function drawFatalityTitle() {
+  const fat = F.fat;
+  const t = (F.phase === "fatality" ? fat.t : fat.dur + F.phaseT) - fat.titleAt;
+  if (t < 0) return;
+  const k = easeOut(clamp(t / 0.25, 0, 1));
+  bigText("ФАТАЛИТИ", H / 2 - 150, 120, ["#ffe6e0", "#ff3a2a", "#7a0000"], 1.8 - 0.8 * k, Math.min(1, t * 5));
+  if (t > 0.45) {
+    const k2 = easeOut(clamp((t - 0.45) / 0.3, 0, 1));
+    text(fat.caption, W / 2, H / 2 - 50, { size: 40, align: "center", gradient: ["#fff6c8", "#ffd54a", "#ff9a2e"], stroke: "#1a0830", strokeW: 7, alpha: k2 });
+  }
+}
+
 function drawFight() {
   const [a, b] = F.fighters;
   const mid = (a.x + b.x) / 2 - W / 2;
@@ -4491,6 +4881,11 @@ function drawFight() {
 
   drawStage(G.stage, F.camX);
   drawAmbient();
+  if (F.phase === "finish" || F.fat) {
+    const k = F.fat ? clamp(fatClock() / 0.4, 0, 1) : clamp(F.phaseT / 0.5, 0, 1) * 0.5;
+    ctx.fillStyle = `rgba(14,0,4,${0.62 * k})`;
+    ctx.fillRect(-60, -60, W + 120, H + 120);
+  }
 
   // draw the attacking fighter on top
   const order = [a, b].sort((p, q) => (p.action ? 1 : 0) - (q.action ? 1 : 0) || (p.ko ? -1 : 0));
@@ -4803,6 +5198,10 @@ function drawFightOverlays() {
       const k = easeOut((t - 1.05) / 0.2);
       bigText("В БОЙ!", H / 2 - 10, 120, ["#fff6c8", "#ffd54a", "#ff7a3d"], 1.6 - 0.6 * k, Math.min(1, k * 1.5));
     }
+  } else if (F.phase === "finish") {
+    drawFinishHim();
+  } else if (F.phase === "fatality" || F.fatDone) {
+    drawFatalityTitle();
   } else if (F.phase === "ko") {
     const t = F.phaseT;
     let main = "K.O.";
