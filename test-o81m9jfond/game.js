@@ -592,7 +592,9 @@ function loadAssets() {
 loadAssets();
 
 // Offline: a service worker keeps the game's files, so after one visit it starts without internet
-if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+// Android app build (the APK serves the files itself — no service worker there)
+const IN_APK = /[?&]apk\b/.test(location.search) || location.hostname === "appassets.androidplatform.net";
+if (!IN_APK && "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
   window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
 }
 
@@ -854,11 +856,45 @@ const padPrev = [{}, {}];
 //   □/X рука · ×/A нога · ○/B спец · △/Y ПАНЧ · R1/L2 блок · L1 бросок · R2 рывок · Options/Start пауза
 // Browsers give most pads the "standard" layout; a Sony pad without it (Firefox, some Macs) is read raw.
 let padSeen = false;
-function readPad(i) {
-  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-  const pad = pads && pads[i];
+// Console mode: a handheld (Retroid / Anbernic on Android) or ?console in the URL.
+// Hides the touch buttons, shows button hints instead of keyboard keys.
+const IS_ANDROID = /Android/i.test(navigator.userAgent);
+let padMode = false;
+function setPadMode() {
+  if (padMode) return;
+  padMode = true;
+  document.body.classList.add("pad-mode");
+  if (typeof updateTouchVisibility === "function") updateTouchVisibility();
+  // Android turns the B button into "browser back": keep the page, treat it as НАЗАД
+  if (IS_ANDROID && history.pushState) {
+    try {
+      history.pushState({ rnv: 1 }, "");
+      window.addEventListener("popstate", () => {
+        navQueue.push({ type: "back", player: -1 });
+        try { history.pushState({ rnv: 1 }, ""); } catch (e) {}
+      });
+    } catch (e) {}
+  }
+}
+if (/[?&](console|apk)\b/.test(location.search)) setTimeout(setPadMode, 0);
+// Real pads only: handhelds also expose odd "gamepads" (power keys, fingerprint, gpio) with a couple of buttons
+function listPads() {
+  const raw = navigator.getGamepads ? navigator.getGamepads() : [];
+  const out = [];
+  // APK: the app reads the handheld's buttons natively and puts them here (window.__nativePad)
+  const np = window.__nativePad;
+  if (np && np.b) out.push({ id: "native", mapping: "standard", connected: true,
+    buttons: np.b.map((v) => ({ pressed: !!v, value: v ? 1 : 0 })), axes: np.a || [0, 0] });
+  for (const g of raw || []) if (g && g.connected !== false && g.buttons && (g.mapping === "standard" || g.buttons.length >= 8)) out.push(g);
+  return out;
+}
+let padSony = false;
+function readPad(pad) {
   if (!pad) return null;
-  if (!padSeen) { padSeen = true; if (G.screen !== "loading") toast("Геймпад подключён"); }
+  padSony = /054c|sony|dualsense|dualshock|wireless controller/i.test(pad.id);
+  if (!padSeen) { padSeen = true; if (G.screen !== "loading" && !IN_APK) toast("Геймпад подключён"); }
+  if (IN_APK && !audioUnlocked) unlockAudio();
+  setPadMode();
   const b = (n) => !!(pad.buttons[n] && (pad.buttons[n].pressed || pad.buttons[n].value > 0.5));
   const ax = pad.axes[0] || 0, ay = pad.axes[1] || 0;
   let k;
@@ -883,7 +919,15 @@ function readPad(i) {
 }
 
 function buildControllers() {
-  const pads = [readPad(0), readPad(1)];
+  const list = listPads().map(readPad);
+  let pads;
+  if (G.mode === 2) pads = [list[0] || null, list[1] || null];
+  else {
+    // one player: every pad drives P1 (a handheld can expose its buttons as two devices)
+    let m = null;
+    for (const r of list) { if (!m) m = Object.assign({}, r); else for (const k in r) m[k] = m[k] || r[k]; }
+    pads = [m, null];
+  }
   for (let p = 0; p < 2; p++) {
     const c = ctrls[p];
     const map = G.mode === 1 ? (p === 0 ? KEYMAP_1P : null) : KEYMAP_2P[p];
@@ -942,9 +986,11 @@ function clearTaps() {
 
 const BLOCK_DEFAULT = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Space", "Tab"]);
 
+const PAD_ECHO = /^(Arrow(Left|Right|Up|Down)|Enter|NumpadEnter|Escape|Space|Backspace|GoBack|BrowserBack)$/;
 window.addEventListener("keydown", (e) => {
   unlockAudio();
   if (BLOCK_DEFAULT.has(e.code)) e.preventDefault();
+  if (padSeen && IS_ANDROID && (PAD_ECHO.test(e.code) || PAD_ECHO.test(e.key) || /^Gamepad/.test(e.code))) { e.preventDefault(); return; }
   if (e.repeat) return;
   heldKeys.add(e.code);
   tappedKeys.add(e.code);
@@ -1017,7 +1063,7 @@ document.querySelectorAll("#touch-controls button").forEach((btn) => {
 });
 
 function updateTouchVisibility() {
-  const show = G.screen === "fight" && !G.paused;
+  const show = G.screen === "fight" && !G.paused && !padMode;
   document.body.classList.toggle("mobile-fight", show);
 }
 
@@ -4526,7 +4572,7 @@ function drawSuperMeter(f, left) {
   ctx.strokeStyle = full ? GOLD : "rgba(255,213,74,0.5)";
   ctx.lineWidth = 2;
   ctx.strokeRect(x - 1, y - 1, sw + 2, sh + 2);
-  const label = full ? (f.isBot ? "ПАНЧ ГОТОВ!" : "ПАНЧ! ЗАЖМИ ОБА УДАРА") : "ПАНЧ";
+  const label = full ? (f.isBot ? "ПАНЧ ГОТОВ!" : (padMode ? "ПАНЧ! ЖМИ Y" : "ПАНЧ! ЗАЖМИ ОБА УДАРА")) : "ПАНЧ";
   text(label, left ? x : x + sw, y - 12, { size: full ? 12 : 10, font: FONT_PIX, align: left ? "left" : "right",
     color: full ? GOLD : "#c9c2ff", stroke: "#000", strokeW: 4, alpha: full ? 0.75 + 0.25 * Math.sin(G.time * 10) : 1 });
 }
@@ -4725,8 +4771,13 @@ function drawControlsHint() {
     t("ПАНЧ — рука + нога   •   бросок — вперёд + рука (вырваться — блок или рука)   •   рывок — дважды вперёд", W / 2, y + 102, 15, "#c9c2ff");
   } else {
     if (padSeen) {
-      t("□ — рука   × — нога   ○ — спец   R1 — блок", W / 2, y + 30, 19, "#fff");
-      t("△ — ПАНЧ   •   L1 — бросок   •   R2 — рывок   •   Options — пауза", W / 2, y + 62, 16, "#c9c2ff");
+      if (padSony) {
+        t("□ — рука   × — нога   ○ — спец   R1 — блок", W / 2, y + 30, 19, "#fff");
+        t("△ — ПАНЧ   •   L1 — бросок   •   R2 — рывок   •   Options — пауза", W / 2, y + 62, 16, "#c9c2ff");
+      } else {
+        t("X — рука   A — нога   B — спец   R1 — блок", W / 2, y + 30, 19, "#fff");
+        t("Y — ПАНЧ   •   L1 — бросок   •   R2 — рывок   •   START — пауза", W / 2, y + 62, 16, "#c9c2ff");
+      }
     } else {
       t("стрелки — ходьба, прыжок, присед   •   A — рука   S — нога   D — спец   F — блок", W / 2, y + 30, 19, "#fff");
       t("ПАНЧ — A + S (отбивается блоком)   •   бросок — вперёд + A   •   рывок — дважды вперёд", W / 2, y + 62, 16, "#c9c2ff");
@@ -4805,8 +4856,17 @@ function header(str, sub) {
   if (sub) text(sub, W / 2, 112, { size: 20, align: "center", color: "#c9c2ff", stroke: "#000", strokeW: 4 });
 }
 
+// Keyboard hint → handheld buttons (Xbox layout: A bottom, B right, X left, Y top)
+function padHint(str) {
+  return str
+    .replace(/\(или мышь\)\s*/g, "")
+    .replace(/\s+S  СЕКРЕТЫ/g, "").replace(/\s+M  ЗВУК/g, "").replace(/\s+1-0  БЫСТРЫЙ ВЫБОР/g, "")
+    .replace(/1P: A D \+ F/g, "← →  ВЫБОР    A  ОК")
+    .replace(/ESC \/ ENTER/g, "B").replace(/ENTER/g, "A").replace(/ESC/g, "B");
+}
 function footer(str) {
-  if (isTouch) return;           // keyboard hints mean nothing on a phone
+  if (padMode) str = padHint(str);
+  else if (isTouch) return;           // keyboard hints mean nothing on a phone
   ctx.fillStyle = "rgba(0,0,0,0.55)";
   ctx.fillRect(0, H - 46, W, 46);
   text(str, W / 2, H - 22, { size: 18, align: "center", color: "#c9c2ff", shadow: false });
@@ -4829,6 +4889,7 @@ function tgButton(x, y) {
 
 // Visible back button (top-left) — phones have no ESC
 function backButton() {
+  if (padMode) return;            // the pad has B for that
   const label = "НАЗАД";
   const bw = textWidth(label, 18, FONT_PIX) + 62, bh = 54, x = 14, y = 12;
   const hov = hover && hover.id === "back-btn";
@@ -5186,18 +5247,18 @@ function drawTitle() {
 /* Tutorial                                                            */
 /* ------------------------------------------------------------------ */
 const TUTORIAL_STEPS = [
-  { id: "walk", title: "ХОДЬБА", text: "Походи влево и вправо:  ← →", touch: "джойстик влево-вправо" },
-  { id: "jump", title: "ПРЫЖОК", text: "Прыгни:  ↑", touch: "джойстик вверх" },
-  { id: "light", title: "УДАР РУКОЙ", text: "Подойди к сопернику и ударь рукой:  A", touch: "кнопка РУКА" },
-  { id: "heavy", title: "УДАР НОГОЙ", text: "Ударь ногой:  S", touch: "кнопка НОГА" },
-  { id: "block", title: "БЛОК", text: "Соперник атакует! Держи F (или НАЗАД от него), чтобы заблокировать 2 удара", touch: "кнопка БЛОК" },
-  { id: "sweep", title: "ПОДСЕЧКА", text: "Присядь и ударь ногой:  ↓ + S  — соперник упадёт", touch: "джойстик вниз + НОГА" },
-  { id: "crouchjab", title: "УДАР В ПРИСЕДЕ", text: "Присядь и ударь рукой:  ↓ + A  — быстрый низкий удар", touch: "джойстик вниз + РУКА" },
-  { id: "chain", title: "СВЯЗКА", text: "Рука, рука, нога подряд:  A, A, S  — третий удар добивающий", touch: "РУКА, РУКА, НОГА" },
-  { id: "dash", title: "РЫВОК", text: "Дважды быстро вперёд:  → →", touch: "кнопка РЫВОК" },
-  { id: "throw", title: "БРОСОК", text: "Подойди вплотную:  вперёд + A  — блоком не закрыться, но можно вырваться: F или A", touch: "кнопка БРОСОК" },
-  { id: "special", title: "СПЕЦПРИЁМ", text: "Фирменный спецприём:  D", touch: "кнопка СПЕЦ" },
-  { id: "super", title: "ПАНЧ", text: "Шкала ПАНЧА полная! Зажми оба удара:  A + S", touch: "кнопка ПАНЧ" },
+  { id: "walk", title: "ХОДЬБА", text: "Походи влево и вправо:  ← →", touch: "джойстик влево-вправо", pad: "Походи влево и вправо:  крестовина ← →" },
+  { id: "jump", title: "ПРЫЖОК", text: "Прыгни:  ↑", touch: "джойстик вверх", pad: "Прыгни:  ↑" },
+  { id: "light", title: "УДАР РУКОЙ", text: "Подойди к сопернику и ударь рукой:  A", touch: "кнопка РУКА", pad: "Подойди к сопернику и ударь рукой:  X" },
+  { id: "heavy", title: "УДАР НОГОЙ", text: "Ударь ногой:  S", touch: "кнопка НОГА", pad: "Ударь ногой:  A" },
+  { id: "block", title: "БЛОК", text: "Соперник атакует! Держи F (или НАЗАД от него), чтобы заблокировать 2 удара", touch: "кнопка БЛОК", pad: "Соперник атакует! Держи R1 (или НАЗАД от него), чтобы заблокировать 2 удара" },
+  { id: "sweep", title: "ПОДСЕЧКА", text: "Присядь и ударь ногой:  ↓ + S  — соперник упадёт", touch: "джойстик вниз + НОГА", pad: "Присядь и ударь ногой:  ↓ + A  — соперник упадёт" },
+  { id: "crouchjab", title: "УДАР В ПРИСЕДЕ", text: "Присядь и ударь рукой:  ↓ + A  — быстрый низкий удар", touch: "джойстик вниз + РУКА", pad: "Присядь и ударь рукой:  ↓ + X  — быстрый низкий удар" },
+  { id: "chain", title: "СВЯЗКА", text: "Рука, рука, нога подряд:  A, A, S  — третий удар добивающий", touch: "РУКА, РУКА, НОГА", pad: "Рука, рука, нога подряд:  X, X, A  — третий удар добивающий" },
+  { id: "dash", title: "РЫВОК", text: "Дважды быстро вперёд:  → →", touch: "кнопка РЫВОК", pad: "Рывок:  R2  (или дважды быстро вперёд)" },
+  { id: "throw", title: "БРОСОК", text: "Подойди вплотную:  вперёд + A  — блоком не закрыться, но можно вырваться: F или A", touch: "кнопка БРОСОК", pad: "Подойди вплотную:  L1  — блоком не закрыться, вырваться: X" },
+  { id: "special", title: "СПЕЦПРИЁМ", text: "Фирменный спецприём:  D", touch: "кнопка СПЕЦ", pad: "Фирменный спецприём:  B" },
+  { id: "super", title: "ПАНЧ", text: "Шкала ПАНЧА полная! Зажми оба удара:  A + S", touch: "кнопка ПАНЧ", pad: "Шкала ПАНЧА полная! Жми  Y" },
 ];
 const TOUCH_UI = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
 
@@ -5288,7 +5349,7 @@ function drawTutorial() {
   panel(x, y, w, h, { active: T.wait <= 0 });
   text(`ШАГ ${T.step + 1} / ${TUTORIAL_STEPS.length}`, x + 20, y + 22, { size: 12, font: FONT_PIX, color: "#9d97c9", shadow: false });
   text(step.title, x + w / 2, y + 28, { size: 30, align: "center", color: T.wait > 0 ? "#8dff7a" : GOLD, stroke: "#000", strokeW: 5 });
-  const line = TOUCH_UI ? step.text.replace(/:\s+[^—]*?(—|$)/, ": " + step.touch + " $1").trim() : step.text;
+  const line = padMode ? step.pad : TOUCH_UI ? step.text.replace(/:\s+[^—]*?(—|$)/, ": " + step.touch + " $1").trim() : step.text;
   text(line, x + w / 2, y + 66, { size: fitText(line, w - 40, 20), align: "center", color: "#fff", stroke: "#000", strokeW: 4 });
   if (step.id === "block") text(`заблокировано: ${T.blocks} / 2`, x + w / 2, y + 92, { size: 12, font: FONT_PIX, align: "center", color: "#c9c2ff", shadow: false });
   if (step.id === "walk") text(`${Math.min(100, Math.round(T.walked / 3.2))}%`, x + w / 2, y + 92, { size: 12, font: FONT_PIX, align: "center", color: "#c9c2ff", shadow: false });
@@ -5297,7 +5358,8 @@ function drawTutorial() {
     ctx.fillStyle = i < T.step || (i === T.step && T.wait > 0) ? "#8dff7a" : i === T.step ? GOLD : "rgba(255,255,255,0.2)";
     ctx.fillRect(x + w - 20 - (TUTORIAL_STEPS.length - i) * 14, y + 16, 10, 10);
   }
-  if (!isTouch) text("ESC — ВЫЙТИ", W - 20, H - 60, { size: 10, font: FONT_PIX, align: "right", color: "rgba(255,255,255,0.5)", shadow: false });
+  if (padMode) text("START — ПАУЗА", W - 20, H - 60, { size: 10, font: FONT_PIX, align: "right", color: "rgba(255,255,255,0.5)", shadow: false });
+  else if (!isTouch) text("ESC — ВЫЙТИ", W - 20, H - 60, { size: 10, font: FONT_PIX, align: "right", color: "rgba(255,255,255,0.5)", shadow: false });
 }
 
 /* ------------------------------------------------------------------ */
@@ -6712,7 +6774,7 @@ function handleNav(ev) {
     else if (t === "back") playSfx("uiBack");
   }
   if (s === "title") {
-    if (t === "confirm" || t.startsWith("digit")) { confirmSfx(); setScreen("mode"); }
+    if (t === "confirm" || t.startsWith("digit") || t === "pause") { confirmSfx(); setScreen("mode"); }
     return;
   }
   if (s === "vs") {
