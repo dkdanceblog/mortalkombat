@@ -46,6 +46,23 @@ const store = {
 /* Data                                                                */
 /* ------------------------------------------------------------------ */
 const CHARS = {
+  loki: {
+    id: "loki", name: "ЛОКИ", special: "КОКТЕЙЛЬ", color: "#d07a3a",
+    speed: 275, power: 1.08, specialCd: 6.0, tough: 1.05, jump: 0.95, weight: 1.15, dash: 0.95,
+    stats: { "СКОРОСТЬ": 2, "СИЛА": 4, "ЗДОРОВЬЕ": 4 },
+    perk: "ФИШКА: огонь на полу жжёт соперника, пока тот стоит в нём",
+    blurb: "Маска не снимается.",
+    loseTitle: "ЛОКИ ПОГАС",
+    quotes: ["ГОРИ", "МАСКА НЕ СНИМАЕТСЯ", "ОГОНЬ ВСЁ ПОМНИТ", "ТЫ СЛЕДУЮЩИЙ"],
+    moves: {
+      // heavy straight right: slower than a jab, hurts more
+      light: { frame: "light", startup: 0.1, active: 0.09, recovery: 0.21, dmg: 8, reach: 125,
+        y0: -220, y1: -160, hitstun: 0.4, blockstun: 0.18, knock: 260, height: "high", sfx: "hitHeavy", stop: 0.08 },
+      // big swinging roundhouse from the ground
+      heavy: { frame: "heavy", startup: 0.17, active: 0.1, recovery: 0.32, dmg: 11, reach: 150, lunge: 40,
+        y0: -215, y1: -130, hitstun: 0.5, blockstun: 0.22, knock: 460, height: "high", sfx: "hitKick", stop: 0.1 },
+    },
+  },
   tito: {
     id: "tito", name: "БОГДАН ТИТОМИР", short: "ТИТОМИР", special: "ДЕЛАЙ КАК Я", color: "#e8c050",
     speed: 305, power: 1.03, specialCd: 5.5, tough: 1.0, jump: 1.05, weight: 0.95, dash: 1.05,
@@ -334,7 +351,7 @@ for (const d of Object.values(CHARS)) {
     "ЗДОРОВЬЕ": st(3 + ((d.tough || 1) - 1) / 0.04),
   };
 }
-const BASE_IDS = ["guf", "noize", "oxxxy", "morgen", "maybe", "kreed", "slava", "atl", "korzh", "face", "ramirez", "husky", "sqwoz", "shilo", "krip", "tito"];
+const BASE_IDS = ["guf", "noize", "oxxxy", "morgen", "maybe", "kreed", "slava", "atl", "korzh", "face", "ramirez", "husky", "sqwoz", "shilo", "krip", "tito", "loki"];
 // Chipinkos is the arcade boss; he joins the roster once he has been beaten in the arcade
 const CHAR_IDS = [...BASE_IDS];
 function chipUnlocked() { return CHAR_IDS.includes("chip"); }
@@ -406,6 +423,7 @@ const SPECIALS = {
   shilo: { startup: 0.45, total: 0.85, sfx: "whoosh" },
   krip: { startup: 0.55, total: 1.0, sfx: "superStart" },
   tito: { startup: 0.4, total: 0.8, sfx: "superStart" },
+  loki: { startup: 0.38, total: 0.8, sfx: "throw" },
   maybe: { startup: 0.21, active: 0.14, total: 0.7, sfx: "special_maybe" },
 };
 
@@ -458,6 +476,7 @@ const ASSET_PATHS = {
   "fx.monkey": "assets/effects/monkey_run.png",
   "fx.kanye_fly": "assets/effects/kanye_fly.png",
   "fx.echpochmak": "assets/effects/echpochmak.png",
+  "fx.molotov": "assets/effects/molotov.png",
   "fx.pigeon_1": "assets/effects/pigeon_1.png",
   "fx.zilla": "assets/effects/zilla.png",
   "fx.zilla_foot": "assets/effects/zilla_foot.png",
@@ -482,6 +501,7 @@ const ASSET_PATHS = {
   "portrait.shilo": "assets/portraits/shilo_portrait.png",
   "portrait.krip": "assets/portraits/krip_portrait.png",
   "portrait.tito": "assets/portraits/tito_portrait.png",
+  "portrait.loki": "assets/portraits/loki_portrait.png",
   "fx.burger": "assets/effects/burger.png",
   "fx.nuke": "assets/effects/nuke_bomb.png",
   "portrait.kreed": "assets/portraits/kreed_portrait.png",
@@ -737,7 +757,7 @@ const AMB_VOL = { bar: 0.32, yard: 0.6, circus: 0.38, concert: 0.2, londograd: 0
 const REACT = { bar: "crowdReact", yard: "react_yard", circus: "react_circus", concert: "react_concert", fountains: "react_fountains" };
 const REACT_CD = { bar: 4, yard: 14, circus: 16, concert: 6, fountains: 6 };   // seconds between crowd reactions
 // Fighter voices (grunts): voice set per fighter; only sets with files are used
-const VOICE = { guf: "a", korzh: "a", atl: "a", chip: "a", noize: "b", oxxxy: "b", face: "b", kreed: "v", slava: "v", morgen: "v", maybe: "g", ramirez: "a", husky: "b", babangida: "a", sqwoz: "b", shilo: "b", krip: "a", tito: "b" };
+const VOICE = { guf: "a", korzh: "a", atl: "a", chip: "a", noize: "b", oxxxy: "b", face: "b", kreed: "v", slava: "v", morgen: "v", maybe: "g", ramirez: "a", husky: "b", babangida: "a", sqwoz: "b", shilo: "b", krip: "a", tito: "b", loki: "a" };
 // a voice set without one of the sounds borrows it: v has no hurt (→ b), g has no attack shout (→ her gasp)
 const VOICE_FALLBACK = { voice_v_hurt: "voice_b_hurt", voice_g_hurt: "none", voice_g_ko: "none" };
 function voice(f, what, chance = 1) {
@@ -1767,6 +1787,15 @@ function updateSpecial(f, opp, a) {
         last: i === 2,
       });
     });
+  } else if (f.cid === "loki") {
+    // Molotov: a bottle thrown in an arc; it smashes on the floor (or on the opponent) and leaves a pool of fire
+    const x0 = f.x + f.dir * 70, y0 = FLOOR_Y - 230, T = 0.7, g = 1600;
+    const tx = clamp(opp.x - f.dir * 20, f.x + f.dir * 160 < opp.x === (f.dir > 0) ? opp.x - 400 : opp.x, opp.x + 400);
+    const vx = clamp((opp.x - x0) / T, -900, 900);
+    F.projectiles.push({ kind: "molotov", phase: "fly", owner: f.slot, dir: f.dir, x: x0, y: y0,
+      vx: Math.abs(vx) < 220 ? f.dir * 220 : vx, vy: (FLOOR_Y - 20 - y0 - 0.5 * g * T * T) / T, g, rot: 0,
+      w: 50, h: 50, dmg: 10, life: 6, hit: false, height: "mid", pierce: true, t: 0 });
+    void tx;
   } else if (f.cid === "tito") {
     // "Do like me": a glowing double steps out from behind him and flies in with a kick at head height — duck or block
     F.projectiles.push({ kind: "double", owner: f.slot, dir: f.dir, x: f.x - f.dir * 40, y: FLOOR_Y - 175,
@@ -2464,7 +2493,7 @@ const SUPER_NAMES = {
   guf: "ХЛЕБНИ ЧАЯ!", noize: "MAKE SOME NOIZE", oxxxy: "РАУНД, С*КА", morgen: "АЛИШЕР ТАГИРОВИЧ",
   maybe: "БИЛЕТ В МЭЙБИЛЭНД!", kreed: "СЮДА, БЛИН", slava: "ПРИДИ И ОХЛАДИ МОЙ ПЫЛ", atl: "Я ТЕБЯ ОТПЕЛ",
   korzh: "МАЛЫЙ ПОВЗРОСЛЕЛ", face: "Я РОНЯЮ ЗАПАД", chip: "ЭТО МОЁ ГЭНГСТА!",
-  ramirez: "ДИКИЙ СЛЭМ!", husky: "ПУЛЯ-ДУРА", babangida: "ТЕНЬ", sqwoz: "ТАТАРСКИЙ БОГАТЫРЬ", shilo: "ЖЕЛЕЗНЫЙ ПОДХОД", krip: "КАССЕТНЫЙ ЗАЛП", tito: "ВЫСОКАЯ ЭНЕРГИЯ",
+  ramirez: "ДИКИЙ СЛЭМ!", husky: "ПУЛЯ-ДУРА", babangida: "ТЕНЬ", sqwoz: "ТАТАРСКИЙ БОГАТЫРЬ", shilo: "ЖЕЛЕЗНЫЙ ПОДХОД", krip: "КАССЕТНЫЙ ЗАЛП", tito: "ВЫСОКАЯ ЭНЕРГИЯ", loki: "ПЕПЕЛИЩЕ",
 };
 
 function addSuper(f, v) {
@@ -2661,7 +2690,7 @@ const FINISHERS = {
   guf: "ЭТО ЦЕНТР!", noize: "ВЫДЫХАЙСЯ!", oxxxy: "ГОРГОРОД!", morgen: "ДОРОГО-БОГАТО!",
   maybe: "БЭЙБИ-КОМБО!", kreed: "ХОЛОСТЯК!", slava: "ГНОЙНЫЙ!", atl: "МАРАБУ!",
   korzh: "ЖИТЬ В КАЙФ!", face: "ЮМОРИСТ!", chip: "ГАНГСТА!",
-  ramirez: "ВЕРТУШКА!", husky: "ПАНЕЛЬКА!", babangida: "ПУТЬ ВОИНА!", sqwoz: "С ПЫЛУ С ЖАРУ!", shilo: "ЕЩЁ ПОДХОД!", krip: "НА ПОВТОР!", tito: "ЕРУНДА!",
+  ramirez: "ВЕРТУШКА!", husky: "ПАНЕЛЬКА!", babangida: "ПУТЬ ВОИНА!", sqwoz: "С ПЫЛУ С ЖАРУ!", shilo: "ЕЩЁ ПОДХОД!", krip: "НА ПОВТОР!", tito: "ЕРУНДА!", loki: "ГОРИ!",
 };
 
 function startDash(f, d) {
@@ -3152,6 +3181,55 @@ function drawPigeon(x, y, dir, ph, s) {
   }
   ctx.restore();
 }
+function updateMolotov(p, dt) {
+  p.t += dt;
+  const target = F.fighters[1 - p.owner], att = F.fighters[p.owner];
+  if (p.phase === "fly") {
+    p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += 12 * dt * Math.sign(p.vx || 1);
+    if (Math.random() < dt * 40) F.particles.push({ type: "sq", x: p.x - Math.sign(p.vx) * 20, y: p.y - 20, vx: rand(-30, 30), vy: rand(-80, -30), life: 0.3, max: 0.3, size: pick([3, 4]), color: pick(["#ffb030", "#ff6a20", "#ffe080"]) });
+    let burst = false;
+    if (!p.hit && F.phase === "fight" && overlap(projBox(p), hurtbox(target))) {
+      p.hit = true; burst = true;
+      const res = applyHit(att, target, { dmg: p.dmg, height: "mid", hitstun: 0.6, blockstun: 0.24, knock: 300, dir: Math.sign(p.vx) || p.dir,
+        sfx: "hitHeavy", stop: 0.1, chip: 3, launch: -420, sparkX: target.x, sparkY: p.y });
+      if (res === "hit") popup(target.x, target.y - 310, "ГОРИ!", "#ff8a30", 34);
+    }
+    if (burst || p.y >= FLOOR_Y - 10) {
+      p.phase = "fire"; p.t = 0; p.life = 2.6; p.y = FLOOR_Y; p.x = clamp(p.x, WALL_L, WALL_R); p.w = 190; p.h = 40; p.tick = 0;
+      F.shake = Math.max(F.shake, 6); playSfx("block");
+      for (let i = 0; i < 24; i++) F.particles.push({ type: "sq", x: p.x + rand(-20, 20), y: FLOOR_Y - rand(5, 40), vx: rand(-260, 260), vy: rand(-380, -80), g: 900, life: rand(0.4, 0.8), max: 0.8, size: pick([3, 4, 6]), color: pick(["#ffb030", "#ff6a20", "#ffe080", "#c8e8ff"]) });
+    }
+    return;
+  }
+  // pool of fire: burns whoever stands in it (on the ground)
+  p.life -= dt;
+  p.tick -= dt;
+  const inFire = target.onGround && !target.ko && Math.abs(target.x - p.x) < p.w / 2 + 20;
+  if (inFire && p.tick <= 0 && F.phase === "fight") {
+    p.tick = 0.4;
+    applyHit(att, target, { dmg: 3, height: "unblockable", hitstun: 0.22, blockstun: 0, knock: Math.sign(target.x - p.x || 1) * 140, dir: Math.sign(target.x - p.x) || 1,
+      sfx: "hitLight", stop: 0.02, chip: 0, noScale: true, sparkX: target.x, sparkY: FLOOR_Y - 40 });
+  }
+}
+function drawFirePool(p) {
+  const fade = Math.min(1, p.life / 0.5, p.t / 0.15);
+  ctx.save(); ctx.globalCompositeOperation = "lighter";
+  const g = ctx.createRadialGradient(p.x, FLOOR_Y - 10, 5, p.x, FLOOR_Y - 10, p.w * 0.7);
+  g.addColorStop(0, `rgba(255,140,40,${0.45 * fade})`); g.addColorStop(1, "rgba(255,80,20,0)");
+  ctx.fillStyle = g; ctx.fillRect(p.x - p.w, FLOOR_Y - 140, p.w * 2, 160);
+  ctx.restore();
+  for (let i = 0; i < 9; i++) {
+    const fx = p.x - p.w / 2 + (i + 0.5) * p.w / 9;
+    const fh = (70 + 50 * Math.abs(Math.sin(G.time * 9 + i * 1.7)) + (i % 2) * 20) * fade;
+    const fw = 34;
+    ctx.fillStyle = `rgba(255,${90 + (i % 3) * 30},20,${0.9 * fade})`;
+    ctx.beginPath(); ctx.moveTo(fx - fw / 2, FLOOR_Y + 4); ctx.quadraticCurveTo(fx - fw / 3, FLOOR_Y - fh * 0.6, fx + Math.sin(G.time * 7 + i) * 6, FLOOR_Y - fh);
+    ctx.quadraticCurveTo(fx + fw / 3, FLOOR_Y - fh * 0.6, fx + fw / 2, FLOOR_Y + 4); ctx.fill();
+    ctx.fillStyle = `rgba(255,230,140,${0.8 * fade})`;
+    ctx.beginPath(); ctx.moveTo(fx - fw / 4, FLOOR_Y + 4); ctx.quadraticCurveTo(fx, FLOOR_Y - fh * 0.5, fx + fw / 4, FLOOR_Y + 4); ctx.fill();
+  }
+  if (Math.random() < 0.5) F.particles.push({ type: "sq", x: p.x + rand(-p.w / 2, p.w / 2), y: FLOOR_Y - rand(20, 60), vx: rand(-20, 20), vy: rand(-120, -60), life: 0.6, max: 0.6, size: pick([3, 4]), color: pick(["#ffb030", "#ffe080", "rgba(60,40,30,0.6)"]) });
+}
 function updateKanye(p, dt) {
   p.t += dt;
   if (p.phase === "fly") {
@@ -3183,6 +3261,7 @@ function updateProjectiles(dt) {
     if (p.kind === "nuke") { updateNuke(p, dt); continue; }
     if (p.kind === "quake") { updateQuake(p, dt); continue; }
     if (p.kind === "kanye") { updateKanye(p, dt); continue; }
+    if (p.kind === "molotov") { updateMolotov(p, dt); continue; }
     if (p.kind === "mosh") { updateMosh(p, dt); continue; }
     if (p.kind === "cut") { p.t += dt; p.life -= dt; continue; }
     if (p.kind === "pigeons") { updatePigeons(p, dt); continue; }
@@ -3394,7 +3473,7 @@ function drawAmbient() {
 const BOT_STYLE = {
   korzh: { aggro: 1.35, dash: 0.6 }, morgen: { aggro: 1.25, dash: 2.2 }, oxxxy: { aggro: 1.2 }, noize: { aggro: 1.1 },
   maybe: { jump: 2.5 }, guf: { erratic: true }, slava: { dash: 1.8 }, face: { aggro: 1.1 },
-  atl: { keep: 190 }, chip: { keep: 280 }, kreed: {}, ramirez: { aggro: 1.3 }, husky: { aggro: 1.15, jump: 1.3 }, babangida: { aggro: 1.2 }, sqwoz: { keep: 240 }, shilo: { aggro: 1.15 }, krip: { aggro: 1.1 }, tito: { aggro: 1.15, jump: 1.3 },
+  atl: { keep: 190 }, chip: { keep: 280 }, kreed: {}, ramirez: { aggro: 1.3 }, husky: { aggro: 1.15, jump: 1.3 }, babangida: { aggro: 1.2 }, sqwoz: { keep: 240 }, shilo: { aggro: 1.15 }, krip: { aggro: 1.1 }, tito: { aggro: 1.15, jump: 1.3 }, loki: { keep: 230 },
 };
 function updateBot(bot, opp, dt) {
   const c = bot.ctrl;
@@ -3475,6 +3554,11 @@ function updateBot(bot, opp, dt) {
         if (!p.hit && p.t > 0.5 && Math.abs(bot.x - p.x) < p.w / 2 + 30 && Math.random() < d.dodge) {
           ai.fleeT = 0.7; ai.fleeDir = bot.x > p.x ? (bot.x > WALL_R - 150 ? -1 : 1) : (bot.x < WALL_L + 150 ? 1 : -1);
         }
+        continue;
+      }
+      if (p.kind === "molotov") {
+        if (p.phase === "fly" && Math.abs(bot.x - (p.x + p.vx * 0.35)) < 160 && Math.random() < d.dodge) { ai.fleeT = 0.5; ai.fleeDir = bot.x > p.x ? 1 : -1; }
+        if (p.phase === "fire" && Math.abs(bot.x - p.x) < p.w / 2 + 40 && Math.random() < d.dodge) { ai.fleeT = 0.5; ai.fleeDir = bot.x > p.x ? (bot.x > WALL_R - 120 ? -1 : 1) : (bot.x < WALL_L + 120 ? 1 : -1); }
         continue;
       }
       if (p.kind === "double") {
@@ -3780,7 +3864,7 @@ function poseName(f) {
   if (f.hitstun > 0) return (!f.onGround && (f.hurtK || 0) >= 0.9 && hasPose(f.cid, "fall")) ? "fall" : "hurt";
   if (f.action) {
     if (f.action.type === "special") { if (f.cid === "babangida" && f.action.dashed && hasPose(f.cid, "slash")) return "slash";
-      if ((f.cid === "sqwoz" || f.cid === "shilo") && f.action.spawned && hasPose(f.cid, "throw")) return "throw";
+      if ((f.cid === "sqwoz" || f.cid === "shilo" || f.cid === "loki") && f.action.spawned && hasPose(f.cid, "throw")) return "throw";
       return "special"; }
     // wind-up frame during the first part of a grounded light / heavy
     const a = f.action, mv = a.move;
@@ -4060,6 +4144,12 @@ function drawProjectiles() {
     if (p.kind === "nuke") { drawNuke(p); continue; }
     if (p.kind === "quake") { drawQuake(p); continue; }
     if (p.kind === "mosh") { drawMosh(p); continue; }
+    if (p.kind === "molotov") {
+      if (p.phase === "fire") { drawFirePool(p); continue; }
+      const im = img("fx.molotov");
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); if (im) ctx.drawImage(im, -im.width / 2, -im.height / 2); ctx.restore();
+      continue;
+    }
     if (p.kind === "double") {
       const fr = frameOf("tito", "air_kick");
       if (fr) {
@@ -5240,6 +5330,7 @@ const ARCADE_ENDINGS = {
   shilo: "Шило вернулся во двор, а голуби — на крышу.",
   krip: "Глебзилла растоптал турнир и ушёл в закат с бумбоксом.",
   tito: "Титомир показал всем, как надо. Делай как он.",
+  loki: "Локи ушёл в огонь. Никто так и не увидел его лица.",
 };
 const ARCADE_FIGHTS = 6;   // 5 opponents + the boss
 function arcadeDifficulty(i) { return i < 3 ? "easy" : "normal"; }
@@ -6115,7 +6206,7 @@ function checkCodes(code) {
 
 /* Evil twin */
 const TWIN_TINT = { color: "#2a0645", a: 0.5 };
-const ACCUSATIVE = { guf: "ГУФА", noize: "НОЙЗА", oxxxy: "ОКСИ", morgen: "МОРГЕНА", maybe: "МЭЙБИ БЭЙБИ", kreed: "ЕГОРА", slava: "СЛАВУ КПСС", atl: "ATL", korzh: "МАКСА КОРЖА", face: "FACE", chip: "ЧИПИНКОСА", ramirez: "РЭМА", husky: "ХАСКИ", babangida: "БАБАНГИДУ", sqwoz: "SQWOZ BAB", shilo: "ШИЛО", krip: "КРИП-А-КРИПА", tito: "ТИТОМИРА" };
+const ACCUSATIVE = { guf: "ГУФА", noize: "НОЙЗА", oxxxy: "ОКСИ", morgen: "МОРГЕНА", maybe: "МЭЙБИ БЭЙБИ", kreed: "ЕГОРА", slava: "СЛАВУ КПСС", atl: "ATL", korzh: "МАКСА КОРЖА", face: "FACE", chip: "ЧИПИНКОСА", ramirez: "РЭМА", husky: "ХАСКИ", babangida: "БАБАНГИДУ", sqwoz: "SQWOZ BAB", shilo: "ШИЛО", krip: "КРИП-А-КРИПА", tito: "ТИТОМИРА", loki: "ЛОКИ" };
 const FEMININE = new Set(["maybe"]);
 function twinData(cid) {
   const base = CHARS[cid];
