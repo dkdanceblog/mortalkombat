@@ -350,8 +350,9 @@ const STAGES = {
   circus: { id: "circus", name: "ЦИРК", ambient: "confetti" },
   yard: { id: "yard", name: "ПАДИК", ambient: "leaves" },
   fountains: { id: "fountains", name: "МЁРТВЫЕ ФОНТАНЫ", ambient: "motes" },
+  wasteland: { id: "wasteland", name: "ЯДЕРНАЯ ПУСТОШЬ", ambient: "ash" },
 };
-const STAGE_IDS = ["moscow", "thailand", "concert", "londograd", "bar", "circus", "yard", "fountains"];
+const STAGE_IDS = ["moscow", "thailand", "concert", "londograd", "bar", "circus", "yard", "fountains", "wasteland"];
 // Circus garland bulbs found in the background art: [x, y, size] in 1280x720 image space
 const CIRCUS_BULBS = [[556,17,7],[702,19,8],[784,24,7],[616,36,4],[493,46,5],[810,48,6],[702,55,7],[703,89,7],[142,96,3],[1016,100,8],[147,101,3],[374,114,8],[1046,118,8],[342,133,8],[1078,136,8],[702,142,10],[132,143,3],[586,144,4],[826,145,4],[310,150,8],[1110,152,8],[129,157,5],[705,162,7],[90,161,3],[128,161,3],[108,162,3],[126,163,4],[122,163,3],[278,167,8],[1141,166,8],[122,166,4],[570,168,6],[842,168,6],[136,169,3],[100,170,3],[133,174,5],[90,173,4],[124,172,4],[114,172,3],[140,177,4],[118,178,3],[126,178,3],[134,180,3],[246,182,7],[1172,182,7],[120,181,3],[128,182,4],[162,182,3],[135,190,7],[120,186,4],[130,186,4],[160,186,4],[705,188,7],[144,190,4],[554,190,6],[122,190,3],[858,190,6],[162,193,4],[1205,194,8],[125,193,3],[213,195,7],[148,194,3],[116,195,3],[126,197,3],[132,198,3],[134,198,3],[153,198,4],[164,199,4],[130,200,4],[136,201,3],[153,202,4],[1236,204,8],[128,203,3],[138,204,4],[130,205,3],[153,211,5],[164,210,4],[130,209,3],[539,210,6],[874,211,6],[106,210,3],[132,211,3],[1269,214,7],[706,214,6],[134,214,3],[117,216,3],[164,218,3],[116,220,5],[120,218,3],[126,223,4],[142,223,3],[132,226,3],[524,228,6],[890,228,6],[128,228,3],[94,230,3],[139,231,3],[88,234,3],[150,234,3],[706,238,6],[508,244,5],[906,244,6],[124,245,3],[196,246,3],[120,251,3],[274,256,6],[493,256,5],[922,256,6],[706,258,6],[242,264,6],[129,264,3],[146,266,3],[478,268,6],[938,268,6],[152,268,3],[708,276,6],[462,276,6],[952,276,5],[964,281,5],[448,284,5],[48,284,5],[1271,284,6],[976,285,5],[52,289,5],[431,288,6],[348,290,7],[988,289,5],[1067,290,5],[708,290,5],[104,290,3],[1001,292,5],[357,292,4],[415,292,5],[1014,294,5],[403,294,5],[1060,293,4],[1244,296,8],[201,295,5],[396,294,3],[1021,294,3],[96,296,3],[101,296,3],[352,297,4],[232,299,5],[334,300,5],[107,300,4],[708,301,5],[820,302,3],[1180,302,5],[278,304,3],[310,306,7],[1069,307,8],[1147,306,6],[709,307,5],[402,309,7],[144,308,3],[361,308,4],[1016,310,6],[1116,309,5],[190,310,3],[206,311,5],[214,312,6],[220,312,4],[599,312,3],[606,314,3],[816,314,4],[821,314,4],[825,316,4],[988,317,5],[600,317,3],[456,319,5],[638,319,4],[781,319,5],[144,319,3],[516,319,4],[906,320,4],[533,320,4],[538,320,4],[630,320,4],[884,320,3],[889,320,5],[484,322,5],[525,322,6],[656,324,6],[898,323,5],[548,324,6],[622,323,4],[844,325,6],[875,324,6],[962,326,7],[1130,325,5],[1133,324,5],[582,326,6],[614,324,4],[754,326,6],[800,324,3],[813,324,3],[968,326,4],[1138,325,4],[186,326,3],[806,326,3],[816,327,3],[707,331,6],[711,330,5],[466,336,4],[146,361,4],[318,367,4],[1120,367,4],[951,378,3],[142,384,3],[160,384,4],[330,386,4],[1107,386,4],[943,389,3],[78,390,3],[812,398,4],[596,398,3],[934,404,3],[173,405,4],[1090,407,4],[342,408,4],[507,415,3],[924,415,4],[602,416,4],[806,416,4],[188,426,4],[1076,427,4],[352,429,4],[914,432,4],[518,432,3],[608,434,3],[800,434,3],[146,438,4],[793,444,3]];
 // Yard babushkas: anchor (bottom of the bench legs, centre) per pose
@@ -419,6 +420,8 @@ const ASSET_PATHS = {
   "bg.circus": "assets/backgrounds/circus.webp",
   "bg.yard": "assets/backgrounds/yard.webp",
   "bg.fountains": "assets/backgrounds/fountains.webp",
+  "bg.wasteland": "assets/backgrounds/wasteland.webp",
+  "wasteland.cloud": "assets/backgrounds/wasteland_cloud.png",
   "yard.A_idle": "assets/stage_yard/babA_idle.png",
   "yard.A_cheer": "assets/stage_yard/babA_cheer.png",
   "yard.A_shock": "assets/stage_yard/babA_shock.png",
@@ -492,7 +495,7 @@ for (const k of Object.keys(ASSET_PATHS)) {
 // download in the background right after (and the VS screen waits for them if needed).
 function deferredAsset(key) {
   if (key === "bg.concert") return false;                 // title backdrop
-  if (key.startsWith("bg.") || key.startsWith("yard.") || key.startsWith("bar.")) return true;
+  if (key.startsWith("bg.") || key.startsWith("yard.") || key.startsWith("bar.") || key.startsWith("wasteland.")) return true;
   return key.startsWith("spr.") && !key.endsWith(".idle");
 }
 let deferredStarted = false;
@@ -534,7 +537,7 @@ function fightAssetKeys(chars, stage) {
   for (const cid of new Set(chars.filter(Boolean))) {
     for (const k of Object.keys(ASSET_PATHS)) if (k.startsWith(`spr.${cid}.`)) keys.push(k);
   }
-  if (stage === "yard" || stage === "bar") keys.push(...Object.keys(ASSET_PATHS).filter((k) => k.startsWith(stage + ".")));
+  if (stage === "yard" || stage === "bar" || stage === "wasteland") keys.push(...Object.keys(ASSET_PATHS).filter((k) => k.startsWith(stage + ".")));
   return keys;
 }
 function fightAssetsReady() {
@@ -2028,6 +2031,66 @@ function drawCircusFx(camX) {
 }
 
 // Dead Fountains (Khabarovsk): leaf shadows sway on the concrete, warm sunset haze
+// Nuclear wasteland: the mushroom cloud churns and glows, smoke billows up, distant blasts flash on the horizon
+const WASTE = { puffs: [], flash: 0, nextFlash: 6, last: 0 };
+function drawWastelandFx(bg, camX) {
+  const t = G.time, dt = Math.min(0.05, Math.max(0, t - WASTE.last)); WASTE.last = t;
+  const s = Math.max(W / bg.naturalWidth, H / bg.naturalHeight) * 1.07;
+  const ox = (W - bg.naturalWidth * s) / 2 - camX * 0.08, oy = (H - bg.naturalHeight * s) / 2;
+  const k = s * bg.naturalWidth / 1280;                      // cloud layer was cut in 1280-wide space
+  const X = (x) => ox + x * k, Y = (y) => oy + y * k;
+  const cx = X(775), cy = Y(250);                             // the stem base
+  // smoke puffs rising from the cap and from the burning city
+  const sources = [[775, 110, 46], [700, 120, 30], [850, 120, 30], [440, 230, 18], [560, 220, 16], [1000, 250, 14]];
+  if (Math.random() < dt * 9) { const [sx, sy, r] = pick(sources); WASTE.puffs.push({ x: sx + rand(-25, 25), y: sy, r: r * rand(0.6, 1), vx: rand(-8, 8), vy: -rand(8, 18), life: 0, max: rand(5, 8) }); }
+  WASTE.puffs = WASTE.puffs.filter((p) => (p.life += dt) < p.max).slice(-60);
+  ctx.save();
+  for (const p of WASTE.puffs) {
+    p.x += p.vx * dt; p.y += p.vy * dt; p.r += dt * 6;
+    const a = Math.sin(Math.PI * p.life / p.max) * 0.22;
+    ctx.fillStyle = `rgba(70,45,35,${a})`;
+    ctx.beginPath(); ctx.arc(X(p.x), Y(p.y), p.r * k, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+  // the fireball breathes: two layers of the cloud slowly swelling and churning, additive glow
+  const cloud = img("wasteland.cloud");
+  if (cloud) {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (let i = 0; i < 2; i++) {
+      const ph = (t * 0.18 + i * 0.5) % 1;                    // each layer swells and fades out in turn
+      const sc = 1 + ph * 0.07 + Math.sin(t * 1.3 + i) * 0.008;
+      ctx.globalAlpha = (0.32 + 0.12 * Math.sin(t * 5.3 + i * 2)) * Math.sin(ph * Math.PI);
+      ctx.save();
+      ctx.translate(cx, cy); ctx.scale(sc, sc * (1 + ph * 0.03));
+      ctx.drawImage(cloud, (560 - 775) * k, (20 - 250) * k - ph * 8 * k, cloud.width * k, cloud.height * k);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+  // flickering fire glow at the base of the stem
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const fl = 0.2 + 0.08 * Math.sin(t * 7) + 0.05 * Math.sin(t * 13.7) + WASTE.flash * 0.6;
+  const g = ctx.createRadialGradient(cx, cy, 10, cx, cy, 420 * k);
+  g.addColorStop(0, `rgba(255,150,50,${fl})`); g.addColorStop(1, "rgba(255,120,40,0)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+  // a distant blast now and then: flash + small shake
+  WASTE.nextFlash -= dt;
+  if (WASTE.nextFlash <= 0) { WASTE.nextFlash = 7 + Math.random() * 7; WASTE.flash = 1; WASTE.fx = rand(150, 1130); if (F && F.phase === "fight") F.shake = Math.max(F.shake, 3); }
+  if (WASTE.flash > 0) {
+    WASTE.flash = Math.max(0, WASTE.flash - dt * 1.8);
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    const fx = X(WASTE.fx), fy = Y(300);
+    const g2 = ctx.createRadialGradient(fx, fy, 5, fx, fy, 260 * k);
+    g2.addColorStop(0, `rgba(255,230,170,${WASTE.flash * 0.7})`); g2.addColorStop(1, "rgba(255,160,60,0)");
+    ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = `rgba(255,200,120,${WASTE.flash * 0.08})`; ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+}
+
 function drawFountainsFx() {
   ctx.save();
   ctx.globalAlpha = 0.16;
@@ -3045,7 +3108,7 @@ function updateAmbient(dt, stageId) {
   if (!F) return;
   const kind = STAGES[stageId].ambient;
   const A = F.ambient;
-  const rate = { snow: 40, rain: 160, confetti: 26, motes: 14, leaves: 5 }[kind];
+  const rate = { snow: 40, rain: 160, confetti: 26, motes: 14, leaves: 5, ash: 30 }[kind];
   let n = rate * dt;
   while (n > 0) {
     if (Math.random() < n) {
@@ -3053,6 +3116,9 @@ function updateAmbient(dt, stageId) {
       if (kind === "rain") A.push({ x: rand(-100, W + 100), y: -20, vx: -160, vy: rand(1100, 1400), s: 1, life: 1.2, c: "rgba(170,190,255,0.35)", rain: true });
       if (kind === "confetti") A.push({ x: rand(0, W), y: -10, vx: rand(-30, 30), vy: rand(80, 160), s: pick([4, 6]), life: 9, c: pick(["#ff6bd6", "#5fd8ff", "#ffd54a", "#8dff7a"]), sway: rand(0, 6), spin: rand(2, 8) });
       if (kind === "leaves") A.push({ x: rand(0, W + 100), y: -10, vx: rand(-50, -10), vy: rand(45, 85), s: pick([5, 6, 7]), life: 14, c: pick(["#e8a13a", "#d9782b", "#f2c94c", "#b9531f"]), sway: rand(0, 6), spin: rand(1.5, 4) });
+      if (kind === "ash") A.push(Math.random() < 0.25
+        ? { x: rand(400, 1000), y: rand(300, 560), vx: rand(-20, 20), vy: rand(-60, -25), s: pick([2, 3]), life: rand(2, 4), max: 4, c: pick(["rgba(255,170,60,0.9)", "rgba(255,220,120,0.9)"]), glow: true }
+        : { x: rand(-50, W + 50), y: -10, vx: rand(-30, 10), vy: rand(30, 70), s: pick([2, 3, 4]), life: 16, c: pick(["rgba(90,80,75,0.8)", "rgba(140,125,115,0.7)", "rgba(60,55,55,0.8)"]), sway: rand(0, 6) });
       if (kind === "motes") A.push({ x: rand(0, W), y: rand(250, 560), vx: rand(-12, 12), vy: rand(-20, -8), s: 3, life: rand(3, 6), max: 6, c: "rgba(255,226,140,0.7)", glow: true });
     }
     n -= 1;
@@ -3952,6 +4018,7 @@ function drawStage(stageId, camX) {
   if (stageId === "circus") drawCircusFx(camX);
   if (stageId === "yard") drawYard(camX);
   if (stageId === "fountains") drawFountainsFx();
+  if (stageId === "wasteland" && bg) drawWastelandFx(bg, camX);
 
   const t = G.time;
   if (stageId === "concert") {
@@ -5454,8 +5521,9 @@ function drawStageSelect() {
   const ck = G.chars.join();
   if (G.prioChars !== ck) { G.prioChars = ck; prioritizeAssets(fightAssetKeys(G.chars, null)); }
   header("ВЫБЕРИ ЛОКАЦИЮ");
-  const cols = 4, w = 290, h = 190, gx = 20, gy = 26;
-  const y0 = 150;
+  const cols = stageCols(), rows = Math.ceil(STAGE_IDS.length / cols), gx = 20, gy = rows > 2 ? 16 : 26;
+  const w = cols === 4 ? 290 : Math.floor((W - 80 - gx * (cols - 1)) / cols), h = rows > 2 ? 140 : cols === 4 ? 190 : 172;
+  const y0 = rows > 2 ? 130 : 150;
   STAGE_IDS.forEach((id, i) => {
     const row = Math.floor(i / cols);
     const inRow = Math.min(cols, STAGE_IDS.length - row * cols);
@@ -5479,6 +5547,7 @@ function drawStageSelect() {
   footer("← → ↑ ↓  ВЫБОР    ENTER  В БОЙ    ESC  НАЗАД");
   backButton();
 }
+function stageCols() { return STAGE_IDS.length <= 8 ? 4 : 5; }
 function chooseStage(id) {
   confirmSfx();
   G.stage = id;
@@ -6368,7 +6437,7 @@ function handleNav(ev) {
     const n = STAGE_IDS.length;
     if (t === "left") G.sel = (G.sel + n - 1) % n;
     if (t === "right") G.sel = (G.sel + 1) % n;
-    if (t === "up" || t === "down") { const k = G.sel + (t === "down" ? 4 : -4); if (k >= 0 && k < n) G.sel = k; else if (t === "down" && G.sel < 4 && n > 4) G.sel = n - 1; }
+    if (t === "up" || t === "down") { const c = stageCols(), k = G.sel + (t === "down" ? c : -c); if (k >= 0 && k < n) G.sel = k; else if (t === "down" && k >= n) G.sel = n - 1; }
     if (t.startsWith("digit")) { const sid = STAGE_IDS[+t.slice(6) - 1]; if (sid) chooseStage(sid); }
     if (t === "confirm") chooseStage(STAGE_IDS[G.sel]);
     if (t === "back") { G.chars = [null, null]; G.picking = 0; setScreen("character"); }
