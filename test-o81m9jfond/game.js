@@ -2262,8 +2262,8 @@ function drawTrainStage(bg, camX) {
   for (const [x0, x1] of [[0, 95], [285, 562], [745, 1005], [1190, 1280]]) ctx.fillRect(X(x0), Y(135), (x1 - x0) * k, 177 * k);
   ctx.restore();
   // 3) lamps flicker; hand grips swing with the rocking
-  TRAIN.flick = Math.random() < 0.012 ? 0.25 : Math.max(0, TRAIN.flick - dt);
-  const dim = TRAIN.flick > 0 ? 0.35 * (Math.random() < 0.5 ? 1 : 0) : 0;
+  TRAIN.flick = Math.random() < 0.003 ? 0.2 : Math.max(0, TRAIN.flick - dt);
+  const dim = TRAIN.flick > 0 ? 0.14 * (Math.random() < 0.5 ? 1 : 0) : 0;
   if (dim) { ctx.fillStyle = `rgba(0,0,0,${dim})`; ctx.fillRect(0, 0, W, H); }
 }
 
