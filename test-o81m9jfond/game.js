@@ -4508,6 +4508,11 @@ const FATALITIES = {
   noize:  { kind: "tv",    caption: "КОНЕЦ ЭФИРА",            dur: 3.3, titleAt: 2.4 },
   oxxxy:  { kind: "stomp", caption: "СОПЕРНИК ПОД ПОДОШВОЙ",  dur: 3.1, titleAt: 1.5 },
   morgen: { kind: "burn",  caption: "ЛЕГЕНДАРНАЯ ПЫЛЬ",       dur: 3.9, titleAt: 2.7 },
+  maybe:  { kind: "dora",  caption: "ДОРАДУРА",               dur: 3.6, titleAt: 2.0 },
+  kreed:  { kind: "rose",  caption: "", title: "ХОЛОСТЯЛИТИ", dur: 3.8, titleAt: 2.5 },
+  slava:  { kind: "hearse", caption: "ПОСЛЕДНЯЯ ПОЕЗДКА",     dur: 4.0, titleAt: 2.4 },
+  atl:    { kind: "stork", caption: "МАРАБУ",                 dur: 3.8, titleAt: 2.4 },
+  loki:   { kind: "quit",  caption: "", title: "RAGE QUIT",   dur: 3.4, titleAt: 1.7 },
 };
 
 function startFinishHim(w, l) {
@@ -4558,7 +4563,7 @@ function finishFall() {
 function startFatality(w, l) {
   const fd = FATALITIES[w.cid];
   const dir = l.x >= w.x ? 1 : -1;
-  const gap = fd.kind === "stomp" ? 300 : fd.kind === "burn" ? 250 : fd.kind === "tv" ? 120 : 170;
+  const gap = { stomp: 300, burn: 250, tv: 120, rose: 150, dora: 220, hearse: 260, stork: 240, quit: 260 }[fd.kind] || 170;
   const c = clamp((w.x + l.x) / 2, WALL_L + gap / 2 + 40, WALL_R - gap / 2 - 40);
   for (const f of [w, l]) {
     f.action = null; f.vx = 0; f.vy = 0; f.y = FLOOR_Y; f.onGround = true; f.hitstun = 0; f.blockstun = 0;
@@ -4570,7 +4575,7 @@ function startFatality(w, l) {
   w.won = true;
   F.projectiles = [];
   F.phase = "fatality"; F.phaseT = 0; F.endType = "ko";
-  F.fat = { kind: fd.kind, caption: fd.caption, dur: fd.dur, titleAt: fd.titleAt, t: 0, w: w.slot, l: l.slot, dir, x0: w.x, ev: {}, chunks: null };
+  F.fat = { kind: fd.kind, caption: fd.caption, title: fd.title || "ФАТАЛИТИ", dur: fd.dur, titleAt: fd.titleAt, t: 0, w: w.slot, l: l.slot, dir, x0: w.x, ev: {}, chunks: null };
   F.slow = 0; F.flash = 0.5; F.shake = 10;
   F.stats.fatality = (F.stats.fatality || 0) + 1;
   playSfx("superStart");
@@ -4629,6 +4634,41 @@ function updateFatality(dt) {
     if (t > 1.7 && t < 2.6) for (let i = 0; i < 4; i++) F.particles.push({ type: "sq", x: l.x + rand(-55, 55), y: l.y - rand(0, 230) * (1 - (t - 1.7) / 0.9), vx: rand(-90, 90), vy: rand(-140, 60), g: 120,
       life: rand(0.8, 1.6), max: 1.6, size: pick([3, 4, 6]), color: pick(["#3a3430", "#5c5550", "#1c1816", "#8a827c"]) });
     once("dust", 1.75, () => playSfx("fat_dust"));
+  } else if (fat.kind === "dora") {
+    once("run", 0.05, () => playSfx("dash"));
+    once("swing", 0.85, () => playSfx("whooshHeavy"));
+    once("hit", 1.05, () => {
+      playSfx("special_noize_hit"); playSfx("hitCrit"); F.shake = 26; F.flash = 0.35; buzz([60, 30, 200]);
+      hitSpark(l.x - dir * 20, head(l) + 40, 14);
+    });
+  } else if (fat.kind === "rose") {
+    once("give", 0.45, () => playSfx("special_kreed"));
+    once("love", 0.9, () => playSfx("superReady"));
+    if (t > 0.9 && t < 2.6 && Math.random() < dt * 14) (fat.hearts = fat.hearts || []).push({ x: l.x + rand(-60, 60), y: head(l) + rand(0, 60), vy: rand(-90, -50), t: 0, s: rand(16, 28) });
+    once("swoon", 2.25, () => { playSfx("bodyfall"); F.shake = 8; for (let i = 0; i < 16; i++) (fat.hearts = fat.hearts || []).push({ x: l.x + dir * 110 + rand(-90, 90), y: FLOOR_Y - rand(10, 80), vy: rand(-160, -60), t: 0, s: rand(14, 30) }); });
+    if (fat.hearts) for (const h of fat.hearts) { h.t += dt; h.y += h.vy * dt; }
+  } else if (fat.kind === "hearse") {
+    once("arrive", 0.0, () => playSfx("special_morgen"));
+    once("door", 0.75, () => playSfx("land"));
+    once("go", 1.0, () => playSfx("dash"));
+    once("hit", 1.35, () => {
+      playSfx("special_morgen_hit"); playSfx("hitCrit"); F.shake = 28; F.flash = 0.35; buzz([80, 40, 220]);
+      hitSpark(l.x, l.y - 120, 14);
+    });
+    once("brake", 1.75, () => playSfx("sweep"));
+    once("out", 2.05, () => playSfx("land"));
+  } else if (fat.kind === "stork") {
+    once("caw", 0.1, () => playSfx("special_shilo"));
+    once("grab", 1.1, () => { playSfx("throw"); F.shake = 10; for (let i = 0; i < 18; i++) F.particles.push({ type: "sq", x: l.x + rand(-60, 60), y: head(l) + rand(-40, 30), vx: rand(-160, 160), vy: rand(-120, 80), g: 200, life: rand(0.8, 1.5), max: 1.5, size: pick([4, 6]), color: pick(["#f2f0ea", "#9aa0a6", "#3b3f45"]) }); });
+    if (t > 1.1 && t < 2.6 && Math.random() < dt * 6) F.particles.push({ type: "sq", x: l.x + rand(-40, 40), y: storkPos(fat, t).y + rand(-20, 60), vx: rand(-60, 60), vy: rand(20, 80), g: 60, life: 1.4, max: 1.4, size: pick([4, 6]), color: pick(["#f2f0ea", "#9aa0a6"]) });
+  } else if (fat.kind === "quit") {
+    once("glitch", 0.5, () => playSfx("uiTimer"));
+    once("gone", 1.15, () => {
+      playSfx("uiBack"); F.flash = 0.2;
+      const top = head(l);
+      for (let i = 0; i < 70; i++) F.particles.push({ type: "sq", x: l.x + rand(-60, 60), y: rand(top, l.y), vx: rand(-60, 60), vy: rand(-60, 60), life: rand(0.3, 0.8), max: 0.8, size: pick([6, 8, 10]), color: pick(["#ff2bd6", "#20f0ff", "#ffffff", "#7a7a7a"]) });
+    });
+    once("notice", 1.3, () => playSfx("uiPick"));
   }
   if (t >= fat.dur) { F.phase = "ko"; F.phaseT = 0; F.fatDone = true; F.quote = null; }
 }
@@ -4737,6 +4777,163 @@ function drawFatFighter(f) {
     if (pile > 0) drawDustPile(f.x, FLOOR_Y, pile, t);
     return;
   }
+
+  // victim knocked far away (Dora's guitar, the hearse): spinning arc off the screen
+  const flyAway = (t0, vx, vy) => {
+    const u = t - t0;
+    if (u < 0) { drawShadowAt(f.x, 70); P("hurt", f.x, f.y, { rot: sway }); return; }
+    const x = f.x + dir * vx * u, y = f.y + vy * u + 1400 * u * u;
+    if (x < -300 || x > W + 300 || y > H + 300) return;
+    P("hurt", x, Math.min(y, FLOOR_Y), { rot: dir * u * 9 });
+  };
+
+  if (fat.kind === "dora") {
+    if (!isW) { flyAway(1.05, 1500, -900); return; }
+    drawShadowAt(f.x, 64);
+    P(t < 0.9 ? "special" : end ? "win" : "idle", f.x, f.y);
+    // Dora runs in from behind Maybe and swings her guitar
+    const l = F.fighters[fat.l];
+    const sx0 = dir > 0 ? -160 : W + 160, sx1 = l.x - dir * 150;
+    const k = clamp(t / 0.8, 0, 1);
+    const dx = lerp(sx0, sx1, easeOut(k));
+    drawDora(dx, FLOOR_Y, dir, t);
+    return;
+  }
+
+  if (fat.kind === "rose") {
+    const l = F.fighters[fat.l];
+    if (isW) {
+      drawShadowAt(f.x, 64);
+      const giving = t >= 0.4 && t < 1.7;
+      P(end ? "win" : giving ? "light" : "idle", f.x, f.y);
+      if (giving) drawBigRose(f.x + dir * 100, f.y - 172, dir * 0.6, 2.4);
+      return;
+    }
+    const fall = clamp((t - 1.85) / 0.4, 0, 1), ang = dir * (Math.PI / 2) * fall * fall;
+    const love = clamp((t - 0.8) / 0.6, 0, 1);
+    drawShadowAt(f.x + dir * 110 * fall, 70 + 50 * fall);
+    ctx.save(); ctx.translate(f.x, f.y - 46 * fall); ctx.rotate(ang + (t < 1.85 ? Math.sin(G.time * 5) * 0.05 * love : 0));
+    P("hurt", 0, 0, { tint: { color: "#ff6fae", a: 0.45 * love } });
+    if (t >= 1.7) drawBigRose(-dir * 10, -hH * 0.55, dir * 1.2, 2.2);
+    ctx.restore();
+    for (const h of fat.hearts || []) {
+      const a = clamp(1 - h.t / 1.6, 0, 1);
+      if (a > 0) text("♥", h.x + Math.sin(h.t * 5 + h.s) * 8, h.y, { size: h.s, align: "center", color: "#ff3d7f", stroke: "#4a0018", strokeW: 3, alpha: a, shadow: false });
+    }
+    return;
+  }
+
+  if (fat.kind === "hearse") {
+    const l = F.fighters[fat.l];
+    // the hearse pulls up behind Slava, he gets in, it runs the victim over, stops, he steps out
+    const cx = hearseX(fat, t, f, l);
+    if (!isW) { flyAway(1.35, 1700, -1000); return; }
+    if (t < 0.8) { drawShadowAt(f.x, 64); P("special", f.x, f.y); }          // waves it in, then gets in
+    drawHearse(cx, dir, t);
+    if (t >= 2.05) { const px = cx - dir * 330; drawShadowAt(px, 64); P(end ? "win" : "idle", px, f.y, { dir: dir }); }
+    return;
+  }
+
+  if (fat.kind === "stork") {
+    const st = storkPos(fat, t);
+    if (!isW) {
+      if (t < 1.1) { drawShadowAt(f.x, 70); P("hurt", f.x, f.y, { rot: sway }); return; }
+      if (st.y + hH < -60) return;
+      drawShadowAt(st.x, 50 * clamp(1 - (FLOOR_Y - (st.y + hH + 40)) / 400, 0, 1));
+      P("hurt", st.x, st.y + hH + 40, { rot: Math.sin(t * 6) * 0.15 });
+      return;
+    }
+    drawShadowAt(f.x, 64);
+    P(t < 1.0 ? "special" : end ? "win" : "idle", f.x, f.y);
+    drawStork(st.x, st.y, dir, t);
+    return;
+  }
+
+  if (fat.kind === "quit") {
+    if (isW) { drawShadowAt(f.x, 64); P(t < 1.2 ? "idle" : "win", f.x, f.y); return; }
+    if (t >= 1.15) return;
+    drawShadowAt(f.x, 70);
+    if (t < 0.5) { P("hurt", f.x, f.y, { rot: sway }); return; }
+    // glitch: the sprite tears into horizontal slices with RGB shifts
+    const fr2 = frameOf(f.cid, "hurt");
+    if (!fr2) return;
+    const g = clamp((t - 0.5) / 0.65, 0, 1);
+    const top = f.y - fr2.ay, hgt = fr2.image.height;
+    for (let yy = 0; yy < hgt; yy += 10) {
+      const off = (Math.random() < 0.4 ? rand(-30, 30) : 0) * g;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(f.x - 200, top + yy, 400, 10); ctx.clip();
+      if (Math.random() < 0.3 * g) { ctx.globalAlpha = 0.6; P("hurt", f.x + off + 6, f.y, { tint: { color: "#ff2bd6", a: 0.8 } }); P("hurt", f.x + off - 6, f.y, { tint: { color: "#20f0ff", a: 0.8 } }); }
+      ctx.globalAlpha = 1 - g * 0.5;
+      P("hurt", f.x + off, f.y);
+      ctx.restore();
+    }
+    return;
+  }
+}
+
+function hearseX(fat, t, w, l) {
+  const dir = fat.dir, edge = dir > 0 ? -380 : W + 380, stopNear = w.x - dir * 60, endX = clamp(l.x + dir * 330, 260, W - 260);
+  if (t < 0.6) return lerp(edge, stopNear, easeOut(t / 0.6));
+  if (t < 1.0) return stopNear;
+  if (t < 1.75) { const k = (t - 1.0) / 0.75; return lerp(stopNear, endX, k * k * (3 - 2 * k)); }
+  return endX;
+}
+function drawHearse(x, dir, t) {
+  const car = img("fx.hearse") || img("fx.cadillac");
+  ctx.save(); ctx.translate(x, FLOOR_Y + 14); if (dir < 0) ctx.scale(-1, 1);
+  if (t > 1.0 && t < 1.75) ctx.translate(0, Math.sin(t * 60) * 2);
+  ctx.fillStyle = "rgba(0,0,0,0.45)"; ctx.beginPath(); ctx.ellipse(0, -6, 245, 14, 0, 0, Math.PI * 2); ctx.fill();
+  if (car) {
+    ctx.drawImage(car, -295, -205, 590, 205);
+    if (!img("fx.hearse")) { ctx.globalAlpha = 0.78; ctx.drawImage(silhouette(car, "#0c0a10"), -295, -205, 590, 205); ctx.globalAlpha = 1;
+      ctx.fillStyle = "#c9b27a"; ctx.font = "bold 22px sans-serif"; ctx.textAlign = "center"; ctx.fillText("✝", 0, -120); }
+  }
+  ctx.restore();
+}
+function storkPos(fat, t) {
+  const l = F.fighters[fat.l], dir = fat.dir;
+  const fr = frameOf(l.cid, "hurt"), hH = fr ? fr.ay : 230;
+  const grabY = l.y - hH - 40;
+  if (t < 1.1) { const k = easeOut(t / 1.1); return { x: lerp(dir > 0 ? -150 : W + 150, l.x, k), y: lerp(-180, grabY, k) }; }
+  const u = t - 1.1;
+  return { x: l.x + dir * 260 * u, y: grabY - 330 * u - 120 * u * u };
+}
+function drawStork(x, y, dir, t) {
+  const im = img(Math.floor(t * 8) % 2 ? "fx.stork_2" : "fx.stork_1");
+  ctx.save(); ctx.translate(x, y); if (dir < 0) ctx.scale(-1, 1);
+  if (im) ctx.drawImage(im, -im.naturalWidth / 2, -im.naturalHeight + 60);
+  else {
+    const pg = img(Math.floor(t * 8) % 2 ? "fx.pigeon_2" : "fx.pigeon_1");
+    if (pg) { ctx.globalAlpha = 1; ctx.drawImage(pg, -120, -230, 240, 300); ctx.globalAlpha = 0.45; ctx.drawImage(silhouette(pg, "#e8e4dc"), -120, -230, 240, 300); }
+  }
+  ctx.restore();
+}
+function drawDora(x, y, dir, t) {
+  const swing = t >= 0.8;
+  const im = img(swing ? "fx.dora_swing" : "fx.dora_run");
+  ctx.save(); ctx.translate(x, y); if (dir < 0) ctx.scale(-1, 1);
+  ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(0, 4, 60, 10, 0, 0, Math.PI * 2); ctx.fill();
+  if (im) ctx.drawImage(im, -im.naturalWidth / 2, -im.naturalHeight);
+  else {
+    // stand-in until the art arrives: a pink-tinted Maybe with Noize's guitar
+    const fr = frameOf("maybe", swing ? "heavy" : (Math.floor(t * 8) % 2 ? "walk_1" : "walk_3"));
+    if (fr) { ctx.drawImage(fr.image, -fr.ax, -fr.ay); ctx.globalAlpha = 0.55; ctx.drawImage(silhouette(fr.image, "#ff7ac8"), -fr.ax, -fr.ay); ctx.globalAlpha = 1; }
+    const gim = img("fx.guitar");
+    if (gim) {
+      const k = clamp((t - 0.8) / 0.3, 0, 1);
+      const ang = swing ? (-150 + 170 * k) * Math.PI / 180 : -2.4;
+      ctx.save(); ctx.translate(20, -190); ctx.rotate(ang);
+      const gw = 175, gh = gw * gim.naturalHeight / gim.naturalWidth;
+      ctx.drawImage(gim, -0.8 * gw, -0.12 * gh, gw, gh); ctx.restore();
+    }
+  }
+  ctx.restore();
+}
+function drawBigRose(x, y, rot, sc) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc);
+  drawRose({ x: 0, y: 0, rot });
+  ctx.restore();
 }
 
 function drawIceBlock(x, y, w, h, k, crack) {
@@ -4859,13 +5056,30 @@ function drawFinishHim() {
   ctx.fillStyle = "#ff4a3d"; ctx.fillRect(W / 2 - 160, 302, 320 * left, 8);
 }
 
+// "<NAME> ПОКИНУЛ ИГРУ" — a system message like in an online lobby
+function drawQuitNotice(fat) {
+  const t = (F.phase === "fatality" ? fat.t : fat.dur + F.phaseT) - 1.3;
+  if (t < 0) return;
+  const l = F.fighters[fat.l];
+  const msg = `${l.data.name} ПОКИНУЛ ИГРУ`;
+  const k = easeOut(clamp(t / 0.25, 0, 1));
+  const w = Math.max(420, textWidth(msg, 24, FONT_PIX) + 90), h = 58, x = W / 2 - w / 2, y = H / 2 - 70 + (1 - k) * 30;
+  ctx.save(); ctx.globalAlpha = k;
+  ctx.fillStyle = "rgba(10,10,14,0.88)"; ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = "#5a5a66"; ctx.lineWidth = 2; ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+  ctx.fillStyle = "#ff5a5a"; ctx.fillRect(x + 18, y + 22, 14, 14);
+  ctx.restore();
+  text(msg, x + 46, y + h / 2 + 1, { size: 24, font: FONT_PIX, color: "#d8d8e0", shadow: false, alpha: k });
+}
 function drawFatalityTitle() {
   const fat = F.fat;
   const t = (F.phase === "fatality" ? fat.t : fat.dur + F.phaseT) - fat.titleAt;
   if (t < 0) return;
   const k = easeOut(clamp(t / 0.25, 0, 1));
-  bigText("ФАТАЛИТИ", H / 2 - 150, 120, ["#ffe6e0", "#ff3a2a", "#7a0000"], 1.8 - 0.8 * k, Math.min(1, t * 5));
-  if (t > 0.45) {
+  const pink = fat.kind === "rose";
+  bigText(fat.title, H / 2 - 150, fat.title.length > 9 ? 100 : 120, pink ? ["#fff0f6", "#ff5fa2", "#8a0040"] : ["#ffe6e0", "#ff3a2a", "#7a0000"], 1.8 - 0.8 * k, Math.min(1, t * 5));
+  if (fat.kind === "quit") drawQuitNotice(fat);
+  if (t > 0.45 && fat.caption) {
     const k2 = easeOut(clamp((t - 0.45) / 0.3, 0, 1));
     text(fat.caption, W / 2, H / 2 - 50, { size: 40, align: "center", gradient: ["#fff6c8", "#ffd54a", "#ff9a2e"], stroke: "#1a0830", strokeW: 7, alpha: k2 });
   }
