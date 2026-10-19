@@ -416,13 +416,13 @@ const SPECIALS = {
   korzh: { startup: 0.32, total: 0.8, sfx: "special_korzh" },
   face: { startup: 0.3, total: 0.7, sfx: "special_face" },
   chip: { startup: 0.25, total: 1.3, sfx: "special_chip" },
-  ramirez: { startup: 0.35, total: 0.85, sfx: "special_slava" },
+  ramirez: { startup: 0.35, total: 0.85, sfx: "special_ramirez" },
   husky: { startup: 0.32, total: 0.75, sfx: "throw" },
-  babangida: { startup: 0.45, total: 1.25, sfx: "whooshHeavy" },
-  sqwoz: { startup: 0.42, total: 0.8, sfx: "throw" },
-  shilo: { startup: 0.45, total: 0.85, sfx: "whoosh" },
-  krip: { startup: 0.55, total: 1.0, sfx: "superStart" },
-  tito: { startup: 0.4, total: 0.8, sfx: "superStart" },
+  babangida: { startup: 0.45, total: 1.25, sfx: "special_babangida" },
+  sqwoz: { startup: 0.42, total: 0.8, sfx: "special_sqwoz" },
+  shilo: { startup: 0.45, total: 0.85, sfx: "special_shilo" },
+  krip: { startup: 0.55, total: 1.0, sfx: "special_krip" },
+  tito: { startup: 0.4, total: 0.8, sfx: "special_tito" },
   loki: { startup: 0.38, total: 0.8, sfx: "throw" },
   maybe: { startup: 0.21, active: 0.14, total: 0.7, sfx: "special_maybe" },
 };
@@ -633,6 +633,9 @@ let muted = store.get("muted", false);
 
 const SFX_VOLUME = {
   hitLight: 0.7, hitHeavy: 0.8, hitBody: 0.8, hitCrit: 0.9, block: 0.65, koHit: 1.0, superStart: 0.8, crowdReact: 0.5, hitKick: 0.75, whooshLight: 0.3, whooshHeavy: 0.35, bodyfall: 0.7, parry: 0.55, counter: 0.7, throw: 0.8, sweep: 0.8, wallHit: 0.85, jump: 0.35, land: 0.4, landHeavy: 0.6, dash: 0.45, comboFinisher: 0.85, launch: 0.7, superReady: 0.5, superHit: 0.8, sway: 0.8, armor: 0.75, money: 0.8, special_kreed_hit: 0.85, atl_boom: 0.25, atl_bolt: 0.45, special_face_hit: 0.85, special_morgen_hit: 0.85, special_guf_hit: 0.8, special_noize_hit: 0.8, react_yard: 0.28, react_circus: 0.3, react_concert: 0.45, uiMove: 0.12, uiBack: 0.18, uiPick: 0.35, uiVs: 0.55, uiUnlock: 0.8, uiTimer: 0.5, voice_a_attack: 0.65, voice_a_hurt: 0.65, voice_a_ko: 0.8, voice_b_attack: 0.65, voice_b_hurt: 0.65, voice_b_ko: 0.8, voice_v_attack: 0.65, voice_v_ko: 0.8, voice_g_hurt: 0.65, voice_g_attack: 0.7, react_fountains: 0.5, uiConfirm: 0.25, whoosh: 0.35, ko: 0.9, roundStart: 0.4,
+  special_ramirez: 0.7, special_babangida: 0.75, special_sqwoz: 0.75, special_shilo: 0.7, special_krip: 0.7, special_tito: 0.7,
+  fat_freeze: 0.8, fat_ice_shatter: 0.9, fat_tv_smash: 0.95, fat_stomp: 0.9, fat_dust: 0.8,
+  react_wasteland: 0.3, react_gorgorod: 0.35, react_train: 0.3, react_mansion: 0.3, react_roof: 0.3,
   menuSelect: 0.3, special_guf: 0.45, special_noize: 0.4, special_oxxxy: 0.7, special_morgen: 0.7, special_maybe: 0.75, special_kreed: 0.7, special_slava: 0.75, special_atl: 0.15, special_korzh: 0.9, special_face: 0.8, special_chip: 0.8,
 };
 
@@ -756,8 +759,9 @@ const AMBIENCE = { bar: "assets/audio/amb_bar.mp3", yard: "assets/audio/amb_yard
   londograd: "assets/audio/amb_londograd.mp3", moscow: "assets/audio/amb_moscow.mp3", thailand: "assets/audio/amb_thailand.mp3", fountains: "assets/audio/amb_fountains.mp3" };
 const AMB_VOL = { bar: 0.32, yard: 0.6, circus: 0.38, concert: 0.2, londograd: 0.5, moscow: 0.31, thailand: 0.4, fountains: 0.2 };
 // Crowd reaction to big hits and knockouts, per arena
-const REACT = { bar: "crowdReact", yard: "react_yard", circus: "react_circus", concert: "react_concert", fountains: "react_fountains" };
-const REACT_CD = { bar: 4, yard: 14, circus: 16, concert: 6, fountains: 6 };   // seconds between crowd reactions
+const REACT = { bar: "crowdReact", yard: "react_yard", circus: "react_circus", concert: "react_concert", fountains: "react_fountains",
+  wasteland: "react_wasteland", gorgorod: "react_gorgorod", train: "react_train", mansion: "react_mansion", roof: "react_roof" };
+const REACT_CD = { bar: 4, yard: 14, circus: 16, concert: 6, fountains: 6, wasteland: 14, gorgorod: 14, train: 16, mansion: 12, roof: 16 };   // seconds between crowd reactions
 // Fighter voices (grunts): voice set per fighter; only sets with files are used
 const VOICE = { guf: "a", korzh: "a", atl: "a", chip: "a", noize: "b", oxxxy: "b", face: "b", kreed: "v", slava: "v", morgen: "v", maybe: "g", ramirez: "a", husky: "b", babangida: "a", sqwoz: "b", shilo: "b", krip: "a", tito: "b", loki: "a" };
 // a voice set without one of the sounds borrows it: v has no hurt (→ b), g has no attack shout (→ her gasp)
@@ -4586,9 +4590,10 @@ function updateFatality(dt) {
     once("blow", 0.1, () => playSfx("special_guf"));
     if (t > 0.15 && t < 0.85) for (let i = 0; i < 3; i++) F.particles.push({ type: "sq", x: w.x + dir * rand(70, 100), y: w.y - rand(185, 215),
       vx: dir * rand(500, 800), vy: rand(-60, 60), life: Math.abs(l.x - w.x) / 650, max: 0.5, size: pick([4, 6, 8]), color: pick(["#ffffff", "#d8f2ff", "#9fd8ff"]) });
-    once("freeze", 0.75, () => { playSfx("parry"); F.flash = 0.25; });
+    once("frost", 0.3, () => playSfx("fat_freeze"));
+    once("freeze", 0.75, () => { F.flash = 0.25; });
     once("kick", 1.5, () => {
-      playSfx("hitCrit"); playSfx("block"); F.shake = 26; F.flash = 0.4; buzz([60, 30, 200]);
+      playSfx("hitKick"); playSfx("fat_ice_shatter"); F.shake = 26; F.flash = 0.4; buzz([60, 30, 200]);
       const top = head(l);
       for (let i = 0; i < 110; i++) F.particles.push({ type: "sq", x: l.x + rand(-70, 70), y: rand(top, l.y), vx: rand(-420, 420) + dir * 260, vy: rand(-820, -120), g: 1500,
         life: rand(0.8, 1.6), max: 1.6, size: pick([4, 6, 8, 10, 12]), color: pick(["#eefaff", "#bfe6ff", "#8fd0ff", "#ffffff", "#6fb4e8"]) });
@@ -4598,7 +4603,7 @@ function updateFatality(dt) {
     once("lift", 0.05, () => playSfx("whoosh"));
     once("swing", 0.6, () => playSfx("whooshHeavy"));
     once("smash", 0.82, () => {
-      playSfx("hitCrit"); playSfx("wallHit"); F.shake = 24; F.flash = 0.35; buzz([60, 30, 180]);
+      playSfx("fat_tv_smash"); playSfx("hitHeavy"); F.shake = 24; F.flash = 0.35; buzz([60, 30, 180]);
       hitSpark(l.x, head(l) + 30, 14);
       for (let i = 0; i < 40; i++) F.particles.push({ type: "sq", x: l.x + rand(-50, 50), y: head(l) + rand(0, 70), vx: rand(-380, 380), vy: rand(-600, -100), g: 1400,
         life: rand(0.5, 1.1), max: 1.1, size: pick([3, 4, 6]), color: pick(["#dfe8ee", "#a9c0cc", "#ffffff", "#ffe27a"]) });
@@ -4608,7 +4613,7 @@ function updateFatality(dt) {
   } else if (fat.kind === "stomp") {
     once("jump", 0.3, () => { playSfx("jump"); playSfx("whooshHeavy"); spawnDust(fat.x0, FLOOR_Y, 1.2); });
     once("land", 0.9, () => {
-      playSfx("landHeavy"); playSfx("hitCrit"); playSfx("bodyfall"); F.shake = 30; F.flash = 0.3; buzz([90, 40, 220]);
+      playSfx("fat_stomp"); playSfx("landHeavy"); F.shake = 30; F.flash = 0.3; buzz([90, 40, 220]);
       spawnDust(l.x - 70, FLOOR_Y, 2); spawnDust(l.x + 70, FLOOR_Y, 2);
       for (let i = 0; i < 40; i++) F.particles.push({ type: "sq", x: l.x + rand(-110, 110), y: FLOOR_Y - rand(0, 20), vx: rand(-500, 500), vy: rand(-500, -120), g: 1500,
         life: rand(0.4, 0.9), max: 0.9, size: pick([4, 6, 8]), color: pick(["#8a7a6a", "#b5a48f", "#5a4c40", "#ffffff"]) });
@@ -4623,7 +4628,7 @@ function updateFatality(dt) {
       life: 0.6, max: 0.6, size: pick([3, 4, 6]), color: pick(["#ffb030", "#ffe080", "#ff6a20", "rgba(50,40,36,0.8)"]) });
     if (t > 1.7 && t < 2.6) for (let i = 0; i < 4; i++) F.particles.push({ type: "sq", x: l.x + rand(-55, 55), y: l.y - rand(0, 230) * (1 - (t - 1.7) / 0.9), vx: rand(-90, 90), vy: rand(-140, 60), g: 120,
       life: rand(0.8, 1.6), max: 1.6, size: pick([3, 4, 6]), color: pick(["#3a3430", "#5c5550", "#1c1816", "#8a827c"]) });
-    once("dust", 2.4, () => playSfx("bodyfall"));
+    once("dust", 1.75, () => playSfx("fat_dust"));
   }
   if (t >= fat.dur) { F.phase = "ko"; F.phaseT = 0; F.fatDone = true; F.quote = null; }
 }
