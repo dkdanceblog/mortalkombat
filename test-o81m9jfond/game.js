@@ -473,6 +473,8 @@ const ASSET_PATHS = {
   "fx.zamay": "assets/effects/zamay.png",     // optional: face for Slava's "антихайп"
   "fx.guitar": "assets/effects/guitar_projectile.png",
   "fx.cadillac": "assets/effects/cadillac_projectile.png",
+  "fx.dora_run": "assets/effects/dora_run.png", "fx.dora_swing": "assets/effects/dora_swing.png", "fx.hearse": "assets/effects/hearse.png",
+  "fx.stork_1": "assets/effects/stork_1.png", "fx.stork_2": "assets/effects/stork_2.png",
   "fx.monkey": "assets/effects/monkey_run.png",
   "fx.kanye_fly": "assets/effects/kanye_fly.png",
   "fx.echpochmak": "assets/effects/echpochmak.png",
@@ -4563,7 +4565,7 @@ function finishFall() {
 function startFatality(w, l) {
   const fd = FATALITIES[w.cid];
   const dir = l.x >= w.x ? 1 : -1;
-  const gap = { stomp: 300, burn: 250, tv: 120, rose: 150, dora: 220, hearse: 260, stork: 240, quit: 260 }[fd.kind] || 170;
+  const gap = { stomp: 300, burn: 250, tv: 120, rose: 150, dora: 380, hearse: 260, stork: 240, quit: 260 }[fd.kind] || 170;
   const c = clamp((w.x + l.x) / 2, WALL_L + gap / 2 + 40, WALL_R - gap / 2 - 40);
   for (const f of [w, l]) {
     f.action = null; f.vx = 0; f.vy = 0; f.y = FLOOR_Y; f.onGround = true; f.hitstun = 0; f.blockstun = 0;
@@ -4830,7 +4832,7 @@ function drawFatFighter(f) {
     if (!isW) { flyAway(1.35, 1700, -1000); return; }
     if (t < 0.8) { drawShadowAt(f.x, 64); P("special", f.x, f.y); }          // waves it in, then gets in
     drawHearse(cx, dir, t);
-    if (t >= 2.05) { const px = cx - dir * 330; drawShadowAt(px, 64); P(end ? "win" : "idle", px, f.y, { dir: dir }); }
+    if (t >= 2.05) { const px = cx + dir * 60; drawShadowAt(px, 64); P(end ? "win" : "idle", px, f.y, { dir: -dir }); }
     return;
   }
 
@@ -4880,7 +4882,17 @@ function hearseX(fat, t, w, l) {
   return endX;
 }
 function drawHearse(x, dir, t) {
-  const car = img("fx.hearse") || img("fx.cadillac");
+  const hs = img("fx.hearse");
+  if (hs) {
+    ctx.save(); ctx.translate(x, FLOOR_Y + 4); if (dir < 0) ctx.scale(-1, 1);
+    ctx.fillStyle = "rgba(0,0,0,0.45)"; ctx.beginPath(); ctx.ellipse(0, 0, 330, 13, 0, 0, Math.PI * 2); ctx.fill();
+    if (t > 1.0 && t < 1.75) ctx.translate(0, Math.sin(t * 60) * 2);
+    if (t > 1.7 && t < 1.95) ctx.rotate(-0.025 * Math.sin((t - 1.7) / 0.25 * Math.PI));     // nose dips on the brake
+    ctx.drawImage(hs, -hs.naturalWidth / 2, -hs.naturalHeight);
+    ctx.restore();
+    return;
+  }
+  const car = img("fx.cadillac");
   ctx.save(); ctx.translate(x, FLOOR_Y + 14); if (dir < 0) ctx.scale(-1, 1);
   if (t > 1.0 && t < 1.75) ctx.translate(0, Math.sin(t * 60) * 2);
   ctx.fillStyle = "rgba(0,0,0,0.45)"; ctx.beginPath(); ctx.ellipse(0, -6, 245, 14, 0, 0, Math.PI * 2); ctx.fill();
@@ -4897,12 +4909,13 @@ function storkPos(fat, t) {
   const grabY = l.y - hH - 40;
   if (t < 1.1) { const k = easeOut(t / 1.1); return { x: lerp(dir > 0 ? -150 : W + 150, l.x, k), y: lerp(-180, grabY, k) }; }
   const u = t - 1.1;
-  return { x: l.x + dir * 260 * u, y: grabY - 330 * u - 120 * u * u };
+  return { x: l.x + dir * 170 * u, y: grabY - 150 * u - 90 * u * u + Math.sin(u * 12) * 6 };
 }
 function drawStork(x, y, dir, t) {
-  const im = img(Math.floor(t * 8) % 2 ? "fx.stork_2" : "fx.stork_1");
+  const up = Math.floor(t * 6) % 2 === 1;
+  const im = img(up ? "fx.stork_2" : "fx.stork_1");
   ctx.save(); ctx.translate(x, y); if (dir < 0) ctx.scale(-1, 1);
-  if (im) ctx.drawImage(im, -im.naturalWidth / 2, -im.naturalHeight + 60);
+  if (im) ctx.drawImage(im, -(up ? 150 : 140), 50 - im.naturalHeight);      // claws over the victim's head
   else {
     const pg = img(Math.floor(t * 8) % 2 ? "fx.pigeon_2" : "fx.pigeon_1");
     if (pg) { ctx.globalAlpha = 1; ctx.drawImage(pg, -120, -230, 240, 300); ctx.globalAlpha = 0.45; ctx.drawImage(silhouette(pg, "#e8e4dc"), -120, -230, 240, 300); }
@@ -4914,8 +4927,10 @@ function drawDora(x, y, dir, t) {
   const im = img(swing ? "fx.dora_swing" : "fx.dora_run");
   ctx.save(); ctx.translate(x, y); if (dir < 0) ctx.scale(-1, 1);
   ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(0, 4, 60, 10, 0, 0, Math.PI * 2); ctx.fill();
-  if (im) ctx.drawImage(im, -im.naturalWidth / 2, -im.naturalHeight);
-  else {
+  if (im) {
+    if (swing) ctx.rotate(0.16 * clamp((t - 0.85) / 0.2, 0, 1));                     // leans into the hit
+    ctx.drawImage(im, -(swing ? 155 : 227), -im.naturalHeight);
+  } else {
     // stand-in until the art arrives: a pink-tinted Maybe with Noize's guitar
     const fr = frameOf("maybe", swing ? "heavy" : (Math.floor(t * 8) % 2 ? "walk_1" : "walk_3"));
     if (fr) { ctx.drawImage(fr.image, -fr.ax, -fr.ay); ctx.globalAlpha = 0.55; ctx.drawImage(silhouette(fr.image, "#ff7ac8"), -fr.ax, -fr.ay); ctx.globalAlpha = 1; }
