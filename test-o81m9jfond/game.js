@@ -3834,7 +3834,7 @@ function updateFight(rawDt) {
     return;
   }
 
-  if (F.phase === "fatality") { F.phaseT += rawDt; updateFatality(rawDt); updateEffects(rawDt); return; }
+  if (F.phase === "fatality") { if (F.fatHold) return; F.phaseT += rawDt; updateFatality(rawDt); updateEffects(rawDt); return; }   // fatHold: test hook (freeze frame)
 
   let dt = rawDt * GAME_SPEED;
   if (F.slow > 0) { F.slow -= rawDt; dt *= 0.3; }
@@ -4518,7 +4518,7 @@ const FATALITIES = {
   korzh:  { kind: "car",   caption: "МОТЫЛЁК",                dur: 4.0, titleAt: 2.6 },
   chip:   { kind: "tea",   caption: "ЗАВАРЕН",                dur: 4.2, titleAt: 2.4 },
   husky:  { kind: "flies", caption: "МИР МУХ",                dur: 4.0, titleAt: 2.5 },
-  babangida: { kind: "elements", caption: "ПЯТЬ СТИХИЙ",      dur: 4.0, titleAt: 2.7 },
+  babangida: { kind: "elements", caption: "ПЯТЬ СТИХИЙ",      dur: 6.6, titleAt: 5.2 },
   sqwoz:  { kind: "wolf",  caption: "АУФ",                    dur: 3.8, titleAt: 2.2 },
   shilo:  { kind: "lake",  caption: "НА ДНО",                 dur: 4.2, titleAt: 2.7 },
   krip:   { kind: "fox",   caption: "УПОРОТЫЙ ЛИС",           dur: 4.0, titleAt: 2.6 },
@@ -4704,19 +4704,33 @@ function updateFatality(dt) {
     once("swarm", 0.8, () => playSfx("special_shilo"));
     once("gone", 2.05, () => { playSfx("whooshHeavy"); F.shake = 6; });
   } else if (fat.kind === "elements") {
-    ELEMENTS.forEach((el, i) => {
-      const t0 = 0.3 + i * 0.4;
-      once("shot" + i, t0, () => playSfx(el.sfx));
-      once("hit" + i, t0 + 0.28, () => {
-        playSfx("hitHeavy"); F.shake = 8 + i * 2; l.flash = 0.1;
-        popup(l.x, head(l) - 20 - i * 6, el.name, el.color, 28);
-        for (let k = 0; k < 18; k++) F.particles.push({ type: "sq", x: l.x - dir * 20, y: l.y - 150 + rand(-30, 30), vx: rand(-300, 300) + dir * 120, vy: rand(-400, 100), g: 600, life: rand(0.3, 0.7), max: 0.7, size: pick([4, 6, 8]), color: pick(el.cols) });
-      });
-    });
-    once("boom", 2.35, () => {
-      playSfx("superHit"); playSfx("hitCrit"); F.flash = 0.5; F.shake = 26; buzz([80, 40, 220]);
-      const top = head(l);
-      for (let k = 0; k < 120; k++) { const el = ELEMENTS[k % 5]; F.particles.push({ type: "sq", x: l.x + rand(-60, 60), y: rand(top, l.y), vx: rand(-600, 600), vy: rand(-800, -100), g: 1000, life: rand(0.7, 1.4), max: 1.4, size: pick([4, 6, 8, 10]), color: pick(el.cols) }); }
+    const zoomAt = (z) => { F.zoom = Math.max(F.zoom || 0, z); F.zoomX = l.x; F.zoomY = l.y - 130; };
+    const flash = (c) => { fat.cflash = { c, t: t }; };
+    once("aura", 0.05, () => { playSfx("superStart"); F.shake = 6; });
+    // 1 ВОДА — a torrent from his palm
+    once("e0", EL_T[0], () => { playSfx("special_guf_hit"); playSfx("whooshHeavy"); flash("#4ab0ff"); popup(l.x, head(l) - 30, "ВОДА", "#4ab0ff", 40); });
+    once("e0h", EL_T[0] + 0.2, () => { playSfx("hitHeavy"); F.shake = 14; zoomAt(0.05); });
+    if (t > EL_T[0] + 0.15 && t < EL_T[0] + 0.65) for (let k = 0; k < 3; k++) F.particles.push({ type: "sq", x: elVictim(fat, t).x - dir * 30, y: l.y - rand(110, 200), vx: dir * rand(60, 260), vy: rand(-420, -60), g: 1300, life: rand(0.4, 0.8), max: 0.8, size: pick([4, 6, 8]), color: pick(ELEMENTS[0].cols) });
+    // 2 ДЕРЕВО — vines burst from the floor and bind him
+    once("e1", EL_T[1], () => { playSfx("sweep"); playSfx("landHeavy"); flash("#5fd05a"); F.shake = 12; popup(l.x, head(l) - 30, "ДЕРЕВО", "#5fd05a", 40); zoomAt(0.04); });
+    if (t > EL_T[1] && t < EL_T[1] + 0.5 && Math.random() < dt * 30) F.particles.push({ type: "sq", x: l.x + rand(-80, 80), y: l.y - rand(0, 200), vx: rand(-100, 100), vy: rand(-160, -40), g: 200, life: 0.9, max: 0.9, size: pick([5, 7]), color: pick(ELEMENTS[1].cols) });
+    // 3 ОГОНЬ — a fire pillar erupts under him
+    once("e2", EL_T[2], () => { playSfx("atl_boom"); playSfx("whooshHeavy"); flash("#ff7a2a"); F.shake = 18; popup(l.x, head(l) - 30, "ОГОНЬ", "#ff9a3a", 40); zoomAt(0.06); });
+    if (t > EL_T[2] && t < EL_T[2] + 0.75) for (let k = 0; k < 2; k++) F.particles.push({ type: "sq", x: l.x + rand(-70, 70), y: l.y - rand(0, 300), vx: rand(-40, 40), vy: rand(-420, -200), life: 0.6, max: 0.6, size: pick([4, 6]), color: pick(ELEMENTS[2].cols) });
+    // 4 ЗЕМЛЯ — rock spikes throw him into the air
+    once("e3", EL_T[3], () => { playSfx("special_korzh"); playSfx("landHeavy"); flash("#b0844a"); F.shake = 26; popup(l.x, head(l) - 160, "ЗЕМЛЯ", "#d8b080", 40); zoomAt(0.06);
+      for (let k = 0; k < 40; k++) F.particles.push({ type: "sq", x: l.x + rand(-140, 140), y: FLOOR_Y - rand(0, 20), vx: rand(-420, 420), vy: rand(-760, -200), g: 1600, life: rand(0.6, 1.1), max: 1.1, size: pick([6, 8, 10, 12]), color: pick(ELEMENTS[3].cols) }); });
+    // 5 МЕТАЛЛ — one dash cut straight through him
+    once("e4", EL_T[4], () => { playSfx("special_babangida"); flash("#ffffff"); F.flash = 0.6; F.shake = 12; });
+    once("e4h", EL_T[4] + 0.1, () => { playSfx("hitCrit"); popup(l.x, head(l) - 180, "МЕТАЛЛ", "#e8eef8", 40); zoomAt(0.08);
+      for (let k = 0; k < 30; k++) F.particles.push({ type: "sq", x: elVictim(fat, t).x + rand(-40, 40), y: elVictim(fat, t).y - rand(60, 200), vx: dir * rand(200, 700), vy: rand(-300, 200), g: 500, life: rand(0.3, 0.6), max: 0.6, size: pick([3, 4, 6]), color: pick(ELEMENTS[4].cols) }); });
+    // the beat of silence, then the wheel fires all five at once
+    once("beams", 4.6, () => { playSfx("superStart"); F.shake = 10; });
+    once("boom", EL_BOOM, () => {
+      playSfx("superHit"); playSfx("hitCrit"); playSfx("atl_boom"); F.flash = 0.45; F.shake = 36; zoomAt(0.14); buzz([120, 40, 300]);
+      const v = elVictim(fat, t), top = v.y - 240;
+      for (let k = 0; k < 220; k++) { const el = ELEMENTS[k % 5], a = rand(0, 6.28), sp = rand(200, 900); F.particles.push({ type: "sq", x: v.x + rand(-40, 40), y: rand(top, v.y), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 200, g: 700, life: rand(0.8, 1.8), max: 1.8, size: pick([4, 6, 8, 10, 12]), color: pick(el.cols) }); }
+      ELEMENTS.forEach((el, i) => F.particles.push({ type: "ring", x: v.x, y: v.y - 120, life: 0.3 + i * 0.12, max: 0.3 + i * 0.12, color: el.color }));
     });
   } else if (fat.kind === "wolf") {
     once("auf", 0.25, () => { playSfx("special_krip"); F.shake = 8; });
@@ -4972,21 +4986,64 @@ function drawFatFighter(f) {
 
   if (fat.kind === "elements") {
     const l = F.fighters[fat.l];
+    const v = elVictim(fat, t);
     if (isW) {
-      drawShadowAt(f.x, 64);
-      P(t < 2.3 ? (Math.floor((t - 0.3) / 0.4) % 2 ? "light" : "special") : end ? "win" : "idle", f.x, f.y);
-      ELEMENTS.forEach((el, i) => {
-        const t0 = 0.3 + i * 0.4, k = (t - t0) / 0.28;
-        if (k < 0 || k >= 1) return;
-        drawElementOrb(lerp(f.x + dir * 80, l.x - dir * 20, k), lerp(f.y - 170, l.y - 150, k) - Math.sin(k * Math.PI) * 30, el, t);
-      });
+      // where he stands: in front, then on the far side after the dash cut
+      const dash = clamp((t - EL_T[4]) / 0.12, 0, 1);
+      const bx = lerp(f.x, l.x + dir * 240, dash);
+      if (dash > 0 && dash < 1) for (let k = 0; k < 5; k++) drawPose(f.cid, "slash", lerp(f.x, bx, k / 5), f.y, { dir, alpha: 0.15 + k * 0.08, flash: 0.8, flashColor: "#e8eef8" });
+      drawElementAura(bx, f.y, t);
+      drawShadowAt(bx, 64);
+      let name = "special";
+      if (t >= EL_T[0] && t < EL_T[1]) name = "light";
+      else if (t >= EL_T[1] && t < EL_T[2]) name = "heavy_0";
+      else if (t >= EL_T[2] && t < EL_T[3]) name = "overhead";
+      else if (t >= EL_T[3] && t < EL_T[4]) name = "heavy";
+      else if (t >= EL_T[4]) name = t < 4.6 ? "slash" : end ? "win" : "idle";
+      P(name, bx, f.y, { dir });
+      // water torrent
+      const wk = (t - EL_T[0]) / 0.7;
+      if (wk > 0 && wk < 1) drawTorrent(f.x + dir * 70, f.y - 165, v.x - dir * 20, v.y - 150, wk, t);
+      // the wheel of five above the arena, its nodes light up one by one, then fire
+      const wheelA = clamp(t / 0.6, 0, 1) * (1 - clamp((t - EL_BOOM - 0.1) / 0.4, 0, 1));
+      if (wheelA > 0) drawElementWheel((f.x + l.x) / 2, 200, 108, t, wheelA, v);
+      // the final burst
+      const bk = (t - EL_BOOM) / 0.6;
+      if (bk > 0 && bk < 1) {
+        ctx.save(); ctx.globalCompositeOperation = "lighter";
+        ELEMENTS.forEach((el, i) => {
+          const r = 60 + 420 * easeOut(bk) * (1 - i * 0.12);
+          const g = ctx.createRadialGradient(v.x, v.y - 130, r * 0.2, v.x, v.y - 130, r);
+          g.addColorStop(0, "rgba(255,255,255,0)"); g.addColorStop(0.75, el.color); g.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.globalAlpha = 0.5 * (1 - bk);
+          ctx.fillStyle = g; ctx.fillRect(v.x - r, v.y - 130 - r, r * 2, r * 2);
+        });
+        ctx.globalAlpha = 1 - bk;
+        const core = ctx.createRadialGradient(v.x, v.y - 130, 5, v.x, v.y - 130, 160);
+        core.addColorStop(0, "rgba(255,255,255,1)"); core.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = core; ctx.fillRect(v.x - 160, v.y - 290, 320, 320);
+        ctx.restore();
+      }
       return;
     }
-    if (t >= 2.35) return;
-    const hits = ELEMENTS.filter((_, i) => t >= 0.58 + i * 0.4);
-    const last = hits[hits.length - 1];
-    drawShadowAt(f.x, 70);
-    P("hurt", f.x + (last && (t - 0.58) % 0.4 < 0.12 ? -dir * 10 : 0), f.y, { rot: sway, tint: last ? { color: last.color, a: 0.25 + 0.08 * hits.length } : null });
+    if (t >= EL_BOOM) return;
+    const hits = EL_T.filter((t0) => t >= t0 + 0.15).length;
+    const last = hits ? ELEMENTS[hits - 1] : null;
+    const frozen = t >= EL_T[4] + 0.1;
+    const lifted = t >= EL_T[3];
+    drawShadowAt(v.x, 70 * (lifted ? 0.6 : 1));
+    if (t >= EL_T[1]) drawVines(v.x, FLOOR_Y, v.y, clamp((t - EL_T[1]) / 0.35, 0, 1), t, true);
+    P(lifted ? "fall" : "hurt", v.x + (frozen ? 0 : rand(-2, 2) * (hits ? 1 : 0)), v.y, { rot: frozen ? -dir * 0.25 : lifted ? -dir * 0.25 * clamp((t - EL_T[3]) / 0.3, 0, 1) : sway, tint: last ? { color: last.color, a: 0.3 } : null, flash: frozen ? 0.15 + 0.15 * Math.sin(t * 30) : 0, flashColor: "#ffffff" });
+    if (t >= EL_T[1]) drawVines(v.x, FLOOR_Y, v.y, clamp((t - EL_T[1]) / 0.35, 0, 1), t, false);
+    const fk = clamp((t - EL_T[2]) / 0.15, 0, 1) * (1 - clamp((t - EL_T[2] - 0.6) / 0.3, 0, 1));
+    if (fk > 0) drawBodyFire(l.x, FLOOR_Y, 300, fk);
+    if (t >= EL_T[3]) drawRockSpikes(l.x, FLOOR_Y, clamp((t - EL_T[3]) / 0.18, 0, 1));
+    if (frozen) {                                            // the cut: a glowing line straight through him
+      ctx.save(); ctx.globalCompositeOperation = "lighter";
+      ctx.strokeStyle = `rgba(255,255,255,${0.7 + 0.3 * Math.sin(t * 40)})`; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(v.x - dir * 90, v.y - 210); ctx.lineTo(v.x + dir * 90, v.y - 40); ctx.stroke();
+      ctx.restore();
+    }
     return;
   }
 
@@ -5090,6 +5147,97 @@ const ELEMENTS = [
   { name: "ЗЕМЛЯ", color: "#b0844a", cols: ["#b0844a", "#7a5a30", "#d8b080"], sfx: "landHeavy" },
   { name: "МЕТАЛЛ", color: "#c8d0dc", cols: ["#c8d0dc", "#8a94a4", "#ffffff"], sfx: "special_babangida" },
 ];
+const EL_T = [0.8, 1.55, 2.3, 3.05, 3.8], EL_BOOM = 4.95;
+// victim position during the five elements: pushed by the water, thrown up by the earth
+function elVictim(fat, t) {
+  const l = F.fighters[fat.l], dir = fat.dir;
+  const push = clamp((t - EL_T[0] - 0.15) / 0.4, 0, 1) * 40;
+  const lift = t < EL_T[3] ? 0 : 150 * easeOut(clamp((t - EL_T[3]) / 0.3, 0, 1)) + (t > EL_T[3] + 0.3 ? Math.sin((t - EL_T[3]) * 3) * 6 : 0);
+  return { x: l.x + dir * push, y: l.y - lift };
+}
+function drawElementAura(x, y, t) {
+  ctx.save(); ctx.globalCompositeOperation = "lighter";
+  for (let i = 0; i < 5; i++) {
+    const a = t * 2.4 + i * Math.PI * 2 / 5, el = ELEMENTS[i];
+    const px = x + Math.cos(a) * 90, py = y - 130 + Math.sin(a) * 26;
+    const g = ctx.createRadialGradient(px, py, 1, px, py, 26);
+    g.addColorStop(0, el.color); g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g; ctx.fillRect(px - 26, py - 26, 52, 52);
+  }
+  const g = ctx.createRadialGradient(x, y - 120, 10, x, y - 120, 170);
+  g.addColorStop(0, `rgba(255,240,200,${0.18 + 0.06 * Math.sin(t * 8)})`); g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g; ctx.fillRect(x - 170, y - 290, 340, 340);
+  ctx.restore();
+}
+// the wheel of five: a pentagram with a node per element; lit nodes glow, at the end all fire beams
+function drawElementWheel(cx, cy, r, t, a, v) {
+  const pts = ELEMENTS.map((_, i) => { const ang = -Math.PI / 2 + i * Math.PI * 2 / 5 + t * 0.4; return [cx + Math.cos(ang) * r, cy + Math.sin(ang) * r]; });
+  ctx.save(); ctx.globalAlpha = a;
+  ctx.strokeStyle = "rgba(255,240,200,0.55)"; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(cx, cy, r + 16, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); for (let i = 0; i <= 5; i++) { const p = pts[(i * 2) % 5]; i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); } ctx.stroke();
+  ctx.globalCompositeOperation = "lighter";
+  ELEMENTS.forEach((el, i) => {
+    const lit = t >= EL_T[i];
+    const pulse = lit ? 1 + 0.5 * Math.max(0, 1 - (t - EL_T[i]) / 0.4) : 0.4;
+    const [px, py] = pts[i];
+    const g = ctx.createRadialGradient(px, py, 1, px, py, 34 * pulse);
+    g.addColorStop(0, lit ? el.color : "rgba(120,110,140,0.6)"); g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g; ctx.fillRect(px - 40 * pulse, py - 40 * pulse, 80 * pulse, 80 * pulse);
+    if (t >= 4.6 && t < EL_BOOM + 0.08) {                // five beams converge on the victim
+      const k = clamp((t - 4.6) / 0.25, 0, 1);
+      ctx.strokeStyle = el.color; ctx.lineWidth = 6 + 10 * k * (0.7 + 0.3 * Math.sin(t * 50 + i));
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(lerp(px, v.x, k), lerp(py, v.y - 130, k)); ctx.stroke();
+      ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(lerp(px, v.x, k), lerp(py, v.y - 130, k)); ctx.stroke();
+    }
+  });
+  ctx.restore();
+  ELEMENTS.forEach((el, i) => { if (t >= EL_T[i]) text(el.name, pts[i][0], pts[i][1] + 30, { size: 12, font: FONT_PIX, align: "center", color: el.color, shadow: false, alpha: a }); });
+}
+function drawTorrent(x0, y0, x1, y1, k, t) {
+  const grow = clamp(k / 0.25, 0, 1), fade = 1 - clamp((k - 0.7) / 0.3, 0, 1);
+  const xe = lerp(x0, x1, grow), len = xe - x0;
+  ctx.save(); ctx.globalAlpha = fade;
+  for (let layer = 0; layer < 3; layer++) {
+    const th = [46, 30, 12][layer];
+    ctx.fillStyle = ["rgba(40,120,220,0.75)", "rgba(110,190,255,0.85)", "rgba(230,248,255,0.95)"][layer];
+    ctx.beginPath();
+    for (let i = 0; i <= 24; i++) { const u = i / 24, x = x0 + len * u, y = lerp(y0, y1, u) - th / 2 + Math.sin(u * 14 - t * 30 + layer) * 6 * (1 - layer * 0.3); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+    for (let i = 24; i >= 0; i--) { const u = i / 24, x = x0 + len * u, y = lerp(y0, y1, u) + th / 2 + Math.sin(u * 14 - t * 30 + layer + 2) * 6 * (1 - layer * 0.3); ctx.lineTo(x, y); }
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.fillStyle = "rgba(230,248,255,0.9)";                      // foam at the impact
+  for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.arc(xe + rand(-20, 20), lerp(y0, y1, grow) + rand(-30, 30), rand(8, 20), 0, Math.PI * 2); ctx.fill(); }
+  ctx.restore();
+}
+// vines: drawn in two passes so they wrap around the body (back half, then front half)
+function drawVines(x, floorY, bodyY, k, t, back) {
+  ctx.save(); ctx.lineCap = "round";
+  for (let i = 0; i < 6; i++) {
+    if ((i % 2 === 0) !== back) continue;
+    const side = i % 3 - 1, hgt = (bodyY < floorY - 10 ? floorY - bodyY + 180 : 200) * k * (0.7 + 0.1 * i % 3);
+    ctx.strokeStyle = back ? "#1f5a24" : "#3a9a3a"; ctx.lineWidth = 9 - (i % 3);
+    ctx.beginPath(); ctx.moveTo(x + side * 50 + (i - 3) * 8, floorY + 2);
+    for (let s2 = 1; s2 <= 12; s2++) { const u = s2 / 12; ctx.lineTo(x + side * 50 * (1 - u) + Math.sin(u * 9 + i + t * 2) * 46 * (back ? -1 : 1), floorY - hgt * u); }
+    ctx.stroke();
+    if (!back) { ctx.fillStyle = "#6fd06a"; for (let s2 = 2; s2 <= 12; s2 += 3) { const u = s2 / 12; ctx.beginPath(); ctx.ellipse(x + side * 50 * (1 - u) + Math.sin(u * 9 + i + t * 2) * 46 + 10, floorY - hgt * u, 10, 5, 0.6, 0, Math.PI * 2); ctx.fill(); } }
+  }
+  ctx.restore();
+}
+function drawRockSpikes(x, y, k) {
+  const spikes = [[-120, 70, 34], [-70, 150, 40], [-20, 210, 46], [40, 180, 42], [95, 120, 36], [140, 60, 28]];
+  ctx.save();
+  for (const [dx, h, w] of spikes) {
+    const hh = h * k;
+    const g = ctx.createLinearGradient(x + dx - w / 2, 0, x + dx + w / 2, 0);
+    g.addColorStop(0, "#5a4028"); g.addColorStop(0.5, "#9a7448"); g.addColorStop(1, "#4a3420");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.moveTo(x + dx - w / 2, y + 4); ctx.lineTo(x + dx + 4, y - hh); ctx.lineTo(x + dx + w / 2, y + 4); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "#2a1c10"; ctx.lineWidth = 2; ctx.stroke();
+  }
+  ctx.restore();
+}
 function drawElementOrb(x, y, el, t) {
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
@@ -5454,6 +5602,12 @@ function drawQuitNotice(fat) {
 }
 function drawFatalityTitle() {
   const fat = F.fat;
+  if (fat.kind === "elements") {
+    const tt = F.phase === "fatality" ? fat.t : fat.dur + F.phaseT;
+    const bh = 70 * easeOut(clamp(tt / 0.5, 0, 1));
+    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
+    if (fat.cflash && tt - fat.cflash.t < 0.35) { ctx.save(); ctx.globalAlpha = 0.3 * (1 - (tt - fat.cflash.t) / 0.35); ctx.fillStyle = fat.cflash.c; ctx.fillRect(0, 0, W, H); ctx.restore(); }
+  }
   const t = (F.phase === "fatality" ? fat.t : fat.dur + F.phaseT) - fat.titleAt;
   if (t < 0) return;
   const k = easeOut(clamp(t / 0.25, 0, 1));
@@ -5499,7 +5653,7 @@ function drawFight() {
   drawVignette();
   drawPeek();
   drawCadillacWarning();
-  drawHUD();
+  if (!(F.fat && F.fat.kind === "elements")) drawHUD();         // the five elements play in letterbox, no HUD
   drawQuote();
   drawFightOverlays();
   drawSuperCut();
