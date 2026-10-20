@@ -639,7 +639,7 @@ const SFX_VOLUME = {
   hitLight: 0.7, hitHeavy: 0.8, hitBody: 0.8, hitCrit: 0.9, block: 0.65, koHit: 1.0, superStart: 0.8, crowdReact: 0.5, hitKick: 0.75, whooshLight: 0.3, whooshHeavy: 0.35, bodyfall: 0.7, parry: 0.55, counter: 0.7, throw: 0.8, sweep: 0.8, wallHit: 0.85, jump: 0.35, land: 0.4, landHeavy: 0.6, dash: 0.45, comboFinisher: 0.85, launch: 0.7, superReady: 0.5, superHit: 0.8, sway: 0.8, armor: 0.75, money: 0.8, special_kreed_hit: 0.85, atl_boom: 0.25, atl_bolt: 0.45, special_face_hit: 0.85, special_morgen_hit: 0.85, special_guf_hit: 0.8, special_noize_hit: 0.8, react_yard: 0.28, react_circus: 0.3, react_concert: 0.45, uiMove: 0.12, uiBack: 0.18, uiPick: 0.35, uiVs: 0.55, uiUnlock: 0.8, uiTimer: 0.5, voice_a_attack: 0.65, voice_a_hurt: 0.65, voice_a_ko: 0.8, voice_b_attack: 0.65, voice_b_hurt: 0.65, voice_b_ko: 0.8, voice_v_attack: 0.65, voice_v_ko: 0.8, voice_g_hurt: 0.65, voice_g_attack: 0.7, react_fountains: 0.5, uiConfirm: 0.25, whoosh: 0.35, ko: 0.9, roundStart: 0.4,
   special_ramirez: 0.7, special_babangida: 0.75, special_sqwoz: 0.75, special_shilo: 0.7, special_krip: 0.7, special_tito: 0.7,
   finish_heartbeat: 0.9, dazed_birds: 0.35, fat_rose_swoon: 0.7, fat_hearse_engine: 0.7, fat_car_door: 0.8, fat_car_leave: 0.7, fat_stork: 0.75, fat_glitch: 0.7, fat_guitar_smash: 0.9, fat_mug_land: 0.85, fat_tea_splash: 0.8, fat_wolf: 0.85, fat_howl: 0.6, fat_monster: 0.85, fat_bubbles: 0.7, fat_burp: 0.8, fat_crowd: 0.7, fat_brawl: 0.8, secret_unlock: 0.7, zilla_step: 0.75, rem_monkeys_hit: 0.75,
-  loki_fire: 0.55, fatality_sting: 0.85, fat_burn: 0.8, fat_flies: 0.7,
+  fat_bottle_smash: 0.9, fat_laser: 0.75, loki_fire: 0.55, fatality_sting: 0.85, fat_burn: 0.8, fat_flies: 0.7,
   fat_freeze: 0.8, fat_ice_shatter: 0.9, fat_tv_smash: 0.95, fat_stomp: 0.9, fat_dust: 0.8,
   react_wasteland: 0.3, react_gorgorod: 0.35, react_train: 0.3, react_mansion: 0.3, react_roof: 0.3,
   menuSelect: 0.3, special_guf: 0.45, special_noize: 0.4, special_oxxxy: 0.7, special_morgen: 0.7, special_maybe: 0.75, special_kreed: 0.7, special_slava: 0.75, special_atl: 0.15, special_korzh: 0.9, special_face: 0.8, special_chip: 0.8,
@@ -4704,7 +4704,8 @@ function updateFatality(dt) {
   } else if (fat.kind === "laser") {
     once("off", 0.3, () => playSfx("whoosh"));
     once("glow", 0.65, () => playSfx("superStart"));
-    once("fire", 0.9, () => { playSfx("atl_bolt"); playSfx("fat_burn"); F.shake = 14; F.flash = 0.2; });
+    once("fire", 0.9, () => { playSfx("fat_laser"); F.shake = 14; F.flash = 0.2; });
+    once("fire2", 1.3, () => playSfx("fat_burn"));
     if (t > 0.9 && t < 2.0) {
       F.shake = Math.max(F.shake, 5);
       const hx = l.x - dir * 10 + Math.sin(t * 7) * 18, hy = head(l) + 60 + Math.sin(t * 5) * 30;
@@ -4717,7 +4718,7 @@ function updateFatality(dt) {
     once("lift", 0.05, () => playSfx("whoosh"));
     once("swing", 0.55, () => playSfx("whooshHeavy"));
     once("smash", 0.7, () => {
-      playSfx("fat_tv_smash"); playSfx("hitCrit"); F.shake = 22; F.flash = 0.3; buzz([60, 30, 180]); voice(l, "hurt");
+      playSfx("fat_bottle_smash"); playSfx("hitHeavy"); F.shake = 22; F.flash = 0.3; buzz([60, 30, 180]); voice(l, "hurt");
       const hy = head(l) + 20;
       for (let i = 0; i < 26; i++) F.particles.push({ type: "sq", x: l.x + rand(-30, 30), y: hy + rand(-10, 20), vx: rand(-420, 420), vy: rand(-620, -120), g: 1500, life: rand(0.5, 1), max: 1, size: pick([3, 4, 6]), color: pick(["#d8ffd0", "#ffffff", "#9ad890"]) });
       for (let i = 0; i < 50; i++) F.particles.push({ type: "sq", x: l.x + rand(-40, 40), y: hy + rand(-10, 30), vx: rand(-360, 360), vy: rand(-520, -60), g: 1300, life: rand(0.6, 1.2), max: 1.2, size: pick([4, 6, 8, 10]), color: pick(ACID_COLS) });
