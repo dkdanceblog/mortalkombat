@@ -4532,6 +4532,7 @@ const FATALITIES = {
   shilo:  { kind: "lake",  caption: "НА ДНО",                 dur: 4.2, titleAt: 2.7 },
   krip:   { kind: "fox",   caption: "УПОРОТЫЙ ЛИС",           dur: 4.0, titleAt: 2.6 },
   tito:   { kind: "crowd", caption: "ПИПЛ ХАВАЕТ",            dur: 4.4, titleAt: 2.9 },
+  ramirez: { kind: "acid", caption: "ТОКСИН",                 dur: 4.0, titleAt: 2.6 },
 };
 
 function startFinishHim(w, l) {
@@ -4588,7 +4589,7 @@ function startFatality(w, l) {
   const fd = FATALITIES[w.cid];
   const dir = l.x >= w.x ? 1 : -1;
   const gap = { stomp: 300, burn: 250, tv: 120, rose: 150, dora: 380, hearse: 260, stork: 240, quit: 260,
-    car: 220, tea: 200, flies: 260, elements: 380, wolf: 300, lake: 280, fox: 300, crowd: 300 }[fd.kind] || 170;
+    car: 220, tea: 200, acid: 150, flies: 260, elements: 380, wolf: 300, lake: 280, fox: 300, crowd: 300 }[fd.kind] || 170;
   const c = clamp((w.x + l.x) / 2, WALL_L + gap / 2 + 40, WALL_R - gap / 2 - 40);
   for (const f of [w, l]) {
     f.action = null; f.vx = 0; f.vy = 0; f.y = FLOOR_Y; f.onGround = true; f.hitstun = 0; f.blockstun = 0;
@@ -4699,6 +4700,21 @@ function updateFatality(dt) {
       for (let i = 0; i < 70; i++) F.particles.push({ type: "sq", x: l.x + rand(-60, 60), y: rand(top, l.y), vx: rand(-60, 60), vy: rand(-60, 60), life: rand(0.3, 0.8), max: 0.8, size: pick([6, 8, 10]), color: pick(["#ff2bd6", "#20f0ff", "#ffffff", "#7a7a7a"]) });
     });
     once("notice", 1.3, () => playSfx("uiPick"));
+  } else if (fat.kind === "acid") {
+    once("lift", 0.05, () => playSfx("whoosh"));
+    once("swing", 0.55, () => playSfx("whooshHeavy"));
+    once("smash", 0.7, () => {
+      playSfx("fat_tv_smash"); playSfx("hitCrit"); F.shake = 22; F.flash = 0.3; buzz([60, 30, 180]); voice(l, "hurt");
+      const hy = head(l) + 20;
+      for (let i = 0; i < 26; i++) F.particles.push({ type: "sq", x: l.x + rand(-30, 30), y: hy + rand(-10, 20), vx: rand(-420, 420), vy: rand(-620, -120), g: 1500, life: rand(0.5, 1), max: 1, size: pick([3, 4, 6]), color: pick(["#d8ffd0", "#ffffff", "#9ad890"]) });
+      for (let i = 0; i < 50; i++) F.particles.push({ type: "sq", x: l.x + rand(-40, 40), y: hy + rand(-10, 30), vx: rand(-360, 360), vy: rand(-520, -60), g: 1300, life: rand(0.6, 1.2), max: 1.2, size: pick([4, 6, 8, 10]), color: pick(ACID_COLS) });
+    });
+    if (t > 0.75 && t < 2.6) {
+      if (Math.random() < dt * 26) F.particles.push({ type: "sq", x: l.x + rand(-50, 50), y: l.y - rand(0, 220) * (1 - clamp((t - 1.2) / 1.2, 0, 1)), vx: rand(-20, 20), vy: rand(-140, -60), life: 0.7, max: 0.7, size: pick([4, 6, 8]), color: pick(["rgba(180,255,140,0.7)", "rgba(200,220,200,0.5)", "#7dff3a"]) });
+      if (Math.random() < dt * 14) F.particles.push({ type: "sq", x: l.x + rand(-45, 45), y: head(l) + rand(20, 120), vx: 0, vy: rand(120, 260), g: 600, life: 0.5, max: 0.5, size: pick([4, 6]), color: pick(ACID_COLS) });
+    }
+    once("melt", 1.15, () => playSfx("fat_bubbles"));
+    once("plop", 2.35, () => { playSfx("fat_bubbles"); F.shake = 4; });
   } else if (fat.kind === "car") {
     once("arrive", 0.0, () => playSfx("dash"));
     once("grab", 1.1, () => { playSfx("throw"); voice(l, "hurt"); });
@@ -4946,6 +4962,36 @@ function drawFatFighter(f) {
     drawShadowAt(f.x, 64);
     P(t < 1.0 ? "special" : end ? "win" : "idle", f.x, f.y);
     drawStork(st.x, st.y, dir, t);
+    return;
+  }
+
+  if (fat.kind === "acid") {
+    const l = F.fighters[fat.l];
+    const lh = (() => { const fr2 = frameOf(l.cid, "hurt"); return l.y - (fr2 ? fr2.ay : 230) + 26; })();
+    if (isW) {
+      drawShadowAt(f.x, 64);
+      const fo = frameOf(f.cid, "overhead_0"), top = f.y - (fo ? fo.ay : 250);
+      if (t < 0.6) {
+        P("overhead_0", f.x, f.y);
+        drawAcidBottle(f.x + dir * 4, top + 6 - 8 * clamp(t / 0.4, 0, 1), dir * 0.15 + Math.PI, t);
+      } else P(t < 1.3 ? "overhead" : end ? "win" : "idle", f.x, f.y);
+      if (t >= 0.6 && t < 0.7) { const k = (t - 0.6) / 0.1; drawAcidBottle(lerp(f.x + dir * 4, l.x - dir * 10, k), lerp(top, lh, k) - Math.sin(k * Math.PI) * 40, Math.PI + dir * k * 2.2, t); }
+      return;
+    }
+    const green = clamp((t - 0.7) / 0.6, 0, 1), m = clamp((t - 1.2) / 1.2, 0, 1);
+    const pk = clamp((t - 0.9) / 1.3, 0, 1);
+    if (pk > 0) drawAcidPuddle(f.x, pk, t);
+    if (m >= 1) return;
+    drawShadowAt(f.x, 70 * (1 - m));
+    const wob = Math.sin(t * 9) * 0.05 * m;
+    P("hurt", f.x, f.y, { rot: t < 0.7 ? sway : sway * (1 - green), sy: 1 - 0.9 * m * m, sx: 1 + 0.7 * m + wob, alpha: 1 - 0.25 * m, tint: green ? { color: "#5aff2a", a: 0.65 * green } : null });
+    if (t >= 0.7 && m < 0.6) {                               // acid on his head, dripping (sinks with the melt)
+      const hy = f.y - (f.y - lh) * (1 - 0.9 * m * m);
+      ctx.save(); ctx.fillStyle = "rgba(125,255,58,0.85)"; ctx.globalAlpha = 1 - m / 0.6;
+      ctx.beginPath(); ctx.ellipse(f.x, hy - 6, 46 * (1 + 0.7 * m), 18, 0, 0, Math.PI * 2); ctx.fill();
+      for (let i = 0; i < 5; i++) { const dx = -36 + i * 18, len = 20 + ((i * 37) % 30) + 40 * green; ctx.fillRect(f.x + dx * (1 + 0.7 * m), hy - 4, 6, len * (1 - m)); }
+      ctx.restore();
+    }
     return;
   }
 
@@ -5306,6 +5352,39 @@ function drawBrawlCloud(x, y, r, t, a = 1) {
     const ang = Math.floor(t * 7 + i * 5) * 2.1;
     text(i === 1 ? "#@!" : "★", x + Math.cos(ang) * r * 0.85, y + Math.sin(ang) * r * 0.55, { size: 26, align: "center", color: "#ffe27a", stroke: "#000", strokeW: 4, alpha: a, shadow: false });
   }
+}
+const ACID_COLS = ["#7dff3a", "#b8ff5a", "#3acc2a", "#e4ff9a"];
+function drawAcidBottle(x, y, rot, t) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.save(); ctx.globalCompositeOperation = "lighter";
+  const g = ctx.createRadialGradient(0, 18, 4, 0, 18, 60); g.addColorStop(0, "rgba(125,255,58,0.5)"); g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g; ctx.fillRect(-60, -42, 120, 120); ctx.restore();
+  ctx.fillStyle = "rgba(60,90,50,0.9)"; ctx.fillRect(-7, -30, 14, 22);                 // neck
+  ctx.fillStyle = "#2a2a2a"; ctx.fillRect(-8, -36, 16, 8);                             // cap
+  ctx.fillStyle = "rgba(70,110,60,0.95)"; ctx.beginPath(); ctx.moveTo(-7, -10); ctx.lineTo(-20, 4); ctx.lineTo(-20, 56); ctx.lineTo(20, 56); ctx.lineTo(20, 4); ctx.lineTo(7, -10); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = `rgba(125,255,58,${0.85 + 0.15 * Math.sin(t * 10)})`; ctx.fillRect(-17, 14, 34, 39);   // the glowing liquid
+  ctx.fillStyle = "#f2f2e8"; ctx.fillRect(-14, 22, 28, 20);                            // label
+  ctx.fillStyle = "#1a1a1a"; ctx.font = "bold 16px sans-serif"; ctx.textAlign = "center"; ctx.fillText("☠", 0, 38);
+  ctx.fillStyle = "rgba(255,255,255,0.35)"; ctx.fillRect(-16, 6, 4, 44);
+  ctx.restore();
+}
+function drawAcidPuddle(x, k, t) {
+  const rx = 40 + 120 * k, ry = 10 + 18 * k;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const g = ctx.createRadialGradient(x, FLOOR_Y, 4, x, FLOOR_Y, rx * 1.3);
+  g.addColorStop(0, "rgba(125,255,58,0.35)"); g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g; ctx.fillRect(x - rx * 1.3, FLOOR_Y - 80, rx * 2.6, 110);
+  ctx.globalCompositeOperation = "source-over";
+  ctx.fillStyle = "#3acc2a"; ctx.beginPath(); ctx.ellipse(x, FLOOR_Y + 2, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#7dff3a"; ctx.beginPath(); ctx.ellipse(x - 8, FLOOR_Y, rx * 0.8, ry * 0.7, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "rgba(230,255,180,0.6)"; ctx.beginPath(); ctx.ellipse(x - rx * 0.35, FLOOR_Y - 3, rx * 0.25, ry * 0.25, 0, 0, Math.PI * 2); ctx.fill();
+  for (let i = 0; i < 7; i++) {                                                         // bubbles popping
+    const ph = (t * 1.4 + i * 0.37) % 1, bx = x + Math.sin(i * 2.7) * rx * 0.7, r = 3 + 7 * ph;
+    ctx.strokeStyle = `rgba(220,255,180,${0.9 * (1 - ph)})`; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(bx, FLOOR_Y - r * 0.6, r, Math.PI, 0); ctx.stroke();
+  }
+  ctx.restore();
 }
 function carX(fat, t, w) {
   const dir = fat.dir, edge = dir > 0 ? -420 : W + 420, stop = fat.x0 - dir * 250, away = dir > 0 ? -520 : W + 520;
