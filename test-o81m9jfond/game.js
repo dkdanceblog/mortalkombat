@@ -638,6 +638,7 @@ let muted = store.get("muted", false);
 const SFX_VOLUME = {
   hitLight: 0.7, hitHeavy: 0.8, hitBody: 0.8, hitCrit: 0.9, block: 0.65, koHit: 1.0, superStart: 0.8, crowdReact: 0.5, hitKick: 0.75, whooshLight: 0.3, whooshHeavy: 0.35, bodyfall: 0.7, parry: 0.55, counter: 0.7, throw: 0.8, sweep: 0.8, wallHit: 0.85, jump: 0.35, land: 0.4, landHeavy: 0.6, dash: 0.45, comboFinisher: 0.85, launch: 0.7, superReady: 0.5, superHit: 0.8, sway: 0.8, armor: 0.75, money: 0.8, special_kreed_hit: 0.85, atl_boom: 0.25, atl_bolt: 0.45, special_face_hit: 0.85, special_morgen_hit: 0.85, special_guf_hit: 0.8, special_noize_hit: 0.8, react_yard: 0.28, react_circus: 0.3, react_concert: 0.45, uiMove: 0.12, uiBack: 0.18, uiPick: 0.35, uiVs: 0.55, uiUnlock: 0.8, uiTimer: 0.5, voice_a_attack: 0.65, voice_a_hurt: 0.65, voice_a_ko: 0.8, voice_b_attack: 0.65, voice_b_hurt: 0.65, voice_b_ko: 0.8, voice_v_attack: 0.65, voice_v_ko: 0.8, voice_g_hurt: 0.65, voice_g_attack: 0.7, react_fountains: 0.5, uiConfirm: 0.25, whoosh: 0.35, ko: 0.9, roundStart: 0.4,
   special_ramirez: 0.7, special_babangida: 0.75, special_sqwoz: 0.75, special_shilo: 0.7, special_krip: 0.7, special_tito: 0.7,
+  finish_heartbeat: 0.9, dazed_birds: 0.35, fat_rose_swoon: 0.7, fat_hearse_engine: 0.7, fat_car_door: 0.8, fat_car_leave: 0.7, fat_stork: 0.75, fat_glitch: 0.7, fat_guitar_smash: 0.9, fat_mug_land: 0.85, fat_tea_splash: 0.8, fat_wolf: 0.85, fat_howl: 0.6, fat_monster: 0.85, fat_bubbles: 0.7, fat_burp: 0.8, fat_crowd: 0.7, fat_brawl: 0.8, secret_unlock: 0.7, zilla_step: 0.75, rem_monkeys_hit: 0.75,
   loki_fire: 0.55, fatality_sting: 0.85, fat_burn: 0.8, fat_flies: 0.7,
   fat_freeze: 0.8, fat_ice_shatter: 0.9, fat_tv_smash: 0.95, fat_stomp: 0.9, fat_dust: 0.8,
   react_wasteland: 0.3, react_gorgorod: 0.35, react_train: 0.3, react_mansion: 0.3, react_roof: 0.3,
@@ -691,6 +692,7 @@ function playSfx(name) {
       srcNode.connect(g); g.connect(sfxOut);
       voices++; srcNode.onended = () => { voices--; };
       srcNode.start();
+      return { stop: () => { try { srcNode.stop(); } catch (e) {} } };
     } catch (e) {}
     return;
   }
@@ -706,6 +708,7 @@ function playSfx(name) {
     el.playbackRate = vary ? 1 + (Math.random() * 2 - 1) * vary : 1;
     const p = el.play();
     if (p && p.catch) p.catch(() => {});
+    return { stop: () => { try { el.pause(); } catch (e) {} } };
   } catch (e) {}
 }
 
@@ -3162,6 +3165,7 @@ function updateMosh(p, dt) {
       if (tick < 5 && tick >= p.ticks) {
         p.ticks = tick + 1;
         const last = tick === 4, dir = tick % 2 ? 1 : -1;
+        if (tick === 0) playSfx("rem_monkeys_hit");
         applyHit(att, target, { dmg: last ? 6 : 3, height: "unblockable", hitstun: last ? 0.8 : 0.4, blockstun: 0, knock: last ? 420 : 0,
           dir: last ? (att.x < target.x ? 1 : -1) : dir, sfx: last ? "hitHeavy" : "hitLight", stop: last ? 0.1 : 0.03, chip: 0, noScale: true,
           launch: last ? -640 : 0, sparkX: target.x + rand(-40, 40), sparkY: target.y - rand(80, 200) });
@@ -3361,6 +3365,7 @@ function updateProjectiles(dt) {
       const owner = F.fighters[p.owner];
       if (p.phase === "grow") { p.vx = 0; p.x = owner.x; if (p.t > 0.45) { p.phase = "charge"; p.vx = p.dir * 1000; playSfx("hitHeavy"); } }
       if (p.phase === "charge") { F.shake = Math.max(F.shake, 6); if (Math.random() < dt * 30) spawnDust(p.x - p.dir * 80, FLOOR_Y, 1);
+        p.stepT = (p.stepT || 0) - dt; if (p.stepT <= 0) { p.stepT = 0.32; playSfx("zilla_step"); F.shake = Math.max(F.shake, 12); }
         if (p.x < WALL_L - 60 || p.x > WALL_R + 60 || p.t > 1.6) { p.phase = "shrink"; p.vx = 0; p.shrinkT = 0; } }
       if (p.phase === "shrink") { p.vx = 0; p.shrinkT += dt; if (p.shrinkT > 0.3) { p.life = 0; owner.zillaT = 0; } }
     }
@@ -4538,7 +4543,9 @@ function startFinishHim(w, l) {
   F.slow = 0.6; F.flash = 0.3; F.shake = 14;
   playSfx("koHit"); buzz([60, 40, 120]);
   voice(l, "hurt");
+  F.finishSfx = [playSfx("finish_heartbeat"), playSfx("dazed_birds")];
 }
+function stopFinishSfx() { for (const h of F.finishSfx || []) if (h) h.stop(); F.finishSfx = null; }
 
 // bot winner: sometimes finishes with the fatality, otherwise just hits
 function finishControls() {
@@ -4552,6 +4559,7 @@ function finishControls() {
 
 // a hit landed: the loser flies like a normal KO
 function finishKO(l, dir) {
+  stopFinishSfx();
   const w = F.fighters[1 - l.slot];
   l.dazed = false; l.ko = true; l.action = null;
   l.vx = dir * 620; l.vy = -900; l.onGround = false;
@@ -4567,6 +4575,7 @@ function finishKO(l, dir) {
 
 // time ran out: he just collapses
 function finishFall() {
+  stopFinishSfx();
   const l = F.fighters[F.finish.l], w = F.fighters[F.finish.w];
   l.dazed = false; l.ko = true; l.action = null;
   w.won = true;
@@ -4575,6 +4584,7 @@ function finishFall() {
 }
 
 function startFatality(w, l) {
+  stopFinishSfx();
   const fd = FATALITIES[w.cid];
   const dir = l.x >= w.x ? 1 : -1;
   const gap = { stomp: 300, burn: 250, tv: 120, rose: 150, dora: 380, hearse: 260, stork: 240, quit: 260,
@@ -4658,31 +4668,31 @@ function updateFatality(dt) {
     once("run", 0.05, () => playSfx("dash"));
     once("swing", 0.85, () => playSfx("whooshHeavy"));
     once("hit", 1.05, () => {
-      playSfx("special_noize_hit"); playSfx("hitCrit"); F.shake = 26; F.flash = 0.35; buzz([60, 30, 200]);
+      playSfx("fat_guitar_smash"); playSfx("hitCrit"); F.shake = 26; F.flash = 0.35; buzz([60, 30, 200]);
       hitSpark(l.x - dir * 20, head(l) + 40, 14);
     });
   } else if (fat.kind === "rose") {
     once("give", 0.45, () => playSfx("special_kreed"));
-    once("love", 0.9, () => playSfx("superReady"));
+    once("love", 0.8, () => playSfx("fat_rose_swoon"));
     if (t > 0.9 && t < 2.6 && Math.random() < dt * 14) (fat.hearts = fat.hearts || []).push({ x: l.x + rand(-60, 60), y: head(l) + rand(0, 60), vy: rand(-90, -50), t: 0, s: rand(16, 28) });
     once("swoon", 2.25, () => { playSfx("bodyfall"); F.shake = 8; for (let i = 0; i < 16; i++) (fat.hearts = fat.hearts || []).push({ x: l.x + dir * 110 + rand(-90, 90), y: FLOOR_Y - rand(10, 80), vy: rand(-160, -60), t: 0, s: rand(14, 30) }); });
     if (fat.hearts) for (const h of fat.hearts) { h.t += dt; h.y += h.vy * dt; }
   } else if (fat.kind === "hearse") {
-    once("arrive", 0.0, () => playSfx("special_morgen"));
-    once("door", 0.75, () => playSfx("land"));
-    once("go", 1.0, () => playSfx("dash"));
+    once("arrive", 0.0, () => playSfx("dash"));
+    once("door", 0.75, () => playSfx("fat_car_door"));
+    once("go", 0.95, () => playSfx("fat_hearse_engine"));
     once("hit", 1.35, () => {
       playSfx("special_morgen_hit"); playSfx("hitCrit"); F.shake = 28; F.flash = 0.35; buzz([80, 40, 220]);
       hitSpark(l.x, l.y - 120, 14);
     });
     once("brake", 1.75, () => playSfx("sweep"));
-    once("out", 2.05, () => playSfx("land"));
+    once("out", 2.05, () => playSfx("fat_car_door"));
   } else if (fat.kind === "stork") {
-    once("caw", 0.1, () => playSfx("special_shilo"));
+    once("caw", 0.1, () => playSfx("fat_stork"));
     once("grab", 1.1, () => { playSfx("throw"); F.shake = 10; for (let i = 0; i < 18; i++) F.particles.push({ type: "sq", x: l.x + rand(-60, 60), y: head(l) + rand(-40, 30), vx: rand(-160, 160), vy: rand(-120, 80), g: 200, life: rand(0.8, 1.5), max: 1.5, size: pick([4, 6]), color: pick(["#f2f0ea", "#9aa0a6", "#3b3f45"]) }); });
     if (t > 1.1 && t < 2.6 && Math.random() < dt * 6) F.particles.push({ type: "sq", x: l.x + rand(-40, 40), y: storkPos(fat, t).y + rand(-20, 60), vx: rand(-60, 60), vy: rand(20, 80), g: 60, life: 1.4, max: 1.4, size: pick([4, 6]), color: pick(["#f2f0ea", "#9aa0a6"]) });
   } else if (fat.kind === "quit") {
-    once("glitch", 0.5, () => playSfx("uiTimer"));
+    once("glitch", 0.5, () => playSfx("fat_glitch"));
     once("gone", 1.15, () => {
       playSfx("uiBack"); F.flash = 0.2;
       const top = head(l);
@@ -4693,14 +4703,14 @@ function updateFatality(dt) {
     once("arrive", 0.0, () => playSfx("dash"));
     once("grab", 1.1, () => { playSfx("throw"); voice(l, "hurt"); });
     once("stuff", 1.75, () => { playSfx("bodyfall"); F.shake = 10; });
-    once("door", 2.1, () => playSfx("land"));
-    once("go", 2.3, () => { playSfx("dash"); playSfx("whooshHeavy"); });
+    once("door", 2.1, () => playSfx("fat_car_door"));
+    once("go", 2.25, () => playSfx("fat_car_leave"));
     if (t > 2.3 && t < 3.3 && Math.random() < dt * 20) { const cx = carX(fat, t, w); F.particles.push({ type: "sq", x: cx + dir * 300, y: FLOOR_Y - rand(10, 30), vx: dir * rand(20, 80), vy: rand(-60, -20), life: 0.7, max: 0.7, size: pick([8, 10, 12]), color: pick(["rgba(150,150,150,0.6)", "rgba(110,110,110,0.5)"]) }); }
   } else if (fat.kind === "tea") {
-    once("drop", 0.55, () => { playSfx("landHeavy"); F.shake = 16; spawnDust(teaX(fat), FLOOR_Y, 1.6); });
+    once("drop", 0.55, () => { playSfx("fat_mug_land"); F.shake = 16; spawnDust(teaX(fat), FLOOR_Y, 1.6); });
     once("throw", 0.9, () => playSfx("throw"));
     once("splash", 1.55, () => {
-      playSfx("special_guf_hit"); F.shake = 12;
+      playSfx("fat_tea_splash"); F.shake = 12;
       for (let i = 0; i < 40; i++) F.particles.push({ type: "sq", x: teaX(fat) + rand(-90, 90), y: FLOOR_Y - 215, vx: rand(-260, 260), vy: rand(-620, -200), g: 1400, life: rand(0.5, 1), max: 1, size: pick([4, 6, 8]), color: pick(["#8a4a1c", "#b5652a", "#d9a066", "#ffffff"]) });
     });
   } else if (fat.kind === "flies") {
@@ -4738,24 +4748,26 @@ function updateFatality(dt) {
     });
   } else if (fat.kind === "wolf") {
     once("auf", 0.25, () => { playSfx("special_krip"); F.shake = 8; });
-    once("leap", 0.75, () => playSfx("whooshHeavy"));
+    once("leap", 0.75, () => playSfx("fat_wolf"));
+    once("howl", 2.0, () => playSfx("fat_howl"));
     once("bite", 1.2, () => { playSfx("hitCrit"); playSfx("bodyfall"); F.shake = 18; F.flash = 0.25; spawnDust(l.x, FLOOR_Y, 1.6); });
   } else if (fat.kind === "lake") {
     once("water", 0.2, () => playSfx("special_guf_hit"));
-    once("rise", 0.8, () => { playSfx("special_krip"); F.shake = 12; });
+    once("rise", 0.8, () => { playSfx("fat_monster"); F.shake = 12; });
     once("grab", 1.35, () => { playSfx("throw"); voice(l, "hurt"); });
     if (t > 1.4 && t < 3.0 && Math.random() < dt * 18) F.particles.push({ type: "sq", x: l.x + rand(-80, 80), y: FLOOR_Y - rand(0, 10), vx: rand(-20, 20), vy: rand(-90, -40), life: 0.6, max: 0.6, size: pick([4, 6, 8]), color: pick(["rgba(200,240,255,0.8)", "rgba(140,200,230,0.7)"]) });
-    once("sink", 2.1, () => playSfx("special_guf_hit"));
+    once("sink", 1.6, () => playSfx("fat_bubbles"));
   } else if (fat.kind === "fox") {
     once("call", 0.2, () => playSfx("special_krip"));
     once("pounce", 0.95, () => { playSfx("whooshHeavy"); });
-    once("fight", 1.1, () => { F.shake = 12; });
-    if (t > 1.1 && t < 2.2 && Math.random() < dt * 9) { playSfx(pick(["hitLight", "hitKick", "hitBody"])); F.shake = Math.max(F.shake, 6); }
-    once("burp", 2.6, () => { playSfx("sway"); popup(l.x, FLOOR_Y - 190, "*ИК*", "#ffd08a", 30); });
+    once("fight", 1.1, () => { F.shake = 12; playSfx("fat_brawl"); });
+    if (t > 1.1 && t < 2.2 && Math.random() < dt * 3) { playSfx(pick(["hitLight", "hitBody"])); F.shake = Math.max(F.shake, 6); }
+    once("burp", 2.6, () => { playSfx("fat_burp"); popup(l.x, FLOOR_Y - 190, "*ИК*", "#ffd08a", 30); });
   } else if (fat.kind === "crowd") {
     once("shout", 0.15, () => { playSfx("superStart"); F.shake = 10; });
-    once("run", 0.75, () => playSfx("react_concert"));
-    if (t > 1.5 && t < 2.6 && Math.random() < dt * 10) { playSfx(pick(["hitLight", "hitKick", "hitBody", "hitHeavy"])); F.shake = Math.max(F.shake, 7); }
+    once("run", 0.75, () => playSfx("fat_crowd"));
+    once("brawl", 1.5, () => playSfx("fat_brawl"));
+    if (t > 1.5 && t < 2.6 && Math.random() < dt * 3) { playSfx(pick(["hitLight", "hitBody", "hitHeavy"])); F.shake = Math.max(F.shake, 7); }
     once("leave", 2.65, () => playSfx("whooshHeavy"));
   }
   if (t >= fat.dur) { F.phase = "ko"; F.phaseT = 0; F.fatDone = true; F.quote = null; }
@@ -7377,7 +7389,7 @@ function unlockSecret(id) {
     store.set("secrets", [...secrets]);
   }
   G.banner = { title: isNew ? "СЕКРЕТ ОТКРЫТ!" : "СЕКРЕТ", name: def.name, t: 3, isNew, count: secrets.size };
-  if (isNew) playSfx("uiUnlock");
+  if (isNew) playSfx("secret_unlock");
 }
 
 function drawBanner(dt) {
