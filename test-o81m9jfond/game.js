@@ -638,6 +638,7 @@ let muted = store.get("muted", false);
 const SFX_VOLUME = {
   hitLight: 0.7, hitHeavy: 0.8, hitBody: 0.8, hitCrit: 0.9, block: 0.65, koHit: 1.0, superStart: 0.8, crowdReact: 0.5, hitKick: 0.75, whooshLight: 0.3, whooshHeavy: 0.35, bodyfall: 0.7, parry: 0.55, counter: 0.7, throw: 0.8, sweep: 0.8, wallHit: 0.85, jump: 0.35, land: 0.4, landHeavy: 0.6, dash: 0.45, comboFinisher: 0.85, launch: 0.7, superReady: 0.5, superHit: 0.8, sway: 0.8, armor: 0.75, money: 0.8, special_kreed_hit: 0.85, atl_boom: 0.25, atl_bolt: 0.45, special_face_hit: 0.85, special_morgen_hit: 0.85, special_guf_hit: 0.8, special_noize_hit: 0.8, react_yard: 0.28, react_circus: 0.3, react_concert: 0.45, uiMove: 0.12, uiBack: 0.18, uiPick: 0.35, uiVs: 0.55, uiUnlock: 0.8, uiTimer: 0.5, voice_a_attack: 0.65, voice_a_hurt: 0.65, voice_a_ko: 0.8, voice_b_attack: 0.65, voice_b_hurt: 0.65, voice_b_ko: 0.8, voice_v_attack: 0.65, voice_v_ko: 0.8, voice_g_hurt: 0.65, voice_g_attack: 0.7, react_fountains: 0.5, uiConfirm: 0.25, whoosh: 0.35, ko: 0.9, roundStart: 0.4,
   special_ramirez: 0.7, special_babangida: 0.75, special_sqwoz: 0.75, special_shilo: 0.7, special_krip: 0.7, special_tito: 0.7,
+  loki_fire: 0.55, fatality_sting: 0.85, fat_burn: 0.8, fat_flies: 0.7,
   fat_freeze: 0.8, fat_ice_shatter: 0.9, fat_tv_smash: 0.95, fat_stomp: 0.9, fat_dust: 0.8,
   react_wasteland: 0.3, react_gorgorod: 0.35, react_train: 0.3, react_mansion: 0.3, react_roof: 0.3,
   menuSelect: 0.3, special_guf: 0.45, special_noize: 0.4, special_oxxxy: 0.7, special_morgen: 0.7, special_maybe: 0.75, special_kreed: 0.7, special_slava: 0.75, special_atl: 0.15, special_korzh: 0.9, special_face: 0.8, special_chip: 0.8,
@@ -3252,6 +3253,7 @@ function updateMolotov(p, dt) {
       if (res === "hit") popup(target.x, target.y - 310, "ГОРИ!", "#ff8a30", 34);
     }
     if (burst || p.y >= FLOOR_Y - 10) {
+      playSfx("loki_fire");
       p.phase = "fire"; p.t = 0; p.life = 2.6; p.y = FLOOR_Y; p.x = clamp(p.x, WALL_L, WALL_R); p.w = 190; p.h = 40; p.tick = 0;
       F.shake = Math.max(F.shake, 6); playSfx("block");
       for (let i = 0; i < 24; i++) F.particles.push({ type: "sq", x: p.x + rand(-20, 20), y: FLOOR_Y - rand(5, 40), vx: rand(-260, 260), vy: rand(-380, -80), g: 900, life: rand(0.4, 0.8), max: 0.8, size: pick([3, 4, 6]), color: pick(["#ffb030", "#ff6a20", "#ffe080", "#c8e8ff"]) });
@@ -4607,7 +4609,7 @@ function updateFatality(dt) {
   const t = fat.t, w = F.fighters[fat.w], l = F.fighters[fat.l], dir = fat.dir;
   const once = (k, at, fn) => { if (!fat.ev[k] && t >= at) { fat.ev[k] = true; fn(); } };
   const head = (f) => { const fr = frameOf(f.cid, "hurt"); return f.y - (fr ? fr.ay : 230); };
-  once("title", fat.titleAt, () => { playSfx("superHit"); F.shake = Math.max(F.shake, 8); });
+  once("title", fat.titleAt, () => { playSfx("fatality_sting"); F.shake = Math.max(F.shake, 8); });
 
   if (fat.kind === "ice") {
     once("blow", 0.1, () => playSfx("special_guf"));
@@ -4646,7 +4648,7 @@ function updateFatality(dt) {
     once("grind", 1.25, () => playSfx("sweep"));
   } else if (fat.kind === "burn") {
     once("snap", 0.35, () => playSfx("special_morgen"));
-    once("ignite", 0.55, () => { playSfx("atl_boom"); F.flash = 0.35; F.shake = 14; });
+    once("ignite", 0.55, () => { playSfx("fat_burn"); F.flash = 0.35; F.shake = 14; });
     if (t > 0.6 && t < 2.6 && Math.random() < dt * 30) F.particles.push({ type: "sq", x: l.x + rand(-60, 60), y: l.y - rand(20, 240), vx: rand(-40, 40), vy: rand(-260, -120),
       life: 0.6, max: 0.6, size: pick([3, 4, 6]), color: pick(["#ffb030", "#ffe080", "#ff6a20", "rgba(50,40,36,0.8)"]) });
     if (t > 1.7 && t < 2.6) for (let i = 0; i < 4; i++) F.particles.push({ type: "sq", x: l.x + rand(-55, 55), y: l.y - rand(0, 230) * (1 - (t - 1.7) / 0.9), vx: rand(-90, 90), vy: rand(-140, 60), g: 120,
@@ -4703,7 +4705,7 @@ function updateFatality(dt) {
     });
   } else if (fat.kind === "flies") {
     once("call", 0.25, () => playSfx("whoosh"));
-    once("swarm", 0.8, () => playSfx("special_shilo"));
+    once("swarm", 0.6, () => playSfx("fat_flies"));
     once("gone", 2.05, () => { playSfx("whooshHeavy"); F.shake = 6; });
   } else if (fat.kind === "elements") {
     const zoomAt = (z) => { F.zoom = Math.max(F.zoom || 0, z); F.zoomX = l.x; F.zoomY = l.y - 130; };
@@ -4717,7 +4719,7 @@ function updateFatality(dt) {
     once("e1", EL_T[1], () => { playSfx("sweep"); playSfx("landHeavy"); flash("#5fd05a"); F.shake = 12; popup(l.x, head(l) - 30, "ДЕРЕВО", "#5fd05a", 40); zoomAt(0.04); });
     if (t > EL_T[1] && t < EL_T[1] + 0.5 && Math.random() < dt * 30) F.particles.push({ type: "sq", x: l.x + rand(-80, 80), y: l.y - rand(0, 200), vx: rand(-100, 100), vy: rand(-160, -40), g: 200, life: 0.9, max: 0.9, size: pick([5, 7]), color: pick(ELEMENTS[1].cols) });
     // 3 ОГОНЬ — a fire pillar erupts under him
-    once("e2", EL_T[2], () => { playSfx("atl_boom"); playSfx("whooshHeavy"); flash("#ff7a2a"); F.shake = 18; popup(l.x, head(l) - 30, "ОГОНЬ", "#ff9a3a", 40); zoomAt(0.06); });
+    once("e2", EL_T[2], () => { playSfx("fat_burn"); flash("#ff7a2a"); F.shake = 18; popup(l.x, head(l) - 30, "ОГОНЬ", "#ff9a3a", 40); zoomAt(0.06); });
     if (t > EL_T[2] && t < EL_T[2] + 0.75) for (let k = 0; k < 2; k++) F.particles.push({ type: "sq", x: l.x + rand(-70, 70), y: l.y - rand(0, 300), vx: rand(-40, 40), vy: rand(-420, -200), life: 0.6, max: 0.6, size: pick([4, 6]), color: pick(ELEMENTS[2].cols) });
     // 4 ЗЕМЛЯ — rock spikes throw him into the air
     once("e3", EL_T[3], () => { playSfx("special_korzh"); playSfx("landHeavy"); flash("#b0844a"); F.shake = 26; popup(l.x, head(l) - 160, "ЗЕМЛЯ", "#d8b080", 40); zoomAt(0.06);
