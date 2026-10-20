@@ -475,6 +475,8 @@ const ASSET_PATHS = {
   "fx.cadillac": "assets/effects/cadillac_projectile.png",
   "fx.dora_run": "assets/effects/dora_run.png", "fx.dora_swing": "assets/effects/dora_swing.png", "fx.hearse": "assets/effects/hearse.png",
   "fx.stork_1": "assets/effects/stork_1.png", "fx.stork_2": "assets/effects/stork_2.png",
+  "fx.fox": "assets/effects/fox.png", "fx.fox_full": "assets/effects/fox_full.png", "fx.amphibian": "assets/effects/amphibian.png",
+  "fx.wolf": "assets/effects/wolf.png", "fx.korzh_car": "assets/effects/korzh_car.png",
   "fx.monkey": "assets/effects/monkey_run.png",
   "fx.kanye_fly": "assets/effects/kanye_fly.png",
   "fx.echpochmak": "assets/effects/echpochmak.png",
@@ -5351,7 +5353,7 @@ function drawWolf(x, y, dir, t, carried) {
   ctx.save(); ctx.translate(x, y); if (dir < 0) ctx.scale(-1, 1);
   ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(0, FLOOR_Y - y + 2, 150, 11, 0, 0, Math.PI * 2); ctx.fill();
   let mouth = [150, -150];
-  if (im) { ctx.drawImage(im, -im.naturalWidth / 2, -im.naturalHeight); mouth = [im.naturalWidth * 0.42, -im.naturalHeight * 0.72]; }
+  if (im) { ctx.drawImage(im, -im.naturalWidth / 2, -im.naturalHeight); mouth = [im.naturalWidth * 0.43, -im.naturalHeight * 0.52]; }
   else {
     const m = img("fx.monkey");
     if (m) { const ww = 404 * 1.5, hh = 188 * 1.5; ctx.drawImage(m, -ww / 2, -hh, ww, hh); ctx.globalAlpha = 0.7; ctx.drawImage(silhouette(m, "#5a5f6a"), -ww / 2, -hh, ww, hh); ctx.globalAlpha = 1; }
@@ -5383,7 +5385,7 @@ function drawFox(x, y, dir, t, full) {
   const im = img(full ? "fx.fox_full" : "fx.fox") || img("fx.fox");
   ctx.save(); ctx.translate(x, y); if (dir < 0) ctx.scale(-1, 1);
   ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(0, FLOOR_Y - y + 2, full ? 90 : 70, 9, 0, 0, Math.PI * 2); ctx.fill();
-  if (full) ctx.scale(1.15 + 0.03 * Math.sin(t * 6), 1);              // round belly
+  if (full) ctx.scale(1 + 0.03 * Math.sin(t * 6), 1 - 0.02 * Math.sin(t * 6));   // breathing with a full belly
   if (im) ctx.drawImage(im, -im.naturalWidth / 2, -im.naturalHeight);
   else { const m = img("fx.monkey"); if (m) { const ww = 260, hh = 121; ctx.drawImage(m, -ww / 2, -hh, ww, hh); ctx.globalAlpha = 0.6; ctx.drawImage(silhouette(m, "#e0782a"), -ww / 2, -hh, ww, hh); } }
   ctx.restore();
