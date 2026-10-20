@@ -476,6 +476,8 @@ const ASSET_PATHS = {
   "fx.dora_run": "assets/effects/dora_run.png", "fx.dora_swing": "assets/effects/dora_swing.png", "fx.hearse": "assets/effects/hearse.png",
   "fx.stork_1": "assets/effects/stork_1.png", "fx.stork_2": "assets/effects/stork_2.png",
   "fx.fox": "assets/effects/fox.png", "fx.fox_full": "assets/effects/fox_full.png", "fx.amphibian": "assets/effects/amphibian.png",
+  "fx.tv": "assets/effects/tv.png", "fx.mug": "assets/effects/mug.png",
+  "end.noize": "assets/endings/noize.webp", "end.oxxxy": "assets/endings/oxxxy.webp", "end.guf": "assets/endings/guf.webp", "end.morgen": "assets/endings/morgen.webp",
   "fx.wolf": "assets/effects/wolf.png", "fx.korzh_car": "assets/effects/korzh_car.png",
   "fx.monkey": "assets/effects/monkey_run.png",
   "fx.kanye_fly": "assets/effects/kanye_fly.png",
@@ -530,7 +532,7 @@ for (const k of Object.keys(ASSET_PATHS)) {
 // download in the background right after (and the VS screen waits for them if needed).
 function deferredAsset(key) {
   if (key === "bg.concert") return false;                 // title backdrop
-  if (key.startsWith("bg.") || key.startsWith("yard.") || key.startsWith("bar.") || key.startsWith("wasteland.") || key.startsWith("train.") || key.startsWith("roof.")) return true;
+  if (key.startsWith("bg.") || key.startsWith("end.") || key.startsWith("yard.") || key.startsWith("bar.") || key.startsWith("wasteland.") || key.startsWith("train.") || key.startsWith("roof.")) return true;
   return key.startsWith("spr.") && !key.endsWith(".idle");
 }
 let deferredStarted = false;
@@ -4841,11 +4843,11 @@ function drawFatFighter(f) {
     const hx = (g) => f.x + g;
     if (isW) {
       drawShadowAt(f.x, 64);
-      const fw = frameOf(f.cid, "heavy_0"), wh = fw ? fw.ay : 240;
+      const hasTv = hasPose(f.cid, "tv") && img("fx.tv");
+      const fw = frameOf(f.cid, hasTv ? "tv" : "heavy_0"), wh = hasTv ? fw.ay - 55 : fw ? fw.ay : 240;
       if (t < 0.6) {
-        P("heavy_0", f.x, f.y);
-        const k = clamp(t / 0.35, 0, 1);
-        drawTV(f.x - dir * 10, f.y - wh - 40 - 20 * k, 150, 118, 0, 0, false);
+        if (hasTv) P("tv", f.x, f.y - 8 * clamp(t / 0.4, 0, 1));
+        else { P("heavy_0", f.x, f.y); drawTV(f.x - dir * 10, f.y - wh - 40 - 20 * clamp(t / 0.35, 0, 1), 150, 118, 0, 0, false); }
       } else P(end ? "win" : t < 1.3 ? "light" : "idle", f.x, f.y);
       if (t >= 0.6 && t < 0.82) {
         const k = (t - 0.6) / 0.22;
@@ -4983,11 +4985,12 @@ function drawFatFighter(f) {
     const l = F.fighters[fat.l];
     if (isW) {
       drawShadowAt(f.x, 64);
-      P(end ? "win" : "idle", f.x, f.y);
+      const bare = hasPose(f.cid, "noglass") && t >= 0.4 && t < 2.5;
+      P(end ? "win" : bare ? "noglass" : "idle", f.x, f.y);
       if (end) return;
-      const ex = f.x + dir * 8, ey = f.y - 200;                        // eyes (glasses) on the idle pose
+      const ex = f.x + dir * (bare ? FACE_EYE[0] : 8), ey = f.y + (bare ? FACE_EYE[1] : -200);
       const glow = clamp((t - 0.55) / 0.3, 0, 1) * (1 - clamp((t - 2.45) / 0.15, 0, 1));
-      if (glow > 0) drawLaserEyes(ex, ey, dir, glow, t);
+      if (glow > 0) drawLaserEyes(ex, ey, dir, glow, t, bare);
       // the sunglasses: lifted off and tossed up, then they fall back onto his nose
       let gx = null, gy, gr = 0;
       if (t >= 0.3 && t < 0.9) { const k = (t - 0.3) / 0.6; gx = ex - dir * 30 * k; gy = ey - 260 * k * (2 - k); gr = -dir * 6 * k; }
@@ -4995,8 +4998,8 @@ function drawFatFighter(f) {
       if (gx !== null && gy > -60) drawSunglasses(gx, gy, dir, gr);
       if (t > 0.9 && t < 2.0) {
         const hx = l.x - dir * 10 + Math.sin(t * 7) * 18, hy = l.y - (frameOf(l.cid, "hurt") ? frameOf(l.cid, "hurt").ay : 230) + 60 + Math.sin(t * 5) * 30;
-        drawLaser(ex + dir * 6, ey - 2, hx, hy, t);
-        drawLaser(ex + dir * 6, ey + 4, hx + 6, hy + 8, t + 1);
+        drawLaser(ex + dir * 2, ey - 2, hx, hy, t);
+        drawLaser(ex + dir * 2, ey + 3, hx + 6, hy + 8, t + 1);
       }
       return;
     }
@@ -5073,7 +5076,8 @@ function drawFatFighter(f) {
       P("hurt", lerp(f.x, mx, k), lerp(f.y, FLOOR_Y - 120, k) - 330 * Math.sin(k * Math.PI), { rot: dir * k * 7 });
     } else if (t >= 1.55 && t < 2.6) {                          // bobbing in the tea, then gone
       const sink = clamp((t - 1.8) / 0.7, 0, 1);
-      ctx.save(); ctx.beginPath(); ctx.rect(mx - 140, my - 600, 280, 600 - 205); ctx.clip();
+      const rim = img("fx.mug") ? MUG.rim - 6 : 205;
+      ctx.save(); ctx.beginPath(); ctx.rect(mx - 140, my - 600, 280, 600 - rim); ctx.clip();
       P("hurt", mx + Math.sin(t * 6) * 6, my - 120 + sink * 160, { rot: Math.sin(t * 4) * 0.2, tint: { color: "#8a4a1c", a: 0.35 } });
       ctx.restore();
     }
@@ -5406,9 +5410,10 @@ function drawSunglasses(x, y, dir, rot) {
   ctx.fillStyle = "rgba(255,255,255,0.45)"; ctx.fillRect(-16, 0, 4, 2); ctx.fillRect(7, 0, 4, 2);
   ctx.restore();
 }
-function drawLaserEyes(x, y, dir, k, t) {
+const FACE_EYE = [13, -176];   // glowing eyes on the no-glasses pose, from the feet anchor
+function drawLaserEyes(x, y, dir, k, t, bare) {
   ctx.save();
-  ctx.fillStyle = `rgba(40,8,8,${0.9 * k})`; ctx.fillRect(x - 15, y - 6, 30, 13);        // hides the painted lenses
+  if (!bare) { ctx.fillStyle = `rgba(40,8,8,${0.9 * k})`; ctx.fillRect(x - 15, y - 6, 30, 13); }   // hides the painted lenses
   ctx.globalCompositeOperation = "lighter";
   const g = ctx.createRadialGradient(x, y, 1, x, y, 46 * k);
   g.addColorStop(0, `rgba(255,60,40,${0.9 * k})`); g.addColorStop(1, "rgba(255,0,0,0)");
@@ -5477,7 +5482,20 @@ function drawKorzhCar(x, face, t) {
   ctx.restore();
 }
 function teaX(fat) { const l = F.fighters[fat.l]; return clamp(l.x + fat.dir * 230, 170, W - 170); }
+const MUG = {"w": 350, "h": 389, "cx": 129, "rim": 261};
 function drawMug(x, y, part, t, label) {
+  const mim = img("fx.mug");
+  if (mim) {
+    if (part !== "front") return;
+    ctx.drawImage(mim, x - MUG.cx, y - MUG.h);
+    if (label) {
+      const top = y - MUG.rim;
+      ctx.save(); ctx.strokeStyle = "#f0e8d0"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 60, top + 10); ctx.quadraticCurveTo(x - 110, top - 10, x - 140, top + 70); ctx.stroke();
+      ctx.fillStyle = "#f2c94c"; ctx.fillRect(x - 188, top + 70, 96, 40); ctx.strokeStyle = "#7a5a10"; ctx.strokeRect(x - 188, top + 70, 96, 40); ctx.restore();
+      text(label.length > 9 ? label.slice(0, 9) : label, x - 140, top + 91, { size: 12, font: FONT_PIX, align: "center", color: "#3a2a08", shadow: false });
+    }
+    return;
+  }
   const w = 240, h = 210, top = y - h;
   ctx.save();
   if (part === "back") {
@@ -5667,6 +5685,21 @@ function drawIceChunk(x, y, s, r) {
 
 // old CRT television: body, screen (static + cracks when smashed), antennas
 function drawTV(x, y, w, h, rot, cracked, on) {
+  const tim = img("fx.tv");
+  if (tim) {
+    const tw = w * 1.05, th = tw * tim.naturalHeight / tim.naturalWidth;
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+    ctx.drawImage(tim, -tw / 2, -th * 0.6, tw, th);
+    const sx = -tw / 2 + tw * 0.09, sy = -th * 0.6 + th * 0.37, sw = tw * 0.52, sh = th * 0.46;   // the screen
+    if (on) for (let i = 0; i < 70; i++) { ctx.fillStyle = Math.random() < 0.5 ? "rgba(255,255,255,0.7)" : "rgba(20,20,20,0.55)"; ctx.fillRect(sx + Math.random() * (sw - 4), sy + Math.random() * (sh - 3), 4, 3); }
+    if (cracked) {
+      ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 2;
+      const cx = sx + sw * 0.45, cy = sy + sh * 0.45;
+      for (let i = 0; i < 7; i++) { const a = i * 0.9 + 0.2; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * sw * 0.3 + 4, cy + Math.sin(a) * sh * 0.25); ctx.lineTo(cx + Math.cos(a) * sw * 0.5, cy + Math.sin(a) * sh * 0.5); ctx.stroke(); }
+    }
+    ctx.restore();
+    return;
+  }
   ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
   ctx.strokeStyle = "#2a2a2a"; ctx.lineWidth = 3;
   ctx.beginPath(); ctx.moveTo(-6, -h / 2); ctx.lineTo(-w * 0.28, -h / 2 - 46); ctx.moveTo(6, -h / 2); ctx.lineTo(w * 0.24, -h / 2 - 50); ctx.stroke();
@@ -6812,6 +6845,16 @@ function drawLadder() {
 function drawArcadeEnd() {
   const A = G.arcade;
   const cid = A ? A.cid : "guf";
+  const art = img("end." + cid);
+  if (art) {
+    // full-screen ending illustration, slow push-in; text sits on the darker right side
+    drawCover(art, 0, 0, W, H, 1.02 + 0.03 * Math.min(1, G.screenT / 12));
+    const gr = ctx.createLinearGradient(520, 0, W, 0);
+    gr.addColorStop(0, "rgba(6,4,18,0)"); gr.addColorStop(0.35, "rgba(6,4,18,0.62)"); gr.addColorStop(1, "rgba(6,4,18,0.8)");
+    ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+    drawArcadeEndText(A, cid);
+    return;
+  }
   const bg = img("bg.bar");
   if (bg) drawCover(bg, 0, 0, W, H, 1.07);
   ctx.fillStyle = "rgba(6,4,18,0.66)";
@@ -6826,6 +6869,9 @@ function drawArcadeEnd() {
   }
   ctx.restore();
   drawPose(cid, "win", 380, 640, { dir: 1, scale: Math.min(1.6, 400 / ((SPRITE_META[cid].win || {}).ay || 240)), sy: 1 + 0.02 * Math.sin(G.time * 4) });
+  drawArcadeEndText(A, cid);
+}
+function drawArcadeEndText(A, cid) {
   text(ARCADE_TEXT.champion, 860, 150, { size: 84, align: "center", gradient: ["#fff6c8", GOLD, "#ff7a3d"], stroke: "#1a0830", strokeW: 10 });
   text(CHARS[cid].name, 860, 240, { size: 40, align: "center", color: CHARS[cid].color, stroke: "#000", strokeW: 6 });
   wrapText(ARCADE_ENDINGS[cid] || "", 860, 320, 640, 34, { size: 26, align: "center", color: "#fff6c8", stroke: "#000", strokeW: 4 });
