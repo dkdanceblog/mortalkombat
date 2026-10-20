@@ -4533,6 +4533,7 @@ const FATALITIES = {
   krip:   { kind: "fox",   caption: "УПОРОТЫЙ ЛИС",           dur: 4.0, titleAt: 2.6 },
   tito:   { kind: "crowd", caption: "ПИПЛ ХАВАЕТ",            dur: 4.4, titleAt: 2.9 },
   ramirez: { kind: "acid", caption: "ТОКСИН",                 dur: 4.0, titleAt: 2.6 },
+  face:   { kind: "laser", caption: "ВЗГЛЯД",                 dur: 4.3, titleAt: 2.9 },
 };
 
 function startFinishHim(w, l) {
@@ -4589,7 +4590,7 @@ function startFatality(w, l) {
   const fd = FATALITIES[w.cid];
   const dir = l.x >= w.x ? 1 : -1;
   const gap = { stomp: 300, burn: 250, tv: 120, rose: 150, dora: 380, hearse: 260, stork: 240, quit: 260,
-    car: 220, tea: 200, acid: 150, flies: 260, elements: 380, wolf: 300, lake: 280, fox: 300, crowd: 300 }[fd.kind] || 170;
+    car: 220, tea: 200, acid: 150, laser: 300, flies: 260, elements: 380, wolf: 300, lake: 280, fox: 300, crowd: 300 }[fd.kind] || 170;
   const c = clamp((w.x + l.x) / 2, WALL_L + gap / 2 + 40, WALL_R - gap / 2 - 40);
   for (const f of [w, l]) {
     f.action = null; f.vx = 0; f.vy = 0; f.y = FLOOR_Y; f.onGround = true; f.hitstun = 0; f.blockstun = 0;
@@ -4700,6 +4701,18 @@ function updateFatality(dt) {
       for (let i = 0; i < 70; i++) F.particles.push({ type: "sq", x: l.x + rand(-60, 60), y: rand(top, l.y), vx: rand(-60, 60), vy: rand(-60, 60), life: rand(0.3, 0.8), max: 0.8, size: pick([6, 8, 10]), color: pick(["#ff2bd6", "#20f0ff", "#ffffff", "#7a7a7a"]) });
     });
     once("notice", 1.3, () => playSfx("uiPick"));
+  } else if (fat.kind === "laser") {
+    once("off", 0.3, () => playSfx("whoosh"));
+    once("glow", 0.65, () => playSfx("superStart"));
+    once("fire", 0.9, () => { playSfx("atl_bolt"); playSfx("fat_burn"); F.shake = 14; F.flash = 0.2; });
+    if (t > 0.9 && t < 2.0) {
+      F.shake = Math.max(F.shake, 5);
+      const hx = l.x - dir * 10 + Math.sin(t * 7) * 18, hy = head(l) + 60 + Math.sin(t * 5) * 30;
+      for (let k = 0; k < 2; k++) F.particles.push({ type: "sq", x: hx, y: hy, vx: rand(-260, 260) - dir * 120, vy: rand(-380, 60), g: 900, life: rand(0.2, 0.45), max: 0.45, size: pick([3, 4, 6]), color: pick(["#ffffff", "#ff4a3a", "#ffb030", "#ffe080"]) });
+    }
+    if (t > 1.9 && t < 2.7) for (let k = 0; k < 4; k++) F.particles.push({ type: "sq", x: l.x + rand(-55, 55), y: l.y - rand(0, 230) * (1 - (t - 1.9) / 0.8), vx: rand(-90, 90), vy: rand(-140, 60), g: 120, life: rand(0.8, 1.6), max: 1.6, size: pick([3, 4, 6]), color: pick(["#3a3430", "#5c5550", "#1c1816", "#8a827c"]) });
+    once("ash", 1.95, () => playSfx("fat_dust"));
+    once("back", 2.55, () => playSfx("land"));
   } else if (fat.kind === "acid") {
     once("lift", 0.05, () => playSfx("whoosh"));
     once("swing", 0.55, () => playSfx("whooshHeavy"));
@@ -4962,6 +4975,36 @@ function drawFatFighter(f) {
     drawShadowAt(f.x, 64);
     P(t < 1.0 ? "special" : end ? "win" : "idle", f.x, f.y);
     drawStork(st.x, st.y, dir, t);
+    return;
+  }
+
+  if (fat.kind === "laser") {
+    const l = F.fighters[fat.l];
+    if (isW) {
+      drawShadowAt(f.x, 64);
+      P(end ? "win" : "idle", f.x, f.y);
+      if (end) return;
+      const ex = f.x + dir * 8, ey = f.y - 200;                        // eyes (glasses) on the idle pose
+      const glow = clamp((t - 0.55) / 0.3, 0, 1) * (1 - clamp((t - 2.45) / 0.15, 0, 1));
+      if (glow > 0) drawLaserEyes(ex, ey, dir, glow, t);
+      // the sunglasses: lifted off and tossed up, then they fall back onto his nose
+      let gx = null, gy, gr = 0;
+      if (t >= 0.3 && t < 0.9) { const k = (t - 0.3) / 0.6; gx = ex - dir * 30 * k; gy = ey - 260 * k * (2 - k); gr = -dir * 6 * k; }
+      else if (t >= 2.2 && t < 2.6) { const k = (t - 2.2) / 0.4; gx = ex - dir * 30 * (1 - k); gy = lerp(-40, ey, k * k); gr = -dir * 6 * (1 - k); }
+      if (gx !== null && gy > -60) drawSunglasses(gx, gy, dir, gr);
+      if (t > 0.9 && t < 2.0) {
+        const hx = l.x - dir * 10 + Math.sin(t * 7) * 18, hy = l.y - (frameOf(l.cid, "hurt") ? frameOf(l.cid, "hurt").ay : 230) + 60 + Math.sin(t * 5) * 30;
+        drawLaser(ex + dir * 6, ey - 2, hx, hy, t);
+        drawLaser(ex + dir * 6, ey + 4, hx + 6, hy + 8, t + 1);
+      }
+      return;
+    }
+    const char = clamp((t - 0.95) / 0.9, 0, 1), gone = clamp((t - 1.95) / 0.7, 0, 1);
+    const fire = clamp((t - 1.0) / 0.3, 0, 1) * (1 - clamp((t - 2.0) / 0.5, 0, 1));
+    if (gone < 1) { drawShadowAt(f.x, 70 * (1 - gone)); P("hurt", f.x + rand(-2, 2) * fire, f.y, { rot: sway * (1 - char), alpha: 1 - gone, tint: { color: "#140c08", a: 0.95 * char } }); }
+    if (fire > 0) drawBodyFire(f.x, f.y, hH * 0.8, fire * 0.8);
+    const pile = clamp((t - 2.1) / 0.6, 0, 1);
+    if (pile > 0) drawDustPile(f.x, FLOOR_Y, pile, t);
     return;
   }
 
@@ -5352,6 +5395,37 @@ function drawBrawlCloud(x, y, r, t, a = 1) {
     const ang = Math.floor(t * 7 + i * 5) * 2.1;
     text(i === 1 ? "#@!" : "★", x + Math.cos(ang) * r * 0.85, y + Math.sin(ang) * r * 0.55, { size: 26, align: "center", color: "#ffe27a", stroke: "#000", strokeW: 4, alpha: a, shadow: false });
   }
+}
+function drawSunglasses(x, y, dir, rot) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); if (dir < 0) ctx.scale(-1, 1);
+  ctx.fillStyle = "#c8323a"; ctx.fillRect(-22, -2, 44, 3);                                // red frame bar
+  ctx.fillStyle = "#0a0a0a";
+  ctx.beginPath(); ctx.ellipse(-11, 4, 10, 7, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(12, 4, 10, 7, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.45)"; ctx.fillRect(-16, 0, 4, 2); ctx.fillRect(7, 0, 4, 2);
+  ctx.restore();
+}
+function drawLaserEyes(x, y, dir, k, t) {
+  ctx.save();
+  ctx.fillStyle = `rgba(40,8,8,${0.9 * k})`; ctx.fillRect(x - 15, y - 6, 30, 13);        // hides the painted lenses
+  ctx.globalCompositeOperation = "lighter";
+  const g = ctx.createRadialGradient(x, y, 1, x, y, 46 * k);
+  g.addColorStop(0, `rgba(255,60,40,${0.9 * k})`); g.addColorStop(1, "rgba(255,0,0,0)");
+  ctx.fillStyle = g; ctx.fillRect(x - 50, y - 50, 100, 100);
+  ctx.fillStyle = `rgba(255,${200 + 55 * Math.sin(t * 30)},200,${k})`;
+  ctx.fillRect(x - 10, y - 2, 7, 5); ctx.fillRect(x + 4, y - 2, 7, 5);
+  ctx.restore();
+}
+function drawLaser(x0, y0, x1, y1, t) {
+  ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.lineCap = "round";
+  const w = 1 + 0.25 * Math.sin(t * 60);
+  ctx.strokeStyle = "rgba(255,30,20,0.35)"; ctx.lineWidth = 22 * w; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  ctx.strokeStyle = "rgba(255,70,50,0.8)"; ctx.lineWidth = 9 * w; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  ctx.strokeStyle = "rgba(255,240,230,0.95)"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  const g = ctx.createRadialGradient(x1, y1, 2, x1, y1, 50);
+  g.addColorStop(0, "rgba(255,240,200,0.9)"); g.addColorStop(1, "rgba(255,40,0,0)");
+  ctx.fillStyle = g; ctx.fillRect(x1 - 50, y1 - 50, 100, 100);
+  ctx.restore();
 }
 const ACID_COLS = ["#7dff3a", "#b8ff5a", "#3acc2a", "#e4ff9a"];
 function drawAcidBottle(x, y, rot, t) {
