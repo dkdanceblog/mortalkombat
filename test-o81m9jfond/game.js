@@ -4515,6 +4515,14 @@ const FATALITIES = {
   slava:  { kind: "hearse", caption: "ПОСЛЕДНЯЯ ПОЕЗДКА",     dur: 4.0, titleAt: 2.4 },
   atl:    { kind: "stork", caption: "МАРАБУ",                 dur: 3.8, titleAt: 2.4 },
   loki:   { kind: "quit",  caption: "", title: "RAGE QUIT",   dur: 3.4, titleAt: 1.7 },
+  korzh:  { kind: "car",   caption: "МОТЫЛЁК",                dur: 4.0, titleAt: 2.6 },
+  chip:   { kind: "tea",   caption: "ЗАВАРЕН",                dur: 4.2, titleAt: 2.4 },
+  husky:  { kind: "flies", caption: "МИР МУХ",                dur: 4.0, titleAt: 2.5 },
+  babangida: { kind: "elements", caption: "ПЯТЬ СТИХИЙ",      dur: 4.0, titleAt: 2.7 },
+  sqwoz:  { kind: "wolf",  caption: "АУФ",                    dur: 3.8, titleAt: 2.2 },
+  shilo:  { kind: "lake",  caption: "НА ДНО",                 dur: 4.2, titleAt: 2.7 },
+  krip:   { kind: "fox",   caption: "УПОРОТЫЙ ЛИС",           dur: 4.0, titleAt: 2.6 },
+  tito:   { kind: "crowd", caption: "ПИПЛ ХАВАЕТ",            dur: 4.4, titleAt: 2.9 },
 };
 
 function startFinishHim(w, l) {
@@ -4565,7 +4573,8 @@ function finishFall() {
 function startFatality(w, l) {
   const fd = FATALITIES[w.cid];
   const dir = l.x >= w.x ? 1 : -1;
-  const gap = { stomp: 300, burn: 250, tv: 120, rose: 150, dora: 380, hearse: 260, stork: 240, quit: 260 }[fd.kind] || 170;
+  const gap = { stomp: 300, burn: 250, tv: 120, rose: 150, dora: 380, hearse: 260, stork: 240, quit: 260,
+    car: 220, tea: 200, flies: 260, elements: 380, wolf: 300, lake: 280, fox: 300, crowd: 300 }[fd.kind] || 170;
   const c = clamp((w.x + l.x) / 2, WALL_L + gap / 2 + 40, WALL_R - gap / 2 - 40);
   for (const f of [w, l]) {
     f.action = null; f.vx = 0; f.vy = 0; f.y = FLOOR_Y; f.onGround = true; f.hitstun = 0; f.blockstun = 0;
@@ -4578,6 +4587,11 @@ function startFatality(w, l) {
   F.projectiles = [];
   F.phase = "fatality"; F.phaseT = 0; F.endType = "ko";
   F.fat = { kind: fd.kind, caption: fd.caption, title: fd.title || "ФАТАЛИТИ", dur: fd.dur, titleAt: fd.titleAt, t: 0, w: w.slot, l: l.slot, dir, x0: w.x, ev: {}, chunks: null };
+  if (fd.kind === "flies") F.fat.flies = Array.from({ length: 170 }, () => ({ a: rand(0, 6.28), r: rand(0.3, 1), sp: rand(3, 9), ph: rand(0, 6.28), h: rand(0, 1), d: rand(0.7, 1.3) }));
+  if (fd.kind === "crowd") {
+    const pool = Object.keys(CHARS).filter((c) => c !== w.cid && c !== l.cid && hasPose(c, "walk_1"));
+    F.fat.mob = Array.from({ length: 14 }, (_, i) => ({ cid: pick(pool), side: i % 2 ? 1 : -1, slot: rand(40, 150), d: rand(0, 0.3), sc: rand(0.88, 1.04), ph: rand(0, 4) }));
+  }
   F.slow = 0; F.flash = 0.5; F.shake = 10;
   F.stats.fatality = (F.stats.fatality || 0) + 1;
   playSfx("superStart");
@@ -4671,6 +4685,60 @@ function updateFatality(dt) {
       for (let i = 0; i < 70; i++) F.particles.push({ type: "sq", x: l.x + rand(-60, 60), y: rand(top, l.y), vx: rand(-60, 60), vy: rand(-60, 60), life: rand(0.3, 0.8), max: 0.8, size: pick([6, 8, 10]), color: pick(["#ff2bd6", "#20f0ff", "#ffffff", "#7a7a7a"]) });
     });
     once("notice", 1.3, () => playSfx("uiPick"));
+  } else if (fat.kind === "car") {
+    once("arrive", 0.0, () => playSfx("dash"));
+    once("grab", 1.1, () => { playSfx("throw"); voice(l, "hurt"); });
+    once("stuff", 1.75, () => { playSfx("bodyfall"); F.shake = 10; });
+    once("door", 2.1, () => playSfx("land"));
+    once("go", 2.3, () => { playSfx("dash"); playSfx("whooshHeavy"); });
+    if (t > 2.3 && t < 3.3 && Math.random() < dt * 20) { const cx = carX(fat, t, w); F.particles.push({ type: "sq", x: cx + dir * 300, y: FLOOR_Y - rand(10, 30), vx: dir * rand(20, 80), vy: rand(-60, -20), life: 0.7, max: 0.7, size: pick([8, 10, 12]), color: pick(["rgba(150,150,150,0.6)", "rgba(110,110,110,0.5)"]) }); }
+  } else if (fat.kind === "tea") {
+    once("drop", 0.55, () => { playSfx("landHeavy"); F.shake = 16; spawnDust(teaX(fat), FLOOR_Y, 1.6); });
+    once("throw", 0.9, () => playSfx("throw"));
+    once("splash", 1.55, () => {
+      playSfx("special_guf_hit"); F.shake = 12;
+      for (let i = 0; i < 40; i++) F.particles.push({ type: "sq", x: teaX(fat) + rand(-90, 90), y: FLOOR_Y - 215, vx: rand(-260, 260), vy: rand(-620, -200), g: 1400, life: rand(0.5, 1), max: 1, size: pick([4, 6, 8]), color: pick(["#8a4a1c", "#b5652a", "#d9a066", "#ffffff"]) });
+    });
+  } else if (fat.kind === "flies") {
+    once("call", 0.25, () => playSfx("whoosh"));
+    once("swarm", 0.8, () => playSfx("special_shilo"));
+    once("gone", 2.05, () => { playSfx("whooshHeavy"); F.shake = 6; });
+  } else if (fat.kind === "elements") {
+    ELEMENTS.forEach((el, i) => {
+      const t0 = 0.3 + i * 0.4;
+      once("shot" + i, t0, () => playSfx(el.sfx));
+      once("hit" + i, t0 + 0.28, () => {
+        playSfx("hitHeavy"); F.shake = 8 + i * 2; l.flash = 0.1;
+        popup(l.x, head(l) - 20 - i * 6, el.name, el.color, 28);
+        for (let k = 0; k < 18; k++) F.particles.push({ type: "sq", x: l.x - dir * 20, y: l.y - 150 + rand(-30, 30), vx: rand(-300, 300) + dir * 120, vy: rand(-400, 100), g: 600, life: rand(0.3, 0.7), max: 0.7, size: pick([4, 6, 8]), color: pick(el.cols) });
+      });
+    });
+    once("boom", 2.35, () => {
+      playSfx("superHit"); playSfx("hitCrit"); F.flash = 0.5; F.shake = 26; buzz([80, 40, 220]);
+      const top = head(l);
+      for (let k = 0; k < 120; k++) { const el = ELEMENTS[k % 5]; F.particles.push({ type: "sq", x: l.x + rand(-60, 60), y: rand(top, l.y), vx: rand(-600, 600), vy: rand(-800, -100), g: 1000, life: rand(0.7, 1.4), max: 1.4, size: pick([4, 6, 8, 10]), color: pick(el.cols) }); }
+    });
+  } else if (fat.kind === "wolf") {
+    once("auf", 0.25, () => { playSfx("special_krip"); F.shake = 8; });
+    once("leap", 0.75, () => playSfx("whooshHeavy"));
+    once("bite", 1.2, () => { playSfx("hitCrit"); playSfx("bodyfall"); F.shake = 18; F.flash = 0.25; spawnDust(l.x, FLOOR_Y, 1.6); });
+  } else if (fat.kind === "lake") {
+    once("water", 0.2, () => playSfx("special_guf_hit"));
+    once("rise", 0.8, () => { playSfx("special_krip"); F.shake = 12; });
+    once("grab", 1.35, () => { playSfx("throw"); voice(l, "hurt"); });
+    if (t > 1.4 && t < 3.0 && Math.random() < dt * 18) F.particles.push({ type: "sq", x: l.x + rand(-80, 80), y: FLOOR_Y - rand(0, 10), vx: rand(-20, 20), vy: rand(-90, -40), life: 0.6, max: 0.6, size: pick([4, 6, 8]), color: pick(["rgba(200,240,255,0.8)", "rgba(140,200,230,0.7)"]) });
+    once("sink", 2.1, () => playSfx("special_guf_hit"));
+  } else if (fat.kind === "fox") {
+    once("call", 0.2, () => playSfx("special_krip"));
+    once("pounce", 0.95, () => { playSfx("whooshHeavy"); });
+    once("fight", 1.1, () => { F.shake = 12; });
+    if (t > 1.1 && t < 2.2 && Math.random() < dt * 9) { playSfx(pick(["hitLight", "hitKick", "hitBody"])); F.shake = Math.max(F.shake, 6); }
+    once("burp", 2.6, () => { playSfx("sway"); popup(l.x, FLOOR_Y - 190, "*ИК*", "#ffd08a", 30); });
+  } else if (fat.kind === "crowd") {
+    once("shout", 0.15, () => { playSfx("superStart"); F.shake = 10; });
+    once("run", 0.75, () => playSfx("react_concert"));
+    if (t > 1.5 && t < 2.6 && Math.random() < dt * 10) { playSfx(pick(["hitLight", "hitKick", "hitBody", "hitHeavy"])); F.shake = Math.max(F.shake, 7); }
+    once("leave", 2.65, () => playSfx("whooshHeavy"));
   }
   if (t >= fat.dur) { F.phase = "ko"; F.phaseT = 0; F.fatDone = true; F.quote = null; }
 }
@@ -4851,6 +4919,147 @@ function drawFatFighter(f) {
     return;
   }
 
+  if (fat.kind === "car") {
+    const cx = carX(fat, t, F.fighters[fat.w]);
+    const l = F.fighters[fat.l], w = F.fighters[fat.w];
+    const door = cx + dir * 120;
+    const wx = t < 0.7 ? fat.x0 : t < 1.1 ? lerp(fat.x0, l.x - dir * 95, (t - 0.7) / 0.4) : t < 1.75 ? lerp(l.x - dir * 95, door + dir * 140, (t - 1.1) / 0.65) : door + dir * 140;
+    const lx = t < 1.1 ? l.x : t < 1.75 ? lerp(l.x, door + dir * 40, (t - 1.1) / 0.65) : door + dir * 40;
+    if (!isW) {
+      if (t >= 1.95) return;
+      const k = t < 1.75 ? 1 : 1 - (t - 1.75) / 0.2;              // squeezed in through the door
+      drawShadowAt(lx, 70 * k);
+      P("hurt", lx, f.y, { rot: t < 1.1 ? sway : -dir * 0.3, sx: k, sy: k });
+      return;
+    }
+    if (t < 2.1) {
+      const walking = (t >= 0.7 && t < 1.1) || (t >= 1.1 && t < 1.75);
+      const name = t < 0.7 ? "idle" : t < 1.1 ? "walk_" + (1 + Math.floor(t * 10) % 4) : t < 1.75 ? "heavy_0" : "idle";
+      const k = t < 1.9 ? 1 : 1 - (t - 1.9) / 0.2;
+      if (k > 0) { drawShadowAt(wx, 64 * k); P(name, wx, f.y, { dir: walking && t >= 1.1 ? -dir : dir, sx: k, sy: k }); }
+    }
+    drawKorzhCar(cx, t >= 2.3 ? -dir : dir, t);
+    return;
+  }
+
+  if (fat.kind === "tea") {
+    const mx = teaX(fat);
+    if (isW) { drawShadowAt(f.x, 64); P(t < 0.85 ? "idle" : t < 1.3 ? "heavy" : end ? "win" : "idle", f.x, f.y); return; }
+    const drop = clamp((t - 0.1) / 0.45, 0, 1), my = lerp(-260, FLOOR_Y, drop * drop);
+    if (t < 0.9) { drawShadowAt(f.x, 70); P("hurt", f.x, f.y, { rot: sway }); }
+    if (t > 0.1) drawMug(mx, my, "back", t);
+    if (t >= 0.9 && t < 1.55) {                                  // thrown in an arc into the mug
+      const k = (t - 0.9) / 0.65;
+      P("hurt", lerp(f.x, mx, k), lerp(f.y, FLOOR_Y - 120, k) - 330 * Math.sin(k * Math.PI), { rot: dir * k * 7 });
+    } else if (t >= 1.55 && t < 2.6) {                          // bobbing in the tea, then gone
+      const sink = clamp((t - 1.8) / 0.7, 0, 1);
+      ctx.save(); ctx.beginPath(); ctx.rect(mx - 140, my - 600, 280, 600 - 205); ctx.clip();
+      P("hurt", mx + Math.sin(t * 6) * 6, my - 120 + sink * 160, { rot: Math.sin(t * 4) * 0.2, tint: { color: "#8a4a1c", a: 0.35 } });
+      ctx.restore();
+    }
+    if (t > 0.1) drawMug(mx, my, "front", t, t >= 1.55 ? f.data.name : null);
+    return;
+  }
+
+  if (fat.kind === "flies") {
+    if (isW) { drawShadowAt(f.x, 64); P(t < 0.9 ? "special" : end ? "win" : "idle", f.x, f.y); return; }
+    const gone = t >= 2.05;
+    const cover = clamp((t - 0.9) / 0.9, 0, 1);
+    if (!gone) { drawShadowAt(f.x, 70); P("hurt", f.x + rand(-2, 2) * cover, f.y, { rot: sway, tint: { color: "#14120e", a: 0.85 * cover } }); }
+    drawFlies(fat, f, t, hH);
+    return;
+  }
+
+  if (fat.kind === "elements") {
+    const l = F.fighters[fat.l];
+    if (isW) {
+      drawShadowAt(f.x, 64);
+      P(t < 2.3 ? (Math.floor((t - 0.3) / 0.4) % 2 ? "light" : "special") : end ? "win" : "idle", f.x, f.y);
+      ELEMENTS.forEach((el, i) => {
+        const t0 = 0.3 + i * 0.4, k = (t - t0) / 0.28;
+        if (k < 0 || k >= 1) return;
+        drawElementOrb(lerp(f.x + dir * 80, l.x - dir * 20, k), lerp(f.y - 170, l.y - 150, k) - Math.sin(k * Math.PI) * 30, el, t);
+      });
+      return;
+    }
+    if (t >= 2.35) return;
+    const hits = ELEMENTS.filter((_, i) => t >= 0.58 + i * 0.4);
+    const last = hits[hits.length - 1];
+    drawShadowAt(f.x, 70);
+    P("hurt", f.x + (last && (t - 0.58) % 0.4 < 0.12 ? -dir * 10 : 0), f.y, { rot: sway, tint: last ? { color: last.color, a: 0.25 + 0.08 * hits.length } : null });
+    return;
+  }
+
+  if (fat.kind === "wolf") {
+    const l = F.fighters[fat.l];
+    if (isW) {
+      drawShadowAt(f.x, 64); P(t < 0.7 ? "special" : end ? "win" : "idle", f.x, f.y);
+      if (t > 0.2 && t < 1.2) { const k = clamp((t - 0.2) / 0.15, 0, 1); text("АУФ!", f.x + dir * 30, f.y - 300, { size: 54 * k, align: "center", gradient: ["#ffffff", "#d8d8e8", "#8a8aa0"], stroke: "#000", strokeW: 6 }); }
+      const wp = wolfPos(fat, t, f, l);
+      if (wp) drawWolf(wp.x, wp.y, wp.dir, t, wp.carry ? l : null);
+      return;
+    }
+    if (t < 1.2) { drawShadowAt(f.x, 70); P("hurt", f.x, f.y, { rot: sway }); }
+    return;
+  }
+
+  if (fat.kind === "lake") {
+    const lk = clamp((t - 0.15) / 0.5, 0, 1) * (1 - clamp((t - 3.0) / 0.6, 0, 1));
+    if (isW) { drawShadowAt(f.x, 64); P(t < 0.8 ? "special" : end ? "win" : "idle", f.x, f.y); return; }
+    if (lk > 0) drawLake(f.x, lk, t);
+    // the monster rises behind, grabs and pulls under
+    const rise = clamp((t - 0.8) / 0.5, 0, 1) * (1 - clamp((t - 1.9) / 0.7, 0, 1));
+    const pull = clamp((t - 1.4) / 0.9, 0, 1);
+    ctx.save(); ctx.beginPath(); ctx.rect(f.x - 400, -100, 800, FLOOR_Y + 100 - 2); ctx.clip();
+    if (rise > 0) drawLakeMonster(f.x + dir * 70, FLOOR_Y + (1 - rise) * 300, dir, t);
+    if (pull < 1) P("hurt", f.x, f.y + 20 * clamp(t / 0.7, 0, 1) + pull * 300, { rot: sway + (t > 1.4 ? Math.sin(t * 14) * 0.08 : 0) });
+    ctx.restore();
+    return;
+  }
+
+  if (fat.kind === "fox") {
+    const l = F.fighters[fat.l];
+    if (isW) {
+      drawShadowAt(f.x, 64); P(t < 0.9 ? "special" : end ? "win" : "idle", f.x, f.y);
+      // fox: runs in, pounces, (cloud), then sits full and happy
+      if (t >= 0.35 && t < 1.1) {
+        const k = (t - 0.35) / 0.75, x0 = dir > 0 ? -120 : W + 120;
+        const fx = lerp(x0, l.x, k), fy = FLOOR_Y - (k > 0.7 ? Math.sin((k - 0.7) / 0.3 * Math.PI) * 120 : 0);
+        drawFox(fx, fy, dir, t, false);
+      } else if (t >= 2.2) drawFox(l.x, FLOOR_Y, -dir, t, true);
+      return;
+    }
+    if (t < 1.1) { drawShadowAt(f.x, 70); P("hurt", f.x, f.y, { rot: sway }); }
+    if (t >= 1.1 && t < 2.3) drawBrawlCloud(f.x, f.y - 110, 130, t, 1 - clamp((t - 2.1) / 0.2, 0, 1));
+    return;
+  }
+
+  if (fat.kind === "crowd") {
+    const l = F.fighters[fat.l];
+    if (isW) {
+      drawShadowAt(f.x, 64); P(t < 1.3 ? "special" : end ? "win" : "idle", f.x, f.y);
+      if (t > 0.1 && t < 1.5) {
+        const k = clamp((t - 0.1) / 0.15, 0, 1);
+        text("ПИПЛ ХАВАЕТ!", f.x + dir * 20, f.y - 310, { size: 46 * k, align: "center", gradient: ["#fff6c8", "#ffd54a", "#ff7a3d"], stroke: "#000", strokeW: 6 });
+      }
+      for (const m of fat.mob) {
+        const tin = 0.75 + m.d, tout = 2.65 + m.d * 0.5;
+        if (t < tin) continue;
+        const edge = m.side > 0 ? W + 120 : -120, spot = l.x + m.side * m.slot;
+        let x, face;
+        if (t < tin + 0.7) { x = lerp(edge, spot, (t - tin) / 0.7); face = -m.side; }
+        else if (t < tout) { x = spot + Math.sin(t * 20 + m.ph) * 8; face = -m.side; }
+        else { x = lerp(spot, edge, clamp((t - tout) / 0.7, 0, 1)); face = m.side; }
+        if (x < -150 || x > W + 150) continue;
+        drawPose(m.cid, "walk_" + (1 + Math.floor(t * 9 + m.ph) % 4), x, FLOOR_Y, { dir: face, sx: m.sc, sy: m.sc, tint: { color: "#3a2c58", a: 0.8 } });
+      }
+      if (t >= 1.5 && t < 2.75) drawBrawlCloud(l.x, l.y - 120, 160, t, 1 - clamp((t - 2.55) / 0.2, 0, 1));
+      return;
+    }
+    if (t < 1.5) { drawShadowAt(f.x, 70); P("hurt", f.x, f.y, { rot: sway }); }
+    return;
+  }
+
   if (fat.kind === "quit") {
     if (isW) { drawShadowAt(f.x, 64); P(t < 1.2 ? "idle" : "win", f.x, f.y); return; }
     if (t >= 1.15) return;
@@ -4874,6 +5083,163 @@ function drawFatFighter(f) {
   }
 }
 
+const ELEMENTS = [
+  { name: "ВОДА", color: "#4ab0ff", cols: ["#4ab0ff", "#a8dcff", "#ffffff"], sfx: "special_guf_hit" },
+  { name: "ДЕРЕВО", color: "#5fd05a", cols: ["#5fd05a", "#2e8a36", "#a8e888"], sfx: "whoosh" },
+  { name: "ОГОНЬ", color: "#ff7a2a", cols: ["#ff7a2a", "#ffd04a", "#ff3a1a"], sfx: "whooshHeavy" },
+  { name: "ЗЕМЛЯ", color: "#b0844a", cols: ["#b0844a", "#7a5a30", "#d8b080"], sfx: "landHeavy" },
+  { name: "МЕТАЛЛ", color: "#c8d0dc", cols: ["#c8d0dc", "#8a94a4", "#ffffff"], sfx: "special_babangida" },
+];
+function drawElementOrb(x, y, el, t) {
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const g = ctx.createRadialGradient(x, y, 2, x, y, 46);
+  g.addColorStop(0, el.color); g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g; ctx.fillRect(x - 46, y - 46, 92, 92);
+  ctx.restore();
+  ctx.save(); ctx.translate(x, y); ctx.rotate(t * 12);
+  ctx.fillStyle = el.color; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2;
+  if (el.name === "МЕТАЛЛ") { ctx.beginPath(); for (let i = 0; i < 8; i++) { const r = i % 2 ? 7 : 20, a = i * Math.PI / 4; ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r); } ctx.closePath(); ctx.fill(); ctx.stroke(); }
+  else if (el.name === "ЗЕМЛЯ") { ctx.beginPath(); ctx.moveTo(-16, -6); ctx.lineTo(-4, -16); ctx.lineTo(14, -10); ctx.lineTo(16, 8); ctx.lineTo(0, 16); ctx.lineTo(-14, 10); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+  else if (el.name === "ДЕРЕВО") { ctx.beginPath(); ctx.ellipse(0, 0, 18, 9, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-18, 0); ctx.lineTo(18, 0); ctx.stroke(); }
+  else { ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+  ctx.restore();
+}
+function drawFlies(fat, f, t, hH) {
+  const l = f, dir = fat.dir, w = F.fighters[fat.w];
+  const sx = w.x + dir * 60, sy = w.y - 170;
+  for (const fl of fat.flies) {
+    const gather = clamp((t - 0.3 - fl.h * 0.4) / 0.6, 0, 1), leave = clamp((t - 2.05) / 0.9, 0, 1);
+    const cx = l.x + Math.cos(fl.a + t * fl.sp) * 70 * fl.r, cy = l.y - hH * (0.15 + 0.8 * fl.h) + Math.sin(fl.ph + t * fl.sp * 1.3) * 26;
+    let x = lerp(sx, cx, gather), y = lerp(sy, cy, gather);
+    if (gather <= 0) continue;
+    if (leave > 0) { x += Math.cos(fl.a) * 900 * leave * fl.d; y += (Math.sin(fl.a) * 500 - 300) * leave * fl.d; }
+    if (x < -20 || x > W + 20 || y < -20) continue;
+    ctx.fillStyle = "rgba(220,230,240,0.55)";
+    const wb = Math.sin(G.time * 60 + fl.ph) > 0 ? 4 : 2;
+    ctx.fillRect(x - 5, y - wb - 1, 5, wb); ctx.fillRect(x + 3, y - wb - 1, 5, wb);
+    ctx.fillStyle = "#0e0c0a"; ctx.fillRect(x - 2, y - 2, 6, 5);
+    ctx.fillStyle = "#7a1a1a"; ctx.fillRect(x + 3, y - 2, 2, 2);
+  }
+}
+function drawBrawlCloud(x, y, r, t, a = 1) {
+  if (a <= 0) return;
+  ctx.save(); ctx.globalAlpha = a;
+  ctx.strokeStyle = "#2a2230"; ctx.lineWidth = 8; ctx.lineCap = "round";
+  for (let i = 0; i < 5; i++) {                       // fists and feet poking out
+    const ang = Math.floor(t * 9 + i * 2.3) * 1.7;
+    ctx.beginPath(); ctx.moveTo(x + Math.cos(ang) * r * 0.4, y + Math.sin(ang) * r * 0.3); ctx.lineTo(x + Math.cos(ang) * r * 0.95, y + Math.sin(ang) * r * 0.7); ctx.stroke();
+  }
+  for (let i = 0; i < 10; i++) {
+    const ang = i / 10 * Math.PI * 2 + t * 2.5;
+    const rr = r * (0.42 + 0.1 * Math.sin(t * 17 + i * 3));
+    ctx.fillStyle = i % 2 ? "#ece6da" : "#cfc6b6";
+    ctx.beginPath(); ctx.arc(x + Math.cos(ang) * r * 0.5, y + Math.sin(ang) * r * 0.32, rr, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.fillStyle = "#f6f2ea"; ctx.beginPath(); ctx.arc(x, y, r * 0.48, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  for (let i = 0; i < 3; i++) {
+    const ang = Math.floor(t * 7 + i * 5) * 2.1;
+    text(i === 1 ? "#@!" : "★", x + Math.cos(ang) * r * 0.85, y + Math.sin(ang) * r * 0.55, { size: 26, align: "center", color: "#ffe27a", stroke: "#000", strokeW: 4, alpha: a, shadow: false });
+  }
+}
+function carX(fat, t, w) {
+  const dir = fat.dir, edge = dir > 0 ? -420 : W + 420, stop = fat.x0 - dir * 250, away = dir > 0 ? -520 : W + 520;
+  if (t < 0.7) return lerp(edge, stop, easeOut(t / 0.7));
+  if (t < 2.3) return stop;
+  const k = (t - 2.3) / 0.9; return lerp(stop, away, k * k);
+}
+function drawKorzhCar(x, face, t) {
+  const im = img("fx.korzh_car");
+  ctx.save(); ctx.translate(x, FLOOR_Y + 4); if (face < 0) ctx.scale(-1, 1);
+  if (t > 1.75 && t < 2.1) ctx.translate(0, Math.sin(t * 50) * 3);          // bounces as he is stuffed in
+  ctx.fillStyle = "rgba(0,0,0,0.45)"; ctx.beginPath(); ctx.ellipse(0, 0, 260, 13, 0, 0, Math.PI * 2); ctx.fill();
+  if (im) ctx.drawImage(im, -im.naturalWidth / 2, -im.naturalHeight);
+  else { const car = img("fx.cadillac"); if (car) ctx.drawImage(car, -260, -180, 520, 180); }
+  ctx.restore();
+}
+function teaX(fat) { const l = F.fighters[fat.l]; return clamp(l.x + fat.dir * 230, 170, W - 170); }
+function drawMug(x, y, part, t, label) {
+  const w = 240, h = 210, top = y - h;
+  ctx.save();
+  if (part === "back") {
+    ctx.fillStyle = "#d9d2c4"; ctx.beginPath(); ctx.ellipse(x, top, w / 2, 30, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#7a3e14"; ctx.beginPath(); ctx.ellipse(x, top + 8, w / 2 - 12, 22, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(255,200,140,0.35)"; ctx.beginPath(); ctx.ellipse(x - 30, top + 4, 40, 7, 0, 0, Math.PI * 2); ctx.fill();
+  } else {
+    ctx.strokeStyle = "#e8e2d4"; ctx.lineWidth = 22;                       // handle
+    ctx.beginPath(); ctx.arc(x + w / 2 + 6, top + h * 0.45, 48, -Math.PI / 2, Math.PI / 2); ctx.stroke();
+    const g = ctx.createLinearGradient(x - w / 2, 0, x + w / 2, 0);
+    g.addColorStop(0, "#c9c1b0"); g.addColorStop(0.35, "#fbf8f0"); g.addColorStop(1, "#b8af9c");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.moveTo(x - w / 2, top); ctx.lineTo(x - w / 2 + 8, y - 16); ctx.quadraticCurveTo(x - w / 2 + 12, y, x - w / 2 + 30, y);
+    ctx.lineTo(x + w / 2 - 30, y); ctx.quadraticCurveTo(x + w / 2 - 12, y, x + w / 2 - 8, y - 16); ctx.lineTo(x + w / 2, top);
+    ctx.ellipse(x, top, w / 2, 30, 0, 0, Math.PI, false); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "#8a8070"; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(x, top, w / 2, 30, 0, 0, Math.PI, false); ctx.stroke();
+    ctx.fillStyle = "#c8323a"; ctx.font = "bold 30px sans-serif"; ctx.textAlign = "center"; ctx.fillText("♥", x - 10, top + 120);
+    if (label) {                                                              // tea bag tag over the rim
+      ctx.strokeStyle = "#f0e8d0"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x - 60, top + 10); ctx.quadraticCurveTo(x - 110, top - 10, x - 112, top + 70); ctx.stroke();
+      ctx.fillStyle = "#f2c94c"; ctx.fillRect(x - 160, top + 70, 96, 40); ctx.strokeStyle = "#7a5a10"; ctx.strokeRect(x - 160, top + 70, 96, 40);
+      ctx.restore(); text(label.length > 9 ? label.slice(0, 9) : label, x - 112, top + 91, { size: 12, font: FONT_PIX, align: "center", color: "#3a2a08", shadow: false }); ctx.save();
+    }
+    for (let i = 0; i < 3; i++) {                                           // steam
+      const s = (t * 0.7 + i / 3) % 1;
+      ctx.strokeStyle = `rgba(255,255,255,${0.5 * (1 - s)})`; ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.moveTo(x - 50 + i * 50, top - 20 - s * 120); ctx.quadraticCurveTo(x - 30 + i * 50 + Math.sin(t * 3 + i) * 20, top - 60 - s * 120, x - 50 + i * 50, top - 100 - s * 120); ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+function wolfPos(fat, t, w, l) {
+  const dir = fat.dir;
+  if (t < 0.75) return null;
+  if (t < 1.2) { const k = (t - 0.75) / 0.45, x0 = dir > 0 ? -200 : W + 200; return { x: lerp(x0, l.x, k), y: FLOOR_Y - Math.sin(k * Math.PI) * 160, dir }; }
+  const k = (t - 1.2) / 0.9, x1 = dir > 0 ? W + 400 : -400;
+  if (k > 1) return null;
+  return { x: lerp(l.x, x1, k * k), y: FLOOR_Y, dir, carry: true };
+}
+function drawWolf(x, y, dir, t, carried) {
+  const im = img("fx.wolf");
+  ctx.save(); ctx.translate(x, y); if (dir < 0) ctx.scale(-1, 1);
+  ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(0, FLOOR_Y - y + 2, 150, 11, 0, 0, Math.PI * 2); ctx.fill();
+  let mouth = [150, -150];
+  if (im) { ctx.drawImage(im, -im.naturalWidth / 2, -im.naturalHeight); mouth = [im.naturalWidth * 0.42, -im.naturalHeight * 0.72]; }
+  else {
+    const m = img("fx.monkey");
+    if (m) { const ww = 404 * 1.5, hh = 188 * 1.5; ctx.drawImage(m, -ww / 2, -hh, ww, hh); ctx.globalAlpha = 0.7; ctx.drawImage(silhouette(m, "#5a5f6a"), -ww / 2, -hh, ww, hh); ctx.globalAlpha = 1; }
+  }
+  if (carried) {                                                // the victim hangs from the jaws
+    const fr = frameOf(carried.cid, "hurt");
+    if (fr) { ctx.save(); ctx.translate(mouth[0], mouth[1] + 20); ctx.rotate(Math.PI / 2 + Math.sin(t * 16) * 0.12); ctx.scale(0.8, 0.8); ctx.drawImage(fr.image, -fr.ax, -fr.ay * 0.55); ctx.restore(); }
+  }
+  ctx.restore();
+}
+function drawLake(x, k, t) {
+  const rx = 190 * k, ry = 34 * k;
+  ctx.save();
+  const g = ctx.createRadialGradient(x, FLOOR_Y, 4, x, FLOOR_Y, rx);
+  g.addColorStop(0, "#0c2a36"); g.addColorStop(0.8, "#174a5a"); g.addColorStop(1, "#2a6a7a");
+  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, FLOOR_Y + 2, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "rgba(170,230,255,0.45)"; ctx.lineWidth = 2;
+  for (let i = 0; i < 3; i++) { const s = (t * 0.8 + i / 3) % 1; ctx.beginPath(); ctx.ellipse(x, FLOOR_Y + 2, rx * s, ry * s, 0, 0, Math.PI * 2); ctx.stroke(); }
+  ctx.restore();
+}
+function drawLakeMonster(x, y, dir, t) {
+  const im = img("fx.amphibian");
+  ctx.save(); ctx.translate(x, y); if (dir < 0) ctx.scale(-1, 1);
+  if (im) ctx.drawImage(im, -im.naturalWidth / 2, -im.naturalHeight);
+  else { const z = img("fx.zilla"); if (z) { const ww = 340, hh = 290; ctx.drawImage(z, -ww / 2, -hh, ww, hh); ctx.globalAlpha = 0.55; ctx.drawImage(silhouette(z, "#3f7a3a"), -ww / 2, -hh, ww, hh); } }
+  ctx.restore();
+}
+function drawFox(x, y, dir, t, full) {
+  const im = img(full ? "fx.fox_full" : "fx.fox") || img("fx.fox");
+  ctx.save(); ctx.translate(x, y); if (dir < 0) ctx.scale(-1, 1);
+  ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(0, FLOOR_Y - y + 2, full ? 90 : 70, 9, 0, 0, Math.PI * 2); ctx.fill();
+  if (full) ctx.scale(1.15 + 0.03 * Math.sin(t * 6), 1);              // round belly
+  if (im) ctx.drawImage(im, -im.naturalWidth / 2, -im.naturalHeight);
+  else { const m = img("fx.monkey"); if (m) { const ww = 260, hh = 121; ctx.drawImage(m, -ww / 2, -hh, ww, hh); ctx.globalAlpha = 0.6; ctx.drawImage(silhouette(m, "#e0782a"), -ww / 2, -hh, ww, hh); } }
+  ctx.restore();
+}
 function hearseX(fat, t, w, l) {
   const dir = fat.dir, edge = dir > 0 ? -380 : W + 380, stopNear = w.x - dir * 60, endX = clamp(l.x + dir * 330, 260, W - 260);
   if (t < 0.6) return lerp(edge, stopNear, easeOut(t / 0.6));
