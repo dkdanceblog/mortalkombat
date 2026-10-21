@@ -477,7 +477,7 @@ const ASSET_PATHS = {
   "fx.stork_1": "assets/effects/stork_1.png", "fx.stork_2": "assets/effects/stork_2.png",
   "fx.fox": "assets/effects/fox.png", "fx.fox_full": "assets/effects/fox_full.png", "fx.amphibian": "assets/effects/amphibian.png",
   "fx.tv": "assets/effects/tv.png", "fx.mug": "assets/effects/mug.png",
-  "end.noize": "assets/endings/noize.webp", "end.oxxxy": "assets/endings/oxxxy.webp", "end.guf": "assets/endings/guf.webp", "end.morgen": "assets/endings/morgen.webp", "end.kreed": "assets/endings/kreed.webp", "end.maybe": "assets/endings/maybe.webp", "end.atl": "assets/endings/atl.webp",
+  "end.noize": "assets/endings/noize.webp", "end.oxxxy": "assets/endings/oxxxy.webp", "end.guf": "assets/endings/guf.webp", "end.morgen": "assets/endings/morgen.webp", "end.kreed": "assets/endings/kreed.webp", "end.maybe": "assets/endings/maybe.webp", "end.atl": "assets/endings/atl.webp", "end.slava": "assets/endings/slava.webp", "end.loki": "assets/endings/loki.webp", "end.tito": "assets/endings/tito.webp", "end.krip": "assets/endings/krip.webp", "end.babangida": "assets/endings/babangida.webp", "end.ramirez": "assets/endings/ramirez.webp", "end.chip": "assets/endings/chip.webp", "end.korzh": "assets/endings/korzh.webp",
   "fx.wolf": "assets/effects/wolf.png", "fx.korzh_car": "assets/effects/korzh_car.png",
   "fx.monkey": "assets/effects/monkey_run.png",
   "fx.kanye_fly": "assets/effects/kanye_fly.png",
