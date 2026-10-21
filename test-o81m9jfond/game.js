@@ -4519,24 +4519,24 @@ function drawCadillacWarning() {
 const FINISH_TIME = 5;
 const FATALITIES = {
   guf:    { kind: "ice",   caption: "АЙС БЭЙБИ",              dur: 3.4, titleAt: 1.9 },
-  noize:  { kind: "tv",    caption: "КОНЕЦ ЭФИРА",            dur: 3.3, titleAt: 2.4 },
+  noize:  { kind: "tv",    caption: "Я РОК-ЗВЕЗДА, ИДИТЕ НА",            dur: 3.3, titleAt: 2.4 },
   oxxxy:  { kind: "stomp", caption: "СОПЕРНИК ПОД ПОДОШВОЙ",  dur: 3.1, titleAt: 1.5 },
   morgen: { kind: "burn",  caption: "ЛЕГЕНДАРНАЯ ПЫЛЬ",       dur: 3.9, titleAt: 2.7 },
-  maybe:  { kind: "dora",  caption: "ДОРАДУРА",               dur: 3.6, titleAt: 2.0 },
+  maybe:  { kind: "dora",  caption: "ДОРА ДУРА!",               dur: 3.6, titleAt: 2.0 },
   kreed:  { kind: "rose",  caption: "", title: "ХОЛОСТЯЛИТИ", dur: 3.8, titleAt: 2.5 },
-  slava:  { kind: "hearse", caption: "ПОСЛЕДНЯЯ ПОЕЗДКА",     dur: 4.0, titleAt: 2.4 },
-  atl:    { kind: "stork", caption: "МАРАБУ",                 dur: 3.8, titleAt: 2.4 },
+  slava:  { kind: "hearse", caption: "КАТАФАЛК",     dur: 4.0, titleAt: 2.4 },
+  atl:    { kind: "stork", caption: "АИСТ МАРАБУ",                 dur: 3.8, titleAt: 2.4 },
   loki:   { kind: "quit",  caption: "", title: "RAGE QUIT",   dur: 3.4, titleAt: 1.7 },
   korzh:  { kind: "car",   caption: "МОТЫЛЁК",                dur: 4.0, titleAt: 2.6 },
-  chip:   { kind: "tea",   caption: "ЗАВАРЕН",                dur: 4.2, titleAt: 2.4 },
+  chip:   { kind: "tea",   caption: "Я ЛЕГЕНДА",                dur: 4.2, titleAt: 2.4 },
   husky:  { kind: "flies", caption: "МИР МУХ",                dur: 4.0, titleAt: 2.5 },
-  babangida: { kind: "elements", caption: "ПЯТЬ СТИХИЙ",      dur: 6.6, titleAt: 5.2 },
+  babangida: { kind: "elements", caption: "ПЯТЬ СТИХИЙ РОЖДАЮТ ВО МНЕ СТИХИ",      dur: 6.6, titleAt: 5.2 },
   sqwoz:  { kind: "wolf",  caption: "АУФ",                    dur: 3.8, titleAt: 2.2 },
-  shilo:  { kind: "lake",  caption: "НА ДНО",                 dur: 4.2, titleAt: 2.7 },
+  shilo:  { kind: "lake",  caption: "ЗДРАСЬТЕ-МОРДАСТИ",                 dur: 4.2, titleAt: 2.7 },
   krip:   { kind: "fox",   caption: "УПОРОТЫЙ ЛИС",           dur: 4.0, titleAt: 2.6 },
   tito:   { kind: "crowd", caption: "ПИПЛ ХАВАЕТ",            dur: 4.4, titleAt: 2.9 },
-  ramirez: { kind: "acid", caption: "ТОКСИН",                 dur: 4.0, titleAt: 2.6 },
-  face:   { kind: "laser", caption: "ВЗГЛЯД",                 dur: 4.3, titleAt: 2.9 },
+  ramirez: { kind: "acid", caption: "ПСЫ НЕ ЛЮБЯТ ТОКСИН",                 dur: 4.0, titleAt: 2.6 },
+  face:   { kind: "laser", caption: "ДЕЛАЮ ВСЁ, ЧТО Я ХОЧУ!",                 dur: 4.3, titleAt: 2.9 },
 };
 
 function startFinishHim(w, l) {
@@ -5824,7 +5824,7 @@ function drawFatalityTitle() {
   if (fat.kind === "quit") drawQuitNotice(fat);
   if (t > 0.45 && fat.caption) {
     const k2 = easeOut(clamp((t - 0.45) / 0.3, 0, 1));
-    text(fat.caption, W / 2, H / 2 - 50, { size: 40, align: "center", gradient: ["#fff6c8", "#ffd54a", "#ff9a2e"], stroke: "#1a0830", strokeW: 7, alpha: k2 });
+    text(fat.caption, W / 2, H / 2 - 50, { size: fitText(fat.caption, W - 120, 40), align: "center", gradient: ["#fff6c8", "#ffd54a", "#ff9a2e"], stroke: "#1a0830", strokeW: 7, alpha: k2 });
   }
 }
 
