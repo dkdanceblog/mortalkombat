@@ -641,6 +641,7 @@ const SFX_VOLUME = {
   hitLight: 0.7, hitHeavy: 0.8, hitBody: 0.8, hitCrit: 0.9, block: 0.65, koHit: 1.0, superStart: 0.8, crowdReact: 0.5, hitKick: 0.75, whooshLight: 0.3, whooshHeavy: 0.35, bodyfall: 0.7, parry: 0.55, counter: 0.7, throw: 0.8, sweep: 0.8, wallHit: 0.85, jump: 0.35, land: 0.4, landHeavy: 0.6, dash: 0.45, comboFinisher: 0.85, launch: 0.7, superReady: 0.5, superHit: 0.8, sway: 0.8, armor: 0.75, money: 0.8, special_kreed_hit: 0.85, atl_boom: 0.25, atl_bolt: 0.45, special_face_hit: 0.85, special_morgen_hit: 0.85, special_guf_hit: 0.8, special_noize_hit: 0.8, react_yard: 0.28, react_circus: 0.3, react_concert: 0.45, uiMove: 0.12, uiBack: 0.18, uiPick: 0.35, uiVs: 0.55, uiUnlock: 0.8, uiTimer: 0.5, voice_a_attack: 0.65, voice_a_hurt: 0.65, voice_a_ko: 0.8, voice_b_attack: 0.65, voice_b_hurt: 0.65, voice_b_ko: 0.8, voice_v_attack: 0.65, voice_v_ko: 0.8, voice_g_hurt: 0.65, voice_g_attack: 0.7, react_fountains: 0.5, uiConfirm: 0.25, whoosh: 0.35, ko: 0.9, roundStart: 0.4,
   special_ramirez: 0.7, special_babangida: 0.75, special_sqwoz: 0.75, special_shilo: 0.7, special_krip: 0.7, special_tito: 0.7,
   finish_heartbeat: 0.9, dazed_birds: 0.35, fat_rose_swoon: 0.7, fat_hearse_engine: 0.7, fat_car_door: 0.8, fat_car_leave: 0.7, fat_stork: 0.75, fat_glitch: 0.7, fat_guitar_smash: 0.9, fat_mug_land: 0.85, fat_tea_splash: 0.8, fat_wolf: 0.85, fat_howl: 0.6, fat_monster: 0.85, fat_bubbles: 0.7, fat_burp: 0.8, fat_crowd: 0.7, fat_brawl: 0.8, secret_unlock: 0.7, zilla_step: 0.75, rem_monkeys_hit: 0.75,
+  voice_fatality: 1.0, voice_holostyality: 1.0, voice_ragequit: 1.0, voice_finish_him: 1.0,
   fat_bottle_smash: 0.9, fat_laser: 0.75, loki_fire: 0.55, fatality_sting: 0.85, fat_burn: 0.8, fat_flies: 0.7,
   fat_freeze: 0.8, fat_ice_shatter: 0.9, fat_tv_smash: 0.95, fat_stomp: 0.9, fat_dust: 0.8,
   react_wasteland: 0.3, react_gorgorod: 0.35, react_train: 0.3, react_mansion: 0.3, react_roof: 0.3,
@@ -4623,7 +4624,11 @@ function updateFatality(dt) {
   const t = fat.t, w = F.fighters[fat.w], l = F.fighters[fat.l], dir = fat.dir;
   const once = (k, at, fn) => { if (!fat.ev[k] && t >= at) { fat.ev[k] = true; fn(); } };
   const head = (f) => { const fr = frameOf(f.cid, "hurt"); return f.y - (fr ? fr.ay : 230); };
-  once("title", fat.titleAt, () => { playSfx("fatality_sting"); F.shake = Math.max(F.shake, 8); });
+  once("title", fat.titleAt, () => {
+    playSfx("fatality_sting"); F.shake = Math.max(F.shake, 8);
+    const vk = fat.kind === "rose" ? "voice_holostyality" : fat.kind === "quit" ? "voice_ragequit" : "voice_fatality";
+    playSfx(sfxPools[vk] ? vk : "voice_fatality");          // own word for Egor / Loki when recorded
+  });
 
   if (fat.kind === "ice") {
     once("blow", 0.1, () => playSfx("special_guf"));
