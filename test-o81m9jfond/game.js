@@ -652,7 +652,7 @@ const SFX_VOLUME = {
   voice_fatality: 1.0, voice_holostyality: 1.0, voice_ragequit: 1.0, voice_finish_him: 1.0,
   fat_bottle_smash: 0.9, fat_laser: 0.75, loki_fire: 0.55, fatality_sting: 0.85, fat_burn: 0.8, fat_flies: 0.7,
   fat_freeze: 0.8, fat_ice_shatter: 0.9, fat_tv_smash: 0.95, fat_stomp: 0.9, fat_dust: 0.8,
-  react_wasteland: 0.3, react_gorgorod: 0.35, react_train: 0.3, react_mansion: 0.3, react_roof: 0.3, react_palenka: 0.3, palenka_till: 0.7,
+  react_wasteland: 0.3, react_gorgorod: 0.35, react_train: 0.3, react_mansion: 0.3, react_roof: 0.3, react_palenka: 0.3, react_tunnel: 0.35, react_moscow: 0.3, react_thailand: 0.3, react_londograd: 0.3, tunnel_busker: 0.22, gorgorod_thunder: 0.5, tunnel_coin: 0.5, palenka_till: 0.7,
   menuSelect: 0.3, special_guf: 0.45, special_noize: 0.4, special_oxxxy: 0.7, special_morgen: 0.7, special_maybe: 0.75, special_kreed: 0.7, special_slava: 0.75, special_atl: 0.15, special_korzh: 0.9, special_face: 0.8, special_chip: 0.8,
 };
 
@@ -728,6 +728,7 @@ function playSfx(name) {
 const MUSIC = {
   menu: "menu", select: "select", bar: "bar", yard: "yard", circus: "circus", fountains: ["fountains", "fountains_2"], concert: "concert",
   londograd: "londograd", moscow: "moscow", thailand: "thailand", boss: "boss", tutorial: "select",
+  wasteland: "wasteland", gorgorod: "gorgorod", mansion: "mansion", train: "train", roof: "roof", palenka: "palenka", tunnel: "tunnel",
   jingle_win: "jingle_win", jingle_lose: "jingle_lose", jingle_arcade_end: "jingle_arcade_end",
 };
 const MUSIC_VOL = { jingle_win: 0.42, jingle_lose: 0.3, jingle_arcade_end: 0.3 };
@@ -779,8 +780,9 @@ const AMBIENCE = { bar: "assets/audio/amb_bar.mp3", yard: "assets/audio/amb_yard
 const AMB_VOL = { bar: 0.32, yard: 0.6, circus: 0.38, concert: 0.2, londograd: 0.5, moscow: 0.31, thailand: 0.4, fountains: 0.2 };
 // Crowd reaction to big hits and knockouts, per arena
 const REACT = { bar: "crowdReact", yard: "react_yard", circus: "react_circus", concert: "react_concert", fountains: "react_fountains",
-  wasteland: "react_wasteland", gorgorod: "react_gorgorod", train: "react_train", mansion: "react_mansion", roof: "react_roof", palenka: "react_palenka" };
-const REACT_CD = { bar: 4, yard: 14, circus: 16, concert: 6, fountains: 6, wasteland: 14, gorgorod: 14, train: 16, mansion: 12, roof: 16, palenka: 12 };   // seconds between crowd reactions
+  wasteland: "react_wasteland", gorgorod: "react_gorgorod", train: "react_train", mansion: "react_mansion", roof: "react_roof", palenka: "react_palenka",
+  tunnel: "react_tunnel", moscow: "react_moscow", thailand: "react_thailand", londograd: "react_londograd" };
+const REACT_CD = { bar: 4, yard: 14, circus: 16, concert: 6, fountains: 6, wasteland: 14, gorgorod: 14, train: 16, mansion: 12, roof: 16, palenka: 12, tunnel: 14, moscow: 14, thailand: 16, londograd: 14 };   // seconds between crowd reactions
 // Fighter voices (grunts): voice set per fighter; only sets with files are used
 const VOICE = { guf: "a", korzh: "a", atl: "a", chip: "a", noize: "b", oxxxy: "b", face: "b", kreed: "v", slava: "v", morgen: "v", maybe: "g", ramirez: "a", husky: "b", babangida: "a", sqwoz: "b", shilo: "b", krip: "a", tito: "b", loki: "a" };
 // a voice set without one of the sounds borrows it: v has no hurt (→ b), g has no attack shout (→ her gasp)
@@ -2239,7 +2241,7 @@ function drawGorgorodFx(bg, camX) {
   // lightning: a jagged bolt behind the tower and a white flash over the whole city
   GOR.next -= dt;
   if (GOR.next <= 0) {
-    GOR.next = 6 + Math.random() * 8; GOR.flash = 1;
+    GOR.next = 6 + Math.random() * 8; GOR.flash = 1; if (F && F.phase !== "intro") setTimeout(() => playSfx("gorgorod_thunder"), 250);
     const bx = rand(380, 900); const pts = [[bx, 0]];
     for (let y = 30; y < 260; y += rand(25, 45)) pts.push([pts[pts.length - 1][0] + rand(-40, 40), y]);
     GOR.bolt = pts;
@@ -2412,7 +2414,10 @@ function drawTunnelFx(bg, camX) {
   if (ba) ctx.drawImage(ba, X(1222) - ba.naturalWidth * k, Y(606) - ba.naturalHeight * k, ba.naturalWidth * k, ba.naturalHeight * k);
   // coins into the guitar case now and then
   TUN.nextCoin -= dt;
-  if (TUN.nextCoin <= 0) { TUN.nextCoin = 4 + Math.random() * 6; TUN.coins.push({ x: 205 + rand(-20, 20), y: 470, vy: -200, t: 0 }); }
+  if (TUN.nextCoin <= 0) { TUN.nextCoin = 4 + Math.random() * 6; TUN.coins.push({ x: 205 + rand(-20, 20), y: 470, vy: -200, t: 0 }); setTimeout(() => playSfx("tunnel_coin"), 450); }
+  // the buskers really play: a quiet tune every so often, under the arena track
+  TUN.nextTune = (TUN.nextTune ?? 4) - dt;
+  if (TUN.nextTune <= 0) { TUN.nextTune = 16 + Math.random() * 10; if (F && F.phase === "fight") playSfx("tunnel_busker"); }
   for (const c of TUN.coins) { c.t += dt; c.vy += 1200 * dt; c.y = Math.min(c.y + c.vy * dt, 578);
     ctx.fillStyle = Math.sin(c.t * 30) > 0 ? "#ffe27a" : "#c9a040"; ctx.fillRect(X(c.x), Y(c.y), 5 * k, 5 * k); }
   TUN.coins = TUN.coins.filter((c) => c.t < 1.2);
