@@ -372,7 +372,7 @@ const STAGES = {
   mansion: { id: "mansion", name: "ОСОБНЯК МОРГЕНА", ambient: "motes" },
   train: { id: "train", name: "АНТИХАЙП-ПОЕЗД", ambient: "none" },
   roof: { id: "roof", name: "ЗАКАТ", ambient: "motes" },
-  palenka: { id: "palenka", name: "ПАЛЁНКА", ambient: "motes" },
+  palenka: { id: "palenka", name: "РЫНОК", ambient: "motes" },
   tunnel: { id: "tunnel", name: "ПЕРЕХОД", ambient: "motes" },
 };
 const STAGE_IDS = ["moscow", "thailand", "concert", "londograd", "bar", "circus", "yard", "fountains", "wasteland", "gorgorod", "mansion", "train", "roof", "palenka", "tunnel"];
