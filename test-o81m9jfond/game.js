@@ -4669,6 +4669,7 @@ function startFinishHim(w, l) {
   playSfx("koHit"); buzz([60, 40, 120]);
   voice(l, "hurt");
   F.finishSfx = [playSfx("finish_heartbeat"), playSfx("dazed_birds")];
+  setTimeout(() => { if (F && F.phase === "finish") playSfx("voice_finish_him"); }, 350);
 }
 function stopFinishSfx() { for (const h of F.finishSfx || []) if (h) h.stop(); F.finishSfx = null; }
 
