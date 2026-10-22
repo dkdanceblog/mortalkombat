@@ -443,7 +443,7 @@ const SPECIALS = {
   krip: { startup: 0.55, total: 1.0, sfx: "special_krip" },
   tito: { startup: 0.4, total: 0.8, sfx: "special_tito" },
   loki: { startup: 0.38, total: 0.8, sfx: "special_loki" },
-  smoky: { startup: 0.3, total: 1.05, sfx: "whoosh" },
+  smoky: { startup: 0.4, total: 1.3, sfx: "whoosh" },
   maybe: { startup: 0.21, active: 0.14, total: 0.7, sfx: "special_maybe" },
 };
 
@@ -1802,31 +1802,50 @@ function updateSpecial(f, opp, a) {
     return;
   }
   if (f.cid === "smoky") {
-    // КАРА-ТЭ: kiai stance, a dash forward, then three lightning strikes; the last one throws the opponent back
-    if (!a.dashed && a.t >= sp.startup) {
-      a.dashed = true; a.dashT = 0;
-      const gap = Math.abs(opp.x - f.x) - 120;
-      a.dashTo = clamp(f.x + f.dir * clamp(gap, 0, 300), WALL_L, WALL_R);
-      a.dashFrom = f.x;
-      popup(f.x, f.y - 300, "КИЯ!", "#fff6c8", 38);
+    // КАРА-ТЭ: smoke gathers, he dissolves; two smoke clones strike from behind and from the air,
+    // then the real Smoky steps out of the cloud with a palm strike that blasts the opponent away
+    const puff = (x, y, n, sp, col) => { for (let i = 0; i < n; i++) { const an = rand(0, 6.28), v = rand(sp * 0.4, sp); F.particles.push({ type: "puff", x: x + rand(-20, 20), y: y + rand(-30, 30), vx: Math.cos(an) * v, vy: Math.sin(an) * v - 40, life: rand(0.4, 0.9), max: 0.9, size: pick([8, 10, 12, 14]), color: col || pick(["rgba(220,225,240,0.75)", "rgba(175,185,205,0.7)", "rgba(130,140,165,0.6)"]) }); } };
+    if (a.t < sp.startup) {
+      if (Math.random() < 0.7) { const an = rand(0, 6.28); F.particles.push({ type: "puff", x: f.x + Math.cos(an) * 140, y: f.y - 120 + Math.sin(an) * 110, vx: -Math.cos(an) * 320, vy: -Math.sin(an) * 250, life: 0.42, max: 0.42, size: pick([8, 10, 12]), color: "rgba(205,212,232,0.7)" }); }
+      return;
+    }
+    if (!a.dashed) {
+      a.dashed = true; a.kara = 0;
+      a.ox = clamp(Math.abs(opp.x - f.x) < 720 ? opp.x : f.x + f.dir * 600, WALL_L + 130, WALL_R - 130);
+      a.oy = opp.y; a.reach = Math.abs(opp.x - f.x) < 720 && !opp.ko;
+      puff(f.x, f.y - 120, 34, 260);
+      popup(f.x, f.y - 300, "КИЯ!", "#fff6c8", 46);
       playSfx("special_smoky"); playSfx("whooshHeavy");
-      for (let i = 0; i < 14; i++) F.particles.push({ type: "puff", x: f.x + rand(-40, 40), y: f.y - rand(10, 200), vx: -f.dir * rand(60, 220), vy: rand(-80, 20), life: 0.5, max: 0.5, size: pick([6, 8, 10]), color: pick(["rgba(210,215,230,0.8)", "rgba(170,180,200,0.7)"]) });
+      F.shake = Math.max(F.shake, 6);
+      f.invulnT = 0.5;
+      f.x = clamp(a.ox - f.dir * 125, WALL_L, WALL_R);      // he is already waiting in front of the opponent, hidden
     }
-    if (a.dashed && a.t < sp.startup + 0.12) {
-      const k = clamp((a.t - sp.startup) / 0.12, 0, 1);
-      f.x = lerp(a.dashFrom, a.dashTo, k);
-      if (Math.random() < 0.6) F.particles.push({ type: "puff", x: f.x - f.dir * 30, y: f.y - rand(30, 200), vx: -f.dir * 80, vy: 0, life: 0.3, max: 0.3, size: 6, color: "rgba(200,206,222,0.7)" });
+    // [time, side (1 = behind the opponent, 0 = in the air, -1 = the real one in front), dmg, knock]
+    const HITS = [[0.55, 1, 4, 0], [0.72, 0, 4, 0], [0.92, -1, 10, 900]];
+    while (a.kara < 3 && a.t >= HITS[a.kara][0] - 0.1 && !a["shown" + a.kara]) {
+      a["shown" + a.kara] = true;
+      const side = HITS[a.kara][1];
+      const cx = side === 1 ? a.ox + f.dir * 115 : side === 0 ? a.ox - f.dir * 70 : f.x;
+      puff(cx, f.y - (side === 0 ? 230 : 120), 18, 200);
+      playSfx("whoosh");
     }
-    const HITS = [[0.46, 4, 0], [0.6, 4, 0], [0.76, 8, 420]];
-    a.kara = a.kara || 0;
     while (a.kara < 3 && a.t >= HITS[a.kara][0]) {
-      const [, dmg, knock] = HITS[a.kara]; const last = a.kara === 2; a.kara++;
-      if (Math.abs(opp.x - f.x) < 175 && !opp.ko) {
-        const res = applyHit(f, opp, { dmg, height: "mid", hitstun: last ? 0.7 : 0.32, blockstun: 0.18, knock, dir: f.dir,
-          sfx: last ? "hitCrit" : "hitLight", stop: last ? 0.12 : 0.05, chip: 1, noScale: true, launch: last ? -520 : 0,
-          sparkX: opp.x - f.dir * 20, sparkY: f.y - (last ? 150 : 180) });
-        if (res === "hit" && last) { popup(opp.x, opp.y - 330, "КАРА-ТЭ!", "#c8d4ff", 36); F.shake = Math.max(F.shake, 10); }
-      } else if (last) popup(f.x + f.dir * 120, f.y - 300, "МИМО!", "#fff6c8", 26);
+      const [, side, dmg, knock] = HITS[a.kara]; const last = a.kara === 2; a.kara++;
+      if (!a.reach) { if (last) popup(f.x + f.dir * 120, f.y - 300, "МИМО!", "#fff6c8", 26); continue; }
+      const dir = side === 1 ? -f.dir : f.dir;
+      const res = applyHit(f, opp, { dmg, height: side === 0 ? "overhead" : "mid", hitstun: last ? 0.9 : 0.45, blockstun: 0.2, knock, dir,
+        sfx: last ? "hitCrit" : "hitHeavy", stop: last ? 0.22 : 0.08, chip: last ? 3 : 1, noScale: true, launch: last ? -700 : -120,
+        sparkX: opp.x - dir * 20, sparkY: opp.y - (side === 0 ? 210 : last ? 140 : 170) });
+      F.zoom = Math.max(F.zoom || 0, last ? 0.12 : 0.05); F.zoomX = opp.x; F.zoomY = opp.y - 140;
+      F.shake = Math.max(F.shake, last ? 22 : 9);
+      if (res === "hit" || res === "block") {
+        popup(opp.x, opp.y - 300 - a.kara * 22, ["КИ!", "КИ!", "КАРА-ТЭ!"][a.kara - 1], last ? "#c8d4ff" : "#e8ecf8", last ? 48 : 30);
+        if (last) {
+          F.flash = Math.max(F.flash, 0.5); buzz([60, 30, 200]);
+          for (let r = 0; r < 3; r++) F.particles.push({ type: "ring", x: opp.x - f.dir * 30, y: opp.y - 140, life: 0.3 + r * 0.12, max: 0.3 + r * 0.12, color: "#dfe6ff" });
+          puff(opp.x - f.dir * 40, opp.y - 140, 40, 520);
+        }
+      }
     }
     return;
   }
@@ -4120,7 +4139,7 @@ function poseName(f) {
   if (f.action) {
     if (f.action.type === "special") { if (f.cid === "babangida" && f.action.dashed && hasPose(f.cid, "slash")) return "slash";
       if ((f.cid === "sqwoz" || f.cid === "shilo" || f.cid === "loki") && f.action.spawned && hasPose(f.cid, "throw")) return "throw";
-      if (f.cid === "smoky" && f.action.dashed) { const k = f.action.kara || 0; return k >= 3 ? "kara_3" : k === 2 ? "kara_3" : k === 1 ? "kara_2" : "kara_1"; }
+      if (f.cid === "smoky" && f.action.dashed) return "kara_3";
       return "special"; }
     // wind-up frame during the first part of a grounded light / heavy
     const a = f.action, mv = a.move;
@@ -4137,6 +4156,7 @@ function poseName(f) {
 
 function drawFighter(f) {
   if (F.fat) { drawFatFighter(f); return; }
+  if (f.cid === "smoky" && f.action && f.action.type === "special" && f.action.dashed && !F.fat) { drawSmokyKarate(f); if (f.action.t < 0.82) return; }
   if (f.zillaT > 0) return;          // he IS the monster right now
   const name = poseName(f);
   let sx = 1, sy = 1, ox = 0, oy = 0, rot = 0;
@@ -5008,6 +5028,23 @@ function updateFatality(dt) {
 
 // height of the squashed KO pose Oxxxy stands on
 function pancakeH(l) { const fr = frameOf(l.cid, "ko"); return fr ? Math.round(fr.ay * 0.6 * 0.8) : 30; }
+// КАРА-ТЭ clones: smoke-tinted copies that strike from behind and from the air
+function drawSmokyKarate(f) {
+  const a = f.action, t = a.t;
+  const clone = (pose, x, y, dir, t0, t1) => {
+    if (t < t0 || t > t1) return;
+    const k = Math.min(1, (t - t0) / 0.06, (t1 - t) / 0.12);
+    drawPose("smoky", pose, x, y, { dir, alpha: 0.85 * k, tint: { color: "#b9c4dc", a: 0.55 }, flash: 0.15, flashColor: "#ffffff" });
+  };
+  clone("kara_1", a.ox + f.dir * 115, f.y, -f.dir, 0.45, 0.66);
+  clone("air_kick", a.ox - f.dir * 75, f.y - 95, f.dir, 0.62, 0.84);
+  if (t >= 0.82) {                                    // the real one: afterglow streaks behind him
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    const g = ctx.createRadialGradient(f.x + f.dir * 110, f.y - 150, 5, f.x + f.dir * 110, f.y - 150, 120);
+    g.addColorStop(0, `rgba(220,230,255,${0.5 * Math.max(0, 1 - (t - 0.9) / 0.3)})`); g.addColorStop(1, "rgba(200,210,255,0)");
+    ctx.fillStyle = g; ctx.fillRect(f.x + f.dir * 110 - 120, f.y - 270, 240, 240); ctx.restore();
+  }
+}
 function drawShadowAt(x, w, a = 0.38) {
   ctx.save(); ctx.fillStyle = `rgba(0,0,0,${a})`;
   ctx.beginPath(); ctx.ellipse(x, FLOOR_Y + 4, w, 11, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
@@ -6068,6 +6105,8 @@ function drawFight() {
 
   drawStage(G.stage, F.camX);
   drawAmbient();
+  const sk = F.fighters.find((x) => x.cid === "smoky" && x.action && x.action.type === "special");
+  if (sk && !F.fat) { const k = Math.min(1, sk.action.t / 0.3, Math.max(0, (1.25 - sk.action.t) / 0.3)); ctx.fillStyle = `rgba(10,12,24,${0.45 * k})`; ctx.fillRect(-60, -60, W + 120, H + 120); }
   if (F.phase === "finish" || F.fat) {
     const k = F.fat ? clamp(fatClock() / 0.4, 0, 1) : clamp(F.phaseT / 0.5, 0, 1) * 0.5;
     ctx.fillStyle = `rgba(14,0,4,${0.62 * k})`;
@@ -8498,7 +8537,7 @@ function loop(now) {
     case "vs": drawVs(); break;
     case "ladder": drawLadder(); break;
     case "arcadeEnd": drawArcadeEnd(); break;
-    case "fight": updateFight(dt); if (G.screen === "fight") drawFight(); else if (G.screen === "end") drawEnd(); break;
+    case "fight": if (window.__step !== undefined) { if (window.__step > 0) { window.__step--; updateFight(1 / 60); } } else updateFight(dt); if (G.screen === "fight") drawFight(); else if (G.screen === "end") drawEnd(); break;
     case "end": drawEnd(); break;
   }
 
