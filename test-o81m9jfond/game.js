@@ -417,13 +417,13 @@ const SPECIALS = {
   face: { startup: 0.3, total: 0.7, sfx: "special_face" },
   chip: { startup: 0.25, total: 1.3, sfx: "special_chip" },
   ramirez: { startup: 0.35, total: 0.85, sfx: "special_ramirez" },
-  husky: { startup: 0.32, total: 0.75, sfx: "throw" },
+  husky: { startup: 0.32, total: 0.75, sfx: "special_husky" },
   babangida: { startup: 0.45, total: 1.25, sfx: "special_babangida" },
   sqwoz: { startup: 0.42, total: 0.8, sfx: "special_sqwoz" },
   shilo: { startup: 0.45, total: 0.85, sfx: "special_shilo" },
   krip: { startup: 0.55, total: 1.0, sfx: "special_krip" },
   tito: { startup: 0.4, total: 0.8, sfx: "special_tito" },
-  loki: { startup: 0.38, total: 0.8, sfx: "throw" },
+  loki: { startup: 0.38, total: 0.8, sfx: "special_loki" },
   maybe: { startup: 0.21, active: 0.14, total: 0.7, sfx: "special_maybe" },
 };
 
@@ -641,6 +641,7 @@ const SFX_VOLUME = {
   hitLight: 0.7, hitHeavy: 0.8, hitBody: 0.8, hitCrit: 0.9, block: 0.65, koHit: 1.0, superStart: 0.8, crowdReact: 0.5, hitKick: 0.75, whooshLight: 0.3, whooshHeavy: 0.35, bodyfall: 0.7, parry: 0.55, counter: 0.7, throw: 0.8, sweep: 0.8, wallHit: 0.85, jump: 0.35, land: 0.4, landHeavy: 0.6, dash: 0.45, comboFinisher: 0.85, launch: 0.7, superReady: 0.5, superHit: 0.8, sway: 0.8, armor: 0.75, money: 0.8, special_kreed_hit: 0.85, atl_boom: 0.25, atl_bolt: 0.45, special_face_hit: 0.85, special_morgen_hit: 0.85, special_guf_hit: 0.8, special_noize_hit: 0.8, react_yard: 0.28, react_circus: 0.3, react_concert: 0.45, uiMove: 0.12, uiBack: 0.18, uiPick: 0.35, uiVs: 0.55, uiUnlock: 0.8, uiTimer: 0.5, voice_a_attack: 0.65, voice_a_hurt: 0.65, voice_a_ko: 0.8, voice_b_attack: 0.65, voice_b_hurt: 0.65, voice_b_ko: 0.8, voice_v_attack: 0.65, voice_v_ko: 0.8, voice_g_hurt: 0.65, voice_g_attack: 0.7, react_fountains: 0.5, uiConfirm: 0.25, whoosh: 0.35, ko: 0.9, roundStart: 0.4,
   special_ramirez: 0.7, special_babangida: 0.75, special_sqwoz: 0.75, special_shilo: 0.7, special_krip: 0.7, special_tito: 0.7,
   finish_heartbeat: 0.9, dazed_birds: 0.35, fat_rose_swoon: 0.7, fat_hearse_engine: 0.7, fat_car_door: 0.8, fat_car_leave: 0.7, fat_stork: 0.75, fat_glitch: 0.7, fat_guitar_smash: 0.9, fat_mug_land: 0.85, fat_tea_splash: 0.8, fat_wolf: 0.85, fat_howl: 0.6, fat_monster: 0.85, fat_bubbles: 0.7, fat_burp: 0.8, fat_crowd: 0.7, fat_brawl: 0.8, secret_unlock: 0.7, zilla_step: 0.75, rem_monkeys_hit: 0.75,
+  special_husky: 0.8, husky_heal: 0.75, special_loki: 0.8, el_charge: 0.7, el_water: 0.85, el_wood: 0.85, el_earth: 0.9, el_metal: 0.9, el_boom: 0.95, fat_fox: 0.8, boss_reveal: 0.9, bab_fake_death: 0.8,
   voice_fatality: 1.0, voice_holostyality: 1.0, voice_ragequit: 1.0, voice_finish_him: 1.0,
   fat_bottle_smash: 0.9, fat_laser: 0.75, loki_fire: 0.55, fatality_sting: 0.85, fat_burn: 0.8, fat_flies: 0.7,
   fat_freeze: 0.8, fat_ice_shatter: 0.9, fat_tv_smash: 0.95, fat_stomp: 0.9, fat_dust: 0.8,
@@ -1478,7 +1479,7 @@ function updateFighter(f, opp, dt) {
   if (f.energyT > 0) f.energyT -= dt;
   if (f.zillaT > 0) { f.zillaT -= dt; f.invulnT = Math.max(f.invulnT || 0, 0.05); f.vx = 0; }
   if (f.cid === "husky" && !f.waterUsed && !f.ko && f.hp > 0 && f.hp <= 25 && F.phase === "fight") {
-    f.waterUsed = true; f.healT = 1.2;
+    f.waterUsed = true; f.healT = 1.2; playSfx("husky_heal");
     popup(f.x, f.y - 320, "ЖИВАЯ ВОДА!", "#7fd8ff", 30);
   }
   if (f.fakeT > 0) {
@@ -1938,7 +1939,7 @@ function fakeDeath(f) {
   F.fakeUsed = F.fakeUsed || {};
   if (F.fakeUsed[f.slot]) return false;
   F.fakeUsed[f.slot] = true;
-  f.hp = 1; f.fakeT = 1.9;
+  f.hp = 1; f.fakeT = 1.9; playSfx("bab_fake_death");
   F.ticker = { text: "БАБАНГИДА УМЕР  •  ПРОДЮСЕР ОПРОВЕРГАЕТ  •  БАБАНГИДА УМЕР", t: 0 };
   return true;
 }
@@ -4758,28 +4759,28 @@ function updateFatality(dt) {
   } else if (fat.kind === "elements") {
     const zoomAt = (z) => { F.zoom = Math.max(F.zoom || 0, z); F.zoomX = l.x; F.zoomY = l.y - 130; };
     const flash = (c) => { fat.cflash = { c, t: t }; };
-    once("aura", 0.05, () => { playSfx("superStart"); F.shake = 6; });
+    once("aura", 0.05, () => { playSfx("el_charge"); F.shake = 6; });
     // 1 ВОДА — a torrent from his palm
-    once("e0", EL_T[0], () => { playSfx("special_guf_hit"); playSfx("whooshHeavy"); flash("#4ab0ff"); popup(l.x, head(l) - 30, "ВОДА", "#4ab0ff", 40); });
+    once("e0", EL_T[0], () => { playSfx("el_water"); flash("#4ab0ff"); popup(l.x, head(l) - 30, "ВОДА", "#4ab0ff", 40); });
     once("e0h", EL_T[0] + 0.2, () => { playSfx("hitHeavy"); F.shake = 14; zoomAt(0.05); });
     if (t > EL_T[0] + 0.15 && t < EL_T[0] + 0.65) for (let k = 0; k < 3; k++) F.particles.push({ type: "sq", x: elVictim(fat, t).x - dir * 30, y: l.y - rand(110, 200), vx: dir * rand(60, 260), vy: rand(-420, -60), g: 1300, life: rand(0.4, 0.8), max: 0.8, size: pick([4, 6, 8]), color: pick(ELEMENTS[0].cols) });
     // 2 ДЕРЕВО — vines burst from the floor and bind him
-    once("e1", EL_T[1], () => { playSfx("sweep"); playSfx("landHeavy"); flash("#5fd05a"); F.shake = 12; popup(l.x, head(l) - 30, "ДЕРЕВО", "#5fd05a", 40); zoomAt(0.04); });
+    once("e1", EL_T[1], () => { playSfx("el_wood"); flash("#5fd05a"); F.shake = 12; popup(l.x, head(l) - 30, "ДЕРЕВО", "#5fd05a", 40); zoomAt(0.04); });
     if (t > EL_T[1] && t < EL_T[1] + 0.5 && Math.random() < dt * 30) F.particles.push({ type: "sq", x: l.x + rand(-80, 80), y: l.y - rand(0, 200), vx: rand(-100, 100), vy: rand(-160, -40), g: 200, life: 0.9, max: 0.9, size: pick([5, 7]), color: pick(ELEMENTS[1].cols) });
     // 3 ОГОНЬ — a fire pillar erupts under him
     once("e2", EL_T[2], () => { playSfx("fat_burn"); flash("#ff7a2a"); F.shake = 18; popup(l.x, head(l) - 30, "ОГОНЬ", "#ff9a3a", 40); zoomAt(0.06); });
     if (t > EL_T[2] && t < EL_T[2] + 0.75) for (let k = 0; k < 2; k++) F.particles.push({ type: "sq", x: l.x + rand(-70, 70), y: l.y - rand(0, 300), vx: rand(-40, 40), vy: rand(-420, -200), life: 0.6, max: 0.6, size: pick([4, 6]), color: pick(ELEMENTS[2].cols) });
     // 4 ЗЕМЛЯ — rock spikes throw him into the air
-    once("e3", EL_T[3], () => { playSfx("special_korzh"); playSfx("landHeavy"); flash("#b0844a"); F.shake = 26; popup(l.x, head(l) - 160, "ЗЕМЛЯ", "#d8b080", 40); zoomAt(0.06);
+    once("e3", EL_T[3], () => { playSfx("el_earth"); flash("#b0844a"); F.shake = 26; popup(l.x, head(l) - 160, "ЗЕМЛЯ", "#d8b080", 40); zoomAt(0.06);
       for (let k = 0; k < 40; k++) F.particles.push({ type: "sq", x: l.x + rand(-140, 140), y: FLOOR_Y - rand(0, 20), vx: rand(-420, 420), vy: rand(-760, -200), g: 1600, life: rand(0.6, 1.1), max: 1.1, size: pick([6, 8, 10, 12]), color: pick(ELEMENTS[3].cols) }); });
     // 5 МЕТАЛЛ — one dash cut straight through him
-    once("e4", EL_T[4], () => { playSfx("special_babangida"); flash("#ffffff"); F.flash = 0.6; F.shake = 12; });
+    once("e4", EL_T[4], () => { playSfx("el_metal"); flash("#ffffff"); F.flash = 0.6; F.shake = 12; });
     once("e4h", EL_T[4] + 0.1, () => { playSfx("hitCrit"); popup(l.x, head(l) - 180, "МЕТАЛЛ", "#e8eef8", 40); zoomAt(0.08);
       for (let k = 0; k < 30; k++) F.particles.push({ type: "sq", x: elVictim(fat, t).x + rand(-40, 40), y: elVictim(fat, t).y - rand(60, 200), vx: dir * rand(200, 700), vy: rand(-300, 200), g: 500, life: rand(0.3, 0.6), max: 0.6, size: pick([3, 4, 6]), color: pick(ELEMENTS[4].cols) }); });
     // the beat of silence, then the wheel fires all five at once
-    once("beams", 4.6, () => { playSfx("superStart"); F.shake = 10; });
+    once("beams", 4.6, () => { playSfx("el_charge"); F.shake = 10; });
     once("boom", EL_BOOM, () => {
-      playSfx("superHit"); playSfx("hitCrit"); playSfx("atl_boom"); F.flash = 0.45; F.shake = 36; zoomAt(0.14); buzz([120, 40, 300]);
+      playSfx("el_boom"); playSfx("hitCrit"); F.flash = 0.45; F.shake = 36; zoomAt(0.14); buzz([120, 40, 300]);
       const v = elVictim(fat, t), top = v.y - 240;
       for (let k = 0; k < 220; k++) { const el = ELEMENTS[k % 5], a = rand(0, 6.28), sp = rand(200, 900); F.particles.push({ type: "sq", x: v.x + rand(-40, 40), y: rand(top, v.y), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 200, g: 700, life: rand(0.8, 1.8), max: 1.8, size: pick([4, 6, 8, 10, 12]), color: pick(el.cols) }); }
       ELEMENTS.forEach((el, i) => F.particles.push({ type: "ring", x: v.x, y: v.y - 120, life: 0.3 + i * 0.12, max: 0.3 + i * 0.12, color: el.color }));
@@ -4796,7 +4797,7 @@ function updateFatality(dt) {
     if (t > 1.4 && t < 3.0 && Math.random() < dt * 18) F.particles.push({ type: "sq", x: l.x + rand(-80, 80), y: FLOOR_Y - rand(0, 10), vx: rand(-20, 20), vy: rand(-90, -40), life: 0.6, max: 0.6, size: pick([4, 6, 8]), color: pick(["rgba(200,240,255,0.8)", "rgba(140,200,230,0.7)"]) });
     once("sink", 1.6, () => playSfx("fat_bubbles"));
   } else if (fat.kind === "fox") {
-    once("call", 0.2, () => playSfx("special_krip"));
+    once("call", 0.35, () => playSfx("fat_fox"));
     once("pounce", 0.95, () => { playSfx("whooshHeavy"); });
     once("fight", 1.1, () => { F.shake = 12; playSfx("fat_brawl"); });
     if (t > 1.1 && t < 2.2 && Math.random() < dt * 3) { playSfx(pick(["hitLight", "hitBody"])); F.shake = Math.max(F.shake, 6); }
@@ -6791,7 +6792,7 @@ function arcadeEndItems() {
   if (A.checkedIdx !== A.idx && F) { A.checkedIdx = A.idx; if (F.wins[1] > 0) A.flawless = false; }
   // a flawless run (no round lost) summons the secret boss after Chipinkos
   if (won && last && A.flawless !== false && !A.secretAdded && A.cid !== "babangida" && !babUnlocked()) {
-    return [["???", () => { confirmSfx(); G.arcadeBoss = false;
+    return [["???", () => { playSfx("boss_reveal"); G.arcadeBoss = false;
       if (!chipUnlocked()) { CHAR_IDS.splice(CHAR_IDS.indexOf("babangida") >= 0 ? CHAR_IDS.indexOf("babangida") : CHAR_IDS.length, 0, "chip"); store.set("chip_unlocked", true); A.newUnlock = true; }
       A.secretAdded = true; A.ladder.push({ cid: "babangida", stage: "yard", boss: true, secret: true }); A.idx++; A.wins++; setScreen("ladder"); }], toMenu];
   }
