@@ -648,7 +648,7 @@ const SFX_VOLUME = {
   voice_fatality: 1.0, voice_holostyality: 1.0, voice_ragequit: 1.0, voice_finish_him: 1.0,
   fat_bottle_smash: 0.9, fat_laser: 0.75, loki_fire: 0.55, fatality_sting: 0.85, fat_burn: 0.8, fat_flies: 0.7,
   fat_freeze: 0.8, fat_ice_shatter: 0.9, fat_tv_smash: 0.95, fat_stomp: 0.9, fat_dust: 0.8,
-  react_wasteland: 0.3, react_gorgorod: 0.35, react_train: 0.3, react_mansion: 0.3, react_roof: 0.3,
+  react_wasteland: 0.3, react_gorgorod: 0.35, react_train: 0.3, react_mansion: 0.3, react_roof: 0.3, react_palenka: 0.3, palenka_till: 0.7,
   menuSelect: 0.3, special_guf: 0.45, special_noize: 0.4, special_oxxxy: 0.7, special_morgen: 0.7, special_maybe: 0.75, special_kreed: 0.7, special_slava: 0.75, special_atl: 0.15, special_korzh: 0.9, special_face: 0.8, special_chip: 0.8,
 };
 
@@ -775,8 +775,8 @@ const AMBIENCE = { bar: "assets/audio/amb_bar.mp3", yard: "assets/audio/amb_yard
 const AMB_VOL = { bar: 0.32, yard: 0.6, circus: 0.38, concert: 0.2, londograd: 0.5, moscow: 0.31, thailand: 0.4, fountains: 0.2 };
 // Crowd reaction to big hits and knockouts, per arena
 const REACT = { bar: "crowdReact", yard: "react_yard", circus: "react_circus", concert: "react_concert", fountains: "react_fountains",
-  wasteland: "react_wasteland", gorgorod: "react_gorgorod", train: "react_train", mansion: "react_mansion", roof: "react_roof" };
-const REACT_CD = { bar: 4, yard: 14, circus: 16, concert: 6, fountains: 6, wasteland: 14, gorgorod: 14, train: 16, mansion: 12, roof: 16 };   // seconds between crowd reactions
+  wasteland: "react_wasteland", gorgorod: "react_gorgorod", train: "react_train", mansion: "react_mansion", roof: "react_roof", palenka: "react_palenka" };
+const REACT_CD = { bar: 4, yard: 14, circus: 16, concert: 6, fountains: 6, wasteland: 14, gorgorod: 14, train: 16, mansion: 12, roof: 16, palenka: 12 };   // seconds between crowd reactions
 // Fighter voices (grunts): voice set per fighter; only sets with files are used
 const VOICE = { guf: "a", korzh: "a", atl: "a", chip: "a", noize: "b", oxxxy: "b", face: "b", kreed: "v", slava: "v", morgen: "v", maybe: "g", ramirez: "a", husky: "b", babangida: "a", sqwoz: "b", shilo: "b", krip: "a", tito: "b", loki: "a" };
 // a voice set without one of the sounds borrows it: v has no hurt (→ b), g has no attack shout (→ her gasp)
@@ -2406,6 +2406,8 @@ function drawPalenkaFx(bg, camX) {
   });
   // the seller: idle at the till; slams it shut on "В БОЙ!", ducks lower at big hits
   const closing = F && ((F.phase === "fight" && F.phaseT < 1.8) || (F.phase === "intro" && F.phaseT > 1.35));
+  if (F && closing && PAL.tillF !== F) { PAL.tillF = F; playSfx("palenka_till"); }
+  if (F && F.phase === "intro" && F.phaseT < 0.5) PAL.tillF = null;
   const sim = img(closing ? "palenka.close" : "palenka.idle");
   if (sim) {
     const duck = F && F.shake > 12 ? 4 : 0;
