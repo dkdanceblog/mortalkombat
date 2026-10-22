@@ -65,7 +65,7 @@ const CHARS = {
   },
   smoky: {
     id: "smoky", name: "СМОКИ МО", special: "КАРА-ТЭ", color: "#9aa6b8",
-    speed: 295, power: 1.03, specialCd: 5.2, tough: 1.02, jump: 1.0, weight: 1.05, dash: 1.0,
+    speed: 290, power: 1.0, specialCd: 6.5, tough: 1.0, jump: 1.0, weight: 1.05, dash: 1.0,
     stats: { "СКОРОСТЬ": 3, "СИЛА": 3, "ЗДОРОВЬЕ": 3 },
     perk: "ФИШКА: раз в раунд на половине здоровья уходит в дым — удар проходит мимо",
     blurb: "Питерский дым.",
@@ -1811,8 +1811,8 @@ function updateSpecial(f, opp, a) {
     }
     if (!a.dashed) {
       a.dashed = true; a.kara = 0;
-      a.ox = clamp(Math.abs(opp.x - f.x) < 720 ? opp.x : f.x + f.dir * 600, WALL_L + 130, WALL_R - 130);
-      a.oy = opp.y; a.reach = Math.abs(opp.x - f.x) < 720 && !opp.ko;
+      a.ox = clamp(Math.abs(opp.x - f.x) < 520 ? opp.x : f.x + f.dir * 600, WALL_L + 130, WALL_R - 130);
+      a.oy = opp.y; a.reach = Math.abs(opp.x - f.x) < 520 && !opp.ko;
       puff(f.x, f.y - 120, 34, 260);
       popup(f.x, f.y - 300, "КИЯ!", "#fff6c8", 46);
       playSfx("special_smoky"); playSfx("whooshHeavy");
@@ -1821,7 +1821,7 @@ function updateSpecial(f, opp, a) {
       f.x = clamp(a.ox - f.dir * 125, WALL_L, WALL_R);      // he is already waiting in front of the opponent, hidden
     }
     // [time, side (1 = behind the opponent, 0 = in the air, -1 = the real one in front), dmg, knock]
-    const HITS = [[0.55, 1, 4, 0], [0.72, 0, 4, 0], [0.92, -1, 10, 900]];
+    const HITS = [[0.55, 1, 3, 0], [0.72, 0, 3, 0], [0.92, -1, 7, 900]];
     while (a.kara < 3 && a.t >= HITS[a.kara][0] - 0.1 && !a["shown" + a.kara]) {
       a["shown" + a.kara] = true;
       const side = HITS[a.kara][1];
@@ -3735,7 +3735,7 @@ function drawAmbient() {
 const BOT_STYLE = {
   korzh: { aggro: 1.35, dash: 0.6 }, morgen: { aggro: 1.25, dash: 2.2 }, oxxxy: { aggro: 1.2 }, noize: { aggro: 1.1 },
   maybe: { jump: 2.5 }, guf: { erratic: true }, slava: { dash: 1.8 }, face: { aggro: 1.1 },
-  atl: { keep: 190 }, chip: { keep: 280 }, kreed: {}, ramirez: { aggro: 1.3 }, husky: { aggro: 1.15, jump: 1.3 }, babangida: { aggro: 1.2 }, sqwoz: { keep: 240 }, shilo: { aggro: 1.15 }, krip: { aggro: 1.1 }, tito: { aggro: 1.15, jump: 1.3 }, loki: { keep: 230 }, smoky: { aggro: 1.15 },
+  atl: { keep: 190 }, chip: { keep: 280 }, kreed: {}, ramirez: { aggro: 1.3 }, husky: { aggro: 1.15, jump: 1.3 }, babangida: { aggro: 1.2 }, sqwoz: { keep: 240 }, shilo: { aggro: 1.15 }, krip: { aggro: 1.1 }, tito: { aggro: 1.15, jump: 1.3 }, loki: { keep: 230 }, smoky: { aggro: 1.0 },
 };
 function updateBot(bot, opp, dt) {
   const c = bot.ctrl;
