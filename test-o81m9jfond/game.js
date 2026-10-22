@@ -4738,6 +4738,7 @@ function updateFatality(dt) {
     once("plop", 2.35, () => { playSfx("fat_bubbles"); F.shake = 4; });
   } else if (fat.kind === "car") {
     once("arrive", 0.0, () => playSfx("dash"));
+    once("line", 0.55, () => { F.quote = { slot: w.slot, text: "Я ЗАТОЛКАЮ ТЕБЯ В ТАЧКУ СИЛОЙ...", t: 2.0 }; });
     once("grab", 1.1, () => { playSfx("throw"); voice(l, "hurt"); });
     once("stuff", 1.75, () => { playSfx("bodyfall"); F.shake = 10; });
     once("door", 2.1, () => playSfx("fat_car_door"));
