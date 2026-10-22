@@ -373,8 +373,9 @@ const STAGES = {
   train: { id: "train", name: "АНТИХАЙП-ПОЕЗД", ambient: "none" },
   roof: { id: "roof", name: "ЗАКАТ", ambient: "motes" },
   palenka: { id: "palenka", name: "ПАЛЁНКА", ambient: "motes" },
+  tunnel: { id: "tunnel", name: "ПЕРЕХОД", ambient: "motes" },
 };
-const STAGE_IDS = ["moscow", "thailand", "concert", "londograd", "bar", "circus", "yard", "fountains", "wasteland", "gorgorod", "mansion", "train", "roof", "palenka"];
+const STAGE_IDS = ["moscow", "thailand", "concert", "londograd", "bar", "circus", "yard", "fountains", "wasteland", "gorgorod", "mansion", "train", "roof", "palenka", "tunnel"];
 // Circus garland bulbs found in the background art: [x, y, size] in 1280x720 image space
 const CIRCUS_BULBS = [[556,17,7],[702,19,8],[784,24,7],[616,36,4],[493,46,5],[810,48,6],[702,55,7],[703,89,7],[142,96,3],[1016,100,8],[147,101,3],[374,114,8],[1046,118,8],[342,133,8],[1078,136,8],[702,142,10],[132,143,3],[586,144,4],[826,145,4],[310,150,8],[1110,152,8],[129,157,5],[705,162,7],[90,161,3],[128,161,3],[108,162,3],[126,163,4],[122,163,3],[278,167,8],[1141,166,8],[122,166,4],[570,168,6],[842,168,6],[136,169,3],[100,170,3],[133,174,5],[90,173,4],[124,172,4],[114,172,3],[140,177,4],[118,178,3],[126,178,3],[134,180,3],[246,182,7],[1172,182,7],[120,181,3],[128,182,4],[162,182,3],[135,190,7],[120,186,4],[130,186,4],[160,186,4],[705,188,7],[144,190,4],[554,190,6],[122,190,3],[858,190,6],[162,193,4],[1205,194,8],[125,193,3],[213,195,7],[148,194,3],[116,195,3],[126,197,3],[132,198,3],[134,198,3],[153,198,4],[164,199,4],[130,200,4],[136,201,3],[153,202,4],[1236,204,8],[128,203,3],[138,204,4],[130,205,3],[153,211,5],[164,210,4],[130,209,3],[539,210,6],[874,211,6],[106,210,3],[132,211,3],[1269,214,7],[706,214,6],[134,214,3],[117,216,3],[164,218,3],[116,220,5],[120,218,3],[126,223,4],[142,223,3],[132,226,3],[524,228,6],[890,228,6],[128,228,3],[94,230,3],[139,231,3],[88,234,3],[150,234,3],[706,238,6],[508,244,5],[906,244,6],[124,245,3],[196,246,3],[120,251,3],[274,256,6],[493,256,5],[922,256,6],[706,258,6],[242,264,6],[129,264,3],[146,266,3],[478,268,6],[938,268,6],[152,268,3],[708,276,6],[462,276,6],[952,276,5],[964,281,5],[448,284,5],[48,284,5],[1271,284,6],[976,285,5],[52,289,5],[431,288,6],[348,290,7],[988,289,5],[1067,290,5],[708,290,5],[104,290,3],[1001,292,5],[357,292,4],[415,292,5],[1014,294,5],[403,294,5],[1060,293,4],[1244,296,8],[201,295,5],[396,294,3],[1021,294,3],[96,296,3],[101,296,3],[352,297,4],[232,299,5],[334,300,5],[107,300,4],[708,301,5],[820,302,3],[1180,302,5],[278,304,3],[310,306,7],[1069,307,8],[1147,306,6],[709,307,5],[402,309,7],[144,308,3],[361,308,4],[1016,310,6],[1116,309,5],[190,310,3],[206,311,5],[214,312,6],[220,312,4],[599,312,3],[606,314,3],[816,314,4],[821,314,4],[825,316,4],[988,317,5],[600,317,3],[456,319,5],[638,319,4],[781,319,5],[144,319,3],[516,319,4],[906,320,4],[533,320,4],[538,320,4],[630,320,4],[884,320,3],[889,320,5],[484,322,5],[525,322,6],[656,324,6],[898,323,5],[548,324,6],[622,323,4],[844,325,6],[875,324,6],[962,326,7],[1130,325,5],[1133,324,5],[582,326,6],[614,324,4],[754,326,6],[800,324,3],[813,324,3],[968,326,4],[1138,325,4],[186,326,3],[806,326,3],[816,327,3],[707,331,6],[711,330,5],[466,336,4],[146,361,4],[318,367,4],[1120,367,4],[951,378,3],[142,384,3],[160,384,4],[330,386,4],[1107,386,4],[943,389,3],[78,390,3],[812,398,4],[596,398,3],[934,404,3],[173,405,4],[1090,407,4],[342,408,4],[507,415,3],[924,415,4],[602,416,4],[806,416,4],[188,426,4],[1076,427,4],[352,429,4],[914,432,4],[518,432,3],[608,434,3],[800,434,3],[146,438,4],[793,444,3]];
 // Yard babushkas: anchor (bottom of the bench legs, centre) per pose
@@ -450,6 +451,9 @@ const ASSET_PATHS = {
   "bg.roof": "assets/backgrounds/roof.webp",
   "roof.sky": "assets/backgrounds/roof_sky.png",
   "bg.palenka": "assets/backgrounds/palenka.webp",
+  "bg.tunnel": "assets/backgrounds/tunnel.webp",
+  "tunnel.bayan_1": "assets/backgrounds/tunnel_bayan_1.png", "tunnel.bayan_2": "assets/backgrounds/tunnel_bayan_2.png",
+  "tunnel.guitar_1": "assets/backgrounds/tunnel_guitar_1.png", "tunnel.guitar_2": "assets/backgrounds/tunnel_guitar_2.png",
   "palenka.idle": "assets/backgrounds/palenka_idle.png", "palenka.close": "assets/backgrounds/palenka_close.png",
   "train.fg": "assets/backgrounds/train_fg.png",
   "train.view": "assets/backgrounds/train_view.png",
@@ -535,7 +539,7 @@ for (const k of Object.keys(ASSET_PATHS)) {
 // download in the background right after (and the VS screen waits for them if needed).
 function deferredAsset(key) {
   if (key === "bg.concert") return false;                 // title backdrop
-  if (key.startsWith("bg.") || key.startsWith("end.") || key.startsWith("yard.") || key.startsWith("bar.") || key.startsWith("wasteland.") || key.startsWith("train.") || key.startsWith("roof.") || key.startsWith("palenka.")) return true;
+  if (key.startsWith("bg.") || key.startsWith("end.") || key.startsWith("yard.") || key.startsWith("bar.") || key.startsWith("wasteland.") || key.startsWith("train.") || key.startsWith("roof.") || key.startsWith("palenka.") || key.startsWith("tunnel.")) return true;
   return key.startsWith("spr.") && !key.endsWith(".idle");
 }
 let deferredStarted = false;
@@ -577,7 +581,7 @@ function fightAssetKeys(chars, stage) {
   for (const cid of new Set(chars.filter(Boolean))) {
     for (const k of Object.keys(ASSET_PATHS)) if (k.startsWith(`spr.${cid}.`)) keys.push(k);
   }
-  if (stage === "yard" || stage === "bar" || stage === "wasteland" || stage === "train" || stage === "roof" || stage === "palenka") keys.push(...Object.keys(ASSET_PATHS).filter((k) => k.startsWith(stage + ".")));
+  if (stage === "yard" || stage === "bar" || stage === "wasteland" || stage === "train" || stage === "roof" || stage === "palenka" || stage === "tunnel") keys.push(...Object.keys(ASSET_PATHS).filter((k) => k.startsWith(stage + ".")));
   return keys;
 }
 function fightAssetsReady() {
@@ -2362,6 +2366,56 @@ function drawTrainStage(bg, camX) {
   TRAIN.flick = Math.random() < 0.003 ? 0.2 : Math.max(0, TRAIN.flick - dt);
   const dim = TRAIN.flick > 0 ? 0.14 * (Math.random() < 0.5 ? 1 : 0) : 0;
   if (dim) { ctx.fillStyle = `rgba(0,0,0,${dim})`; ctx.fillRect(0, 0, W, H); }
+}
+
+// Underground passage: tube lights flicker (one is broken and dripping), headlights sweep past the far
+// exit, a guitarist and an old man with a bayan play by the walls, now and then a coin drops in the case.
+const TUN = { last: 0, drops: [], coins: [], nextCoin: 3, cars: [], nextCar: 2 };
+function drawTunnelFx(bg, camX) {
+  const t = G.time, dt = Math.min(0.05, Math.max(0, t - TUN.last)); TUN.last = t;
+  const s = Math.max(W / bg.naturalWidth, H / bg.naturalHeight) * 1.07;
+  const k = s * bg.naturalWidth / 1280;
+  const ox = (W - bg.naturalWidth * s) / 2 - camX * 0.08, oy = (H - bg.naturalHeight * s) / 2;
+  const X = (x) => ox + x * k, Y = (y) => oy + y * k;
+  // headlights crossing the street at the far end of the tunnel
+  TUN.nextCar -= dt;
+  if (TUN.nextCar <= 0) { TUN.nextCar = 2.5 + Math.random() * 4; TUN.cars.push({ x: Math.random() < 0.5 ? -1 : 1, t: 0 }); }
+  ctx.save(); ctx.beginPath(); ctx.rect(X(580), Y(405), 120 * k, 50 * k); ctx.clip(); ctx.globalCompositeOperation = "lighter";
+  for (const c of TUN.cars) {
+    c.t += dt; const u = c.t / 1.1, cx = c.x < 0 ? X(560 + 160 * u) : X(720 - 160 * u);
+    const g = ctx.createRadialGradient(cx, Y(432), 1, cx, Y(432), 40 * k);
+    g.addColorStop(0, "rgba(255,240,200,0.8)"); g.addColorStop(1, "rgba(255,200,120,0)");
+    ctx.fillStyle = g; ctx.fillRect(cx - 40 * k, Y(392), 80 * k, 80 * k);
+  }
+  ctx.restore();
+  TUN.cars = TUN.cars.filter((c) => c.t < 1.1);
+  // tube lights: soft glow, one row element misbehaves
+  ctx.save(); ctx.globalCompositeOperation = "lighter";
+  [[639, 25, 1.4], [639, 150, 1.1], [639, 212, 0.9], [639, 258, 0.7], [639, 296, 0.6], [639, 330, 0.5]].forEach(([lx, ly, sz], i) => {
+    let a = 0.16 + 0.03 * Math.sin(t * 50 + i);
+    if (i === 2 && Math.sin(t * 1.3) > 0.6) a *= Math.random() < 0.5 ? 0.1 : 1;        // the bad one
+    const g = ctx.createRadialGradient(X(lx), Y(ly), 2, X(lx), Y(ly), 170 * sz * k);
+    g.addColorStop(0, `rgba(210,235,255,${a})`); g.addColorStop(1, "rgba(180,210,255,0)");
+    ctx.fillStyle = g; ctx.fillRect(X(lx) - 170 * sz * k, Y(ly) - 170 * sz * k, 340 * sz * k, 340 * sz * k);
+  });
+  ctx.restore();
+  // the broken lamp drips
+  if (Math.random() < dt * 2.2) TUN.drops.push({ x: 842 + rand(-6, 6), y: 128, vy: 0 });
+  ctx.fillStyle = "rgba(190,220,255,0.75)";
+  for (const d of TUN.drops) { d.vy += 900 * dt; d.y += d.vy * dt; ctx.fillRect(X(d.x), Y(d.y), 2 * k, 6 * k); }
+  TUN.drops = TUN.drops.filter((d) => d.y < 540);
+  // musicians: guitarist on the left facing the fight, old man with a bayan on the right
+  const gu = img(Math.floor(t * 4.2) % 2 ? "tunnel.guitar_2" : "tunnel.guitar_1");
+  if (gu) ctx.drawImage(gu, X(38), Y(598) - gu.naturalHeight * k * 0.95, gu.naturalWidth * k * 0.95, gu.naturalHeight * k * 0.95);
+  const bx = Math.sin(t * 2.6) > 0;                                          // the bellows breathe
+  const ba = img(bx ? "tunnel.bayan_1" : "tunnel.bayan_2");
+  if (ba) ctx.drawImage(ba, X(1222) - ba.naturalWidth * k, Y(606) - ba.naturalHeight * k, ba.naturalWidth * k, ba.naturalHeight * k);
+  // coins into the guitar case now and then
+  TUN.nextCoin -= dt;
+  if (TUN.nextCoin <= 0) { TUN.nextCoin = 4 + Math.random() * 6; TUN.coins.push({ x: 205 + rand(-20, 20), y: 470, vy: -200, t: 0 }); }
+  for (const c of TUN.coins) { c.t += dt; c.vy += 1200 * dt; c.y = Math.min(c.y + c.vy * dt, 578);
+    ctx.fillStyle = Math.sin(c.t * 30) > 0 ? "#ffe27a" : "#c9a040"; ctx.fillRect(X(c.x), Y(c.y), 5 * k, 5 * k); }
+  TUN.coins = TUN.coins.filter((c) => c.t < 1.2);
 }
 
 // «Палёнка» market stall: the seller dozes at his till, slams it shut when the fight starts and ducks
@@ -4487,6 +4541,7 @@ function drawStage(stageId, camX) {
   if (stageId === "mansion" && bg) drawMansionFx(bg, camX);
   if (stageId === "roof" && bg) drawRoofFx(bg, camX);
   if (stageId === "palenka" && bg) drawPalenkaFx(bg, camX);
+  if (stageId === "tunnel" && bg) drawTunnelFx(bg, camX);
 
   const t = G.time;
   if (stageId === "concert") {
