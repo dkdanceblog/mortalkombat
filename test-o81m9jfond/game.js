@@ -649,7 +649,7 @@ const SFX_VOLUME = {
   special_ramirez: 0.7, special_babangida: 0.75, special_sqwoz: 0.75, special_shilo: 0.7, special_krip: 0.7, special_tito: 0.7,
   finish_heartbeat: 0.9, dazed_birds: 0.35, fat_rose_swoon: 0.7, fat_hearse_engine: 0.7, fat_car_door: 0.8, fat_car_leave: 0.7, fat_stork: 0.75, fat_glitch: 0.7, fat_guitar_smash: 0.9, fat_mug_land: 0.85, fat_tea_splash: 0.8, fat_wolf: 0.85, fat_howl: 0.6, fat_monster: 0.85, fat_bubbles: 0.7, fat_burp: 0.8, fat_crowd: 0.7, fat_brawl: 0.8, secret_unlock: 0.7, zilla_step: 0.75, rem_monkeys_hit: 0.75,
   special_husky: 0.8, husky_heal: 0.75, special_loki: 0.8, el_charge: 0.7, el_water: 0.85, el_wood: 0.85, el_earth: 0.9, el_metal: 0.9, el_boom: 0.95, fat_fox: 0.8, boss_reveal: 0.9, bab_fake_death: 0.8,
-  voice_fatality: 1.0, voice_holostyality: 1.0, voice_ragequit: 1.0, voice_finish_him: 1.0,
+  voice_chip_win: 1.0, voice_fatality: 1.0, voice_holostyality: 1.0, voice_ragequit: 1.0, voice_finish_him: 1.0,
   fat_bottle_smash: 0.9, fat_laser: 0.75, loki_fire: 0.55, fatality_sting: 0.85, fat_burn: 0.8, fat_flies: 0.7,
   fat_freeze: 0.8, fat_ice_shatter: 0.9, fat_tv_smash: 0.95, fat_stomp: 0.9, fat_dust: 0.8,
   react_wasteland: 0.3, react_gorgorod: 0.35, react_train: 0.3, react_mansion: 0.3, react_roof: 0.3, react_palenka: 0.3, react_tunnel: 0.35, react_moscow: 0.3, react_thailand: 0.3, react_londograd: 0.3, tunnel_busker: 0.22, gorgorod_thunder: 0.5, tunnel_coin: 0.5, palenka_till: 0.7,
@@ -3927,6 +3927,7 @@ function afterRound() {
     checkMatchSecrets();
     checkLegend();
     setScreen("end");
+    if (F.matchWinner >= 0 && F.fighters[F.matchWinner].cid === "chip") setTimeout(() => playSfx("voice_chip_win"), 500);   // «с тотальной победой»
     G.endLock = 0.9;
     return;
   }
