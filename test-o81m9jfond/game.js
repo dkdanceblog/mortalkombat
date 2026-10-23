@@ -118,7 +118,7 @@ const CHARS = {
     perk: "ФИШКА: гантеля проламывает блок — даже через защиту отнимает здоровье",
     blurb: "Качалка во дворе.",
     loseTitle: "ШИЛО ЗАТУПИЛОСЬ",
-    quotes: ["ГОЛУБИ, ФАС!", "ЖЕЛЕЗО НЕ ВРЁТ", "ЕЩЁ ПОДХОД", "КАЧАЙСЯ"],
+    quotes: ["И БУДЕТ ФАРШ, И БУДЕТ МЯСО", "РУБИ, ТОПОР, ДА ЕБ*ШЬ", "ГОЛУБИ ЭТИ НЕ ЗНАЮТ ПОЩАДЫ", "ДУМАЙ ПОЗИТИВНО", "БЕЙ И УЛЫБАЙСЯ"],
     moves: {
       // swing with the dumbbell: heavier and slower than a jab
       light: { frame: "light", startup: 0.09, active: 0.09, recovery: 0.2, dmg: 7, reach: 125, dumbbell: true,
