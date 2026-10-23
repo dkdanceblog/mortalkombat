@@ -4819,6 +4819,11 @@ function startFatality(w, l) {
   }
   F.slow = 0; F.flash = 0.5; F.shake = 10;
   F.stats.fatality = (F.stats.fatality || 0) + 1;
+  if (!w.isBot && !G.botVsBot) {
+    for (const sd of SECRETS) if (sd.fat === w.cid) unlockSecret(sd.id);
+    const done = new Set(store.get("fat_done", [])); done.add(w.cid); store.set("fat_done", [...done]);
+    if (Object.keys(FATALITIES).every((c) => done.has(c))) unlockSecret("a_collector");
+  }
   playSfx("superStart");
 }
 
@@ -7206,7 +7211,7 @@ function openSecrets() { G.secretsBack = G.screen === "mode" ? "mode" : "title";
 function drawSecrets() {
   menuBackground(0.8);
   header("СЕКРЕТЫ", `НАЙДЕНО ${secrets.size} ИЗ ${SECRETS.length}`);
-  const cols = 3, gx = 14, gy = 10;
+  const cols = SECRETS.length > 12 ? 4 : 3, gx = 14, gy = 10;
   const rows = Math.ceil(SECRETS.length / cols);
   const w = Math.floor((W - 60 - gx * (cols - 1)) / cols);
   const y0 = 140;
@@ -7863,6 +7868,13 @@ const SECRETS = [
   { id: "a_center", name: "СПАСИБО ЦЕНТРУ ЗА ЭТО!", win: "guf", stage: "moscow", how: "Выиграй за Гуфа в Городе дорог" },
   { id: "a_pussyboy", name: "ПУСИБОЙ", special: "kreed", how: "Используй спецприём Егора" },
   { id: "a_truegangsta", name: "ЕДИНСТВЕННЫЙ ТРУ-ГАНГСТА-РЭПЕР", lose: "chip", how: "Победи Чипинкоса" },
+  { id: "a_hood", name: "МАСТЕР КАПЮШОН", lose: "babangida", how: "Победи Бабангиду" },
+  { id: "a_ragequit", name: "RAGE QUIT", fat: "loki", how: "Сделай фаталити Локимина — удали соперника" },
+  { id: "a_nuke", name: "ЯДЕРКА", win: "atl", stage: "wasteland", how: "Выиграй за ATL в Апокалипсисе" },
+  { id: "a_mayor", name: "СЛОВО МЭРА", win: "oxxxy", stage: "gorgorod", how: "Выиграй за Оксимирона в Горгороде" },
+  { id: "a_suck", name: "ПОСОСИ", win: "morgen", stage: "mansion", how: "Выиграй за Моргенштерна в его особняке" },
+  { id: "a_sunset", name: "МАЛИНОВЫЙ ЗАКАТ", win: "korzh", stage: "roof", how: "Выиграй за Коржа на Закате" },
+  { id: "a_collector", name: "КОЛЛЕКЦИОНЕР", event: "allfat", how: "Попробуй все фаталити" },
 ];
 const SECRET_INFO = Object.fromEntries(SECRETS.map((s) => [s.id, { how: s.how, hint: s.how }]));
 // Called once per finished match
@@ -7871,7 +7883,7 @@ function checkMatchSecrets() {
   const mw = F.matchWinner;
   const humans = F.fighters.filter((f) => !f.isBot);
   for (const sd of SECRETS) {
-    if (sd.special) continue;   // unlocked in startSpecial
+    if (sd.special || sd.fat || sd.event) continue;   // unlocked where they happen
     if (sd.lost) {   // a human lost with this fighter
       if (mw >= 0 && humans.some((f) => f.slot !== mw && f.cid === sd.lost)) unlockSecret(sd.id);
       continue;
