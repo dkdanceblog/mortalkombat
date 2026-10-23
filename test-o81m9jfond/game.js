@@ -68,8 +68,8 @@ const CHARS = {
     speed: 285, power: 1.0, specialCd: 6.0, tough: 1.0, jump: 1.05, weight: 1.0, dash: 1.05,
     stats: { "СКОРОСТЬ": 3, "СИЛА": 3, "ЗДОРОВЬЕ": 3 },
     perk: "ФИШКА: кубик льда замораживает — соперник ненадолго замедляется",
-    blurb: "Мамбл в маске.",
-    loseTitle: "ГЛЭМ ОТМЕНЁН",
+    blurb: "Худрич.",
+    loseTitle: "ФЛАД ВСЁ",
     quotes: ["ШВЕПСОВО", "ТУПАЯ СУКА, БУДТО ПИТЕКАНТРОП", "ТЫ С ЧЛЕНОМ ВО РТУ — ЭТО МАМБЛ", "GLAM GO!", "ЧИЗАРП"],
     moves: {
       // kung-fu tiger claw from a wide stance
@@ -5822,7 +5822,7 @@ function drawSunglasses(x, y, dir, rot) {
   ctx.fillStyle = "rgba(255,255,255,0.45)"; ctx.fillRect(-16, 0, 4, 2); ctx.fillRect(7, 0, 4, 2);
   ctx.restore();
 }
-const FACE_EYE = [13, -176];   // glowing eyes on the no-glasses pose, from the feet anchor
+const FACE_EYE = [19, -215];   // glowing eyes on the no-glasses pose, from the feet anchor
 function drawLaserEyes(x, y, dir, k, t, bare) {
   ctx.save();
   if (!bare) { ctx.fillStyle = `rgba(40,8,8,${0.9 * k})`; ctx.fillRect(x - 15, y - 6, 30, 13); }   // hides the painted lenses
