@@ -183,7 +183,7 @@ const CHARS = {
     perk: "ФИШКА: пропустил удар — звереет и бьёт сильнее",
     blurb: "Король слэма.",
     loseTitle: "РЭМ ОТМЫЛСЯ",
-    quotes: ["В СЛЭМ!", "ОБЕЗЬЯНЫ, ФАС!", "ГРЯЗЬ НЕ СМЫВАЕТСЯ", "СТЕНКА НА СТЕНКУ!"],
+    quotes: ["УСЛЕДИ ЗА БАЗАРОМ, АГОРАНОМ", "Я ПОТОПЛЮ ТЕБЯ ЗА НЕДОГОН", "ТВОЯ СУКА ГЛОТАЕТ НАШ КОКТЕЙЛЬ", "ДОЛБО*Б ИСЧЕЗ, МНЕ ХВАТИЛО ЛИШЬ ЩЁЛКНУТЬ ЕБ*ЛОМ"],
     moves: {
       // windmill (hardcore dancing): the arm swings a full circle and comes down from above — reaches crouchers
       light: { frame: "light", startup: 0.1, active: 0.1, recovery: 0.2, dmg: 7, reach: 118,
