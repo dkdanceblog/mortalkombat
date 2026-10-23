@@ -3953,6 +3953,7 @@ function updateBot(bot, opp, dt) {
 /* ------------------------------------------------------------------ */
 function endRound(type, winnerSlot, dir = 1) {
   if (F.phase !== "fight") return;
+  if (F.fighters[0].hp < 100) F.hurt0 = true;            // RAP GOD: player 1 never lost a single point
   F.phase = "ko";
   F.phaseT = 0;
   F.endType = type;
@@ -4003,6 +4004,7 @@ function afterRound() {
     else F.matchWinner = F.wins[0] > F.wins[1] ? 0 : 1;
     checkMatchSecrets();
     checkLegend();
+    checkRapGod();
     setScreen("end");
     if (F.matchWinner >= 0 && F.fighters[F.matchWinner].cid === "chip") setTimeout(() => playSfx("voice_chip_win"), 500);   // «с тотальной победой»
     G.endLock = 0.9;
@@ -7875,6 +7877,7 @@ const SECRETS = [
   { id: "a_suck", name: "ПОСОСИ", win: "morgen", stage: "mansion", how: "Выиграй за Моргенштерна в его особняке" },
   { id: "a_sunset", name: "МАЛИНОВЫЙ ЗАКАТ", win: "korzh", stage: "roof", how: "Выиграй за Коржа на Закате" },
   { id: "a_collector", name: "КОЛЛЕКЦИОНЕР", event: "allfat", how: "Попробуй все фаталити" },
+  { id: "a_rapgod", name: "RAP GOD", event: "rapgod", how: "Выиграй бой на сложном боте, не пропустив ни одного удара" },
 ];
 const SECRET_INFO = Object.fromEntries(SECRETS.map((s) => [s.id, { how: s.how, hint: s.how }]));
 // Called once per finished match
@@ -7995,6 +7998,9 @@ function drawTwinPreview(id, x) {
 
 /* Legend: beat the hard bot without losing a round */
 function legends() { return store.get("legends", []); }
+function checkRapGod() {
+  if (G.mode === 1 && !G.tutorial && !G.botVsBot && F.matchWinner === 0 && G.difficulty === "hard" && !F.hurt0) unlockSecret("a_rapgod");
+}
 function checkLegend() {
   if (G.mode === 1 && F.matchWinner === 0 && G.difficulty === "hard" && F.wins[1] === 0) {
     F.legend = true;
