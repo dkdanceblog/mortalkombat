@@ -7567,6 +7567,7 @@ function drawCharacter() {
   });
 
   // Previews
+  const twoRowsSel = cols < selectCount();
   const p1id = G.chars[0] || CHAR_IDS[G.charCursor[0]];
   drawPreview(p1id, PREVIEW_X, 0, G.chars[0] ? "ГОТОВ" : null);
   if (two) {
@@ -7576,7 +7577,8 @@ function drawCharacter() {
   } else {
     if (G.twinArmed) drawTwinPreview(CHARS[CHAR_IDS[G.charCursor[0]]].id, W - PREVIEW_X);
     else drawMystery(W - PREVIEW_X, "СОПЕРНИК");
-    region("mystery", W - PREVIEW_X - 130, 300, 260, 340, () => {
+    const my0 = twoRowsSel ? 410 : 300;                  // never over the second row of tiles
+    region("mystery", W - PREVIEW_X - 130, my0, 260, 640 - my0, () => {
       G.mysteryClicks = (G.mysteryClicks || 0) + 1;
       playSfx("block");
       if (G.mysteryClicks >= 5) { G.mysteryClicks = 0; G.twinArmed = !G.twinArmed; playSfx("ko"); }
@@ -7601,7 +7603,11 @@ function drawCharacter() {
     }
   });
   const bl = wrapText(d.blurb, ix + iw / 2, iy + (twoRows ? 170 : 192), iw - 40, 20, { size: 17, align: "center", color: "#fff", shadow: false });
-  if (d.perk) text(d.perk, ix + iw / 2, iy + ih - 22, { size: fitText(d.perk, iw - 36, 15), align: "center", color: GOLD, shadow: false });
+  if (d.perk) {
+    const ps = fitText(d.perk, iw - 36, 15, FONT_HEAD, 13);
+    if (textWidth(d.perk, ps, FONT_HEAD) <= iw - 36) text(d.perk, ix + iw / 2, iy + ih - 22, { size: ps, align: "center", color: GOLD, shadow: false });
+    else wrapText(d.perk, ix + iw / 2, iy + ih - 36, iw - 40, 17, { size: 13, align: "center", color: GOLD, shadow: false });   // long perk: two lines
+  }
 
   footer(two
     ? (G.picking === 0 ? "1P: A D + F    (или мышь)    ESC  НАЗАД" : "2P: ← → + J / ENTER    ESC  НАЗАД")
@@ -7646,8 +7652,9 @@ function drawMystery(x, label) {
   const id = CHAR_IDS[Math.floor(G.time * 2.5) % CHAR_IDS.length];
   const fr = frameOf(id, "idle");
   if (fr) {
+    const sc = charCols() < selectCount() ? 0.9 : 1.25;
     ctx.translate(x, y);
-    ctx.scale(-1.25, 1.25);
+    ctx.scale(-sc, sc);
     ctx.drawImage(silhouette(fr.image, "#1a1440"), -fr.ax, -fr.ay);
   }
   ctx.restore();
@@ -8111,7 +8118,7 @@ function drawTwinPreview(id, x) {
   ctx.fillStyle = g;
   ctx.fillRect(x - 230, y - 360, 460, 420);
   const b = Math.sin(G.time * 3.2);
-  drawPose(id, "idle", x, y, { dir: -1, scale: 1.25, sy: 1 + 0.012 * b, tint: TWIN_TINT });
+  drawPose(id, "idle", x, y, { dir: -1, scale: charCols() < selectCount() ? 0.9 : 1.25, sy: 1 + 0.012 * b, tint: TWIN_TINT });
   text("ЗЛОЙ ДВОЙНИК", x, y + 34, { size: 14, font: FONT_PIX, align: "center", color: "#c45cff" });
 }
 
