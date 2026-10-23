@@ -150,6 +150,12 @@ canvas {
     font-size: 15px;
   }
 
+  /* Portrait phone: a taller strip so БЛОК fits above the stick without covering the pause button or the scene */
+  @media (orientation: portrait) {
+    body.mobile-fight #touch-controls { height: 280px; }
+    body.mobile-fight canvas { width: min(100vw, calc((100dvh - 280px) * 16 / 9)); }
+  }
+
   /* Landscape phone: the scene sits in the middle, controls live in the side gutters — never over the fight. */
   @media (orientation: landscape) and (max-height: 600px) {
     body.mobile-fight { --gut: clamp(140px, 19vw, 210px); }
