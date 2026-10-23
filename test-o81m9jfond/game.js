@@ -548,7 +548,8 @@ const ASSET_PATHS = {
   "portrait.babangida": "assets/portraits/babangida_portrait.png",
   "portrait.smoky": "assets/portraits/smoky_portrait.png",
   "portrait.fludd": "assets/portraits/fludd_portrait.png",
-  "fx.icecube": "assets/effects/icecube.png", "fx.lollipop": "assets/effects/lollipop.png",
+  "fx.icecube": "assets/effects/icecube.png", "fx.rose": "assets/effects/rose.png", "fx.egg": "assets/effects/egg.png", "fx.bill": "assets/effects/bill.png", "fx.sunglasses": "assets/effects/sunglasses.png", "fx.ice_block": "assets/effects/ice_block.png",
+  "fx.ice_shard_1": "assets/effects/ice_shard_1.png", "fx.ice_shard_2": "assets/effects/ice_shard_2.png", "fx.ice_shard_3": "assets/effects/ice_shard_3.png", "fx.ice_shard_4": "assets/effects/ice_shard_4.png", "fx.ice_shard_5": "assets/effects/ice_shard_5.png", "fx.ice_shard_6": "assets/effects/ice_shard_6.png", "fx.lollipop": "assets/effects/lollipop.png",
   "portrait.sqwoz": "assets/portraits/sqwoz_portrait.png",
   "portrait.shilo": "assets/portraits/shilo_portrait.png",
   "portrait.krip": "assets/portraits/krip_portrait.png",
@@ -5821,6 +5822,8 @@ function drawBrawlCloud(x, y, r, t, a = 1) {
 }
 function drawSunglasses(x, y, dir, rot) {
   ctx.save(); ctx.translate(x, y); ctx.rotate(rot); if (dir < 0) ctx.scale(-1, 1);
+  const im = img("fx.sunglasses");
+  if (im) { ctx.drawImage(im, -26, -6, 52, 52 * im.height / im.width); ctx.restore(); return; }
   ctx.fillStyle = "#c8323a"; ctx.fillRect(-22, -2, 44, 3);                                // red frame bar
   ctx.fillStyle = "#0a0a0a";
   ctx.beginPath(); ctx.ellipse(-11, 4, 10, 7, 0, 0, Math.PI * 2); ctx.fill();
@@ -6093,6 +6096,13 @@ function drawBigRose(x, y, rot, sc) {
 function drawIceBlock(x, y, w, h, k, crack) {
   const hh = h * k, top = y + 6 - hh;
   ctx.save();
+  const im = img("fx.ice_block");
+  if (im) {                                   // the block grows from the floor up: draw only its lower part
+    ctx.globalAlpha = 0.6;
+    const sh = im.height * k;
+    ctx.drawImage(im, 0, im.height - sh, im.width, sh, x - w / 2 - 10, top - 10, w + 20, hh + 14);
+    ctx.globalAlpha = 1;
+  } else {
   ctx.fillStyle = "rgba(170,225,255,0.33)";
   ctx.fillRect(x - w / 2, top, w, hh);
   const g = ctx.createLinearGradient(x - w / 2, top, x + w / 2, y);
@@ -6103,6 +6113,7 @@ function drawIceBlock(x, y, w, h, k, crack) {
   ctx.strokeStyle = "rgba(255,255,255,0.55)"; ctx.lineWidth = 6;
   ctx.beginPath(); ctx.moveTo(x - w / 2 + 14, top + 40); ctx.lineTo(x - w / 2 + 44, top + 10); ctx.stroke();
   ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x - w / 2 + 14, top + 70); ctx.lineTo(x - w / 2 + 70, top + 14); ctx.stroke();
+  }
   if (crack > 0) {
     ctx.strokeStyle = "rgba(255,255,255,0.95)"; ctx.lineWidth = 2;
     const cx = x, cy = top + hh * 0.45;
@@ -6115,6 +6126,8 @@ function drawIceBlock(x, y, w, h, k, crack) {
 }
 function drawIceChunk(x, y, s, r) {
   ctx.save(); ctx.translate(x, y - s * 0.4); ctx.rotate(r);
+  const im = img("fx.ice_shard_" + (1 + Math.floor(Math.abs(r) * 7) % 6));
+  if (im) { const d = s * 2.6, sc = d / Math.max(im.width, im.height); ctx.drawImage(im, -im.width * sc / 2, -im.height * sc / 2, im.width * sc, im.height * sc); ctx.restore(); return; }
   ctx.fillStyle = "rgba(190,232,255,0.85)"; ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(-s, s * 0.4); ctx.lineTo(-s * 0.4, -s * 0.6); ctx.lineTo(s * 0.7, -s * 0.3); ctx.lineTo(s, s * 0.4); ctx.closePath();
   ctx.fill(); ctx.stroke(); ctx.restore();
@@ -8365,6 +8378,8 @@ function drawEasterFx() {
 function drawRose(p) {
   ctx.translate(Math.round(p.x), Math.round(p.y));
   ctx.rotate(p.rot);
+  const im = img("fx.rose");
+  if (im) { const h = 50, w = h * im.width / im.height; ctx.drawImage(im, -w / 2, -h * 0.28, w, h); return; }   // bloom at the origin
   ctx.fillStyle = "#1f6b2a";
   ctx.fillRect(-1, 4, 3, 22);
   ctx.fillRect(1, 12, 6, 3);
@@ -8382,6 +8397,8 @@ function drawEgg(p) {
   ctx.translate(Math.round(p.x), Math.round(p.y));
   ctx.rotate(p.rot);
   ctx.scale(p.size, p.size);
+  const im = img("fx.egg");
+  if (im) { const h = 36, w = h * im.width / im.height; ctx.drawImage(im, -w / 2, -h / 2, w, h); return; }
   const egg = () => { ctx.beginPath(); ctx.ellipse(0, 0, 11, 15, 0, 0, Math.PI * 2); };
   ctx.fillStyle = "#1a1030";
   ctx.beginPath(); ctx.ellipse(0, 0, 13, 17, 0, 0, Math.PI * 2); ctx.fill();
@@ -8399,6 +8416,8 @@ function drawBill(p) {
   ctx.translate(p.x + Math.sin(G.time * 3 + p.sway) * 14, p.y);
   ctx.rotate(p.rot + G.time * p.spin);
   ctx.scale(1, Math.abs(Math.cos(G.time * 4 + p.sway)) * 0.8 + 0.2);
+  const im = img("fx.bill");
+  if (im) { ctx.drawImage(im, -20, -12, 40, 24); return; }
   ctx.fillStyle = "#2e8b3e";
   ctx.fillRect(-14, -7, 28, 14);
   ctx.fillStyle = "#7be08a";
