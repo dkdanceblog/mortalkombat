@@ -1810,7 +1810,7 @@ function updateSpecial(f, opp, a) {
         const tip = overlap({ x0: Math.min(tip0, far), x1: Math.max(tip0, far), y0: box.y0, y1: box.y1 }, hb);
         // the hair wraps around the opponent, yanks them in and Maybe throws them over herself
         const res = applyHit(f, opp, {
-          dmg: tip ? 9 : 7, height: "mid", hitstun: 2, blockstun: 0.2,
+          dmg: tip ? 12 : 9, height: "mid", hitstun: 2, blockstun: 0.2,
           knock: 0, dir: f.dir, sfx: tip ? "hitHeavy" : "hitLight", stop: tip ? 0.12 : 0.07, chip: 2,
           sparkX: opp.x - f.dir * 16, sparkY: f.y - 165,
         });
@@ -3034,7 +3034,7 @@ function updatePull(f, dt) {
     const by = f.thrown.by;
     f.thrown = null;
     f.hitstun = 0.5;
-    const dmg = 8;
+    const dmg = F.fighters[by] && F.fighters[by].cid === "maybe" ? 11 : 8;   // Maybe's whip slam hits harder
     f.hp = Math.max(0, f.hp - dmg);
     if (f.hp <= 0) fakeDeath(f);
     f.flash = 0.1;
