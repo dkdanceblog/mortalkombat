@@ -4724,7 +4724,7 @@ const FINISH_TIME = 5;
 const FATALITIES = {
   guf:    { kind: "ice",   caption: "АЙС БЭЙБИ",              dur: 3.4, titleAt: 1.9 },
   noize:  { kind: "tv",    caption: "Я РОК-ЗВЕЗДА, ИДИТЕ НА",            dur: 3.3, titleAt: 2.4 },
-  oxxxy:  { kind: "stomp", caption: "СОПЕРНИК ПОД ПОДОШВОЙ",  dur: 3.1, titleAt: 1.5 },
+  oxxxy:  { kind: "stomp", caption: "СОПЕРНИК ПОД ПОДОШВОЙ",  dur: 3.6, titleAt: 2.0 },
   morgen: { kind: "burn",  caption: "ЛЕГЕНДАРНАЯ ПЫЛЬ",       dur: 3.9, titleAt: 2.7 },
   maybe:  { kind: "dora",  caption: "ДОРА ДУРА!",               dur: 3.6, titleAt: 2.0 },
   kreed:  { kind: "rose",  caption: "", title: "ХОЛОСТЯЛИТИ", dur: 3.8, titleAt: 2.5 },
@@ -4861,16 +4861,23 @@ function updateFatality(dt) {
     if (t > 0.85 && t < 2.0 && Math.random() < dt * 6) hitSpark(l.x + rand(-40, 40), head(l) + rand(10, 70), 2);
     once("fall", 2.35, () => { playSfx("bodyfall"); playSfx("landHeavy"); F.shake = 16; spawnDust(l.x + dir * 120, FLOOR_Y, 1.6); });
   } else if (fat.kind === "stomp") {
-    once("jump", 0.3, () => { playSfx("jump"); playSfx("whooshHeavy"); spawnDust(fat.x0, FLOOR_Y, 1.2); });
-    once("land", 0.9, () => {
-      playSfx("fat_stomp"); playSfx("landHeavy"); F.shake = 30; F.flash = 0.3; buzz([90, 40, 220]);
+    // the opponent shrinks into an 8-bit platformer enemy, Oxxxy jumps on his head
+    once("poof", 0.2, () => { playSfx("superReady"); F.flash = 0.35;
+      for (let i = 0; i < 24; i++) F.particles.push({ type: "puff", x: l.x + rand(-60, 60), y: l.y - rand(20, 220), vx: rand(-160, 160), vy: rand(-160, 40), life: rand(0.4, 0.8), max: 0.8, size: pick([10, 14, 18]), color: pick(["rgba(255,255,255,0.8)", "rgba(255,230,150,0.7)"]) });
+      popup(l.x, l.y - 260, "8-BIT!", "#ffe27a", 34); });
+    once("jump", 0.75, () => { playSfx("jump"); playSfx("whooshHeavy"); spawnDust(fat.x0, FLOOR_Y, 1.2); });
+    once("land", 1.3, () => {
+      playSfx("fat_stomp"); playSfx("money"); F.shake = 24; F.flash = 0.2; buzz([90, 40, 220]);
+      popup(l.x, FLOOR_Y - 190, "+100", "#ffffff", 34);
+      fat.coin = { t: 0 };
       spawnDust(l.x - 70, FLOOR_Y, 2); spawnDust(l.x + 70, FLOOR_Y, 2);
       for (let i = 0; i < 40; i++) F.particles.push({ type: "sq", x: l.x + rand(-110, 110), y: FLOOR_Y - rand(0, 20), vx: rand(-500, 500), vy: rand(-500, -120), g: 1500,
         life: rand(0.4, 0.9), max: 0.9, size: pick([4, 6, 8]), color: pick(["#8a7a6a", "#b5a48f", "#5a4c40", "#ffffff"]) });
     });
-    if (t > 1.2 && t < 2.3 && Math.random() < dt * 8) F.particles.push({ type: "sq", x: l.x + rand(-120, 120), y: FLOOR_Y - 4, vx: rand(-200, 200), vy: rand(-200, -60), g: 900,
+    if (fat.coin) fat.coin.t += dt;
+    if (t > 1.6 && t < 2.6 && Math.random() < dt * 8) F.particles.push({ type: "sq", x: l.x + rand(-120, 120), y: FLOOR_Y - 4, vx: rand(-200, 200), vy: rand(-200, -60), g: 900,
       life: 0.5, max: 0.5, size: pick([4, 6]), color: pick(["#8a7a6a", "#b5a48f"]) });
-    once("grind", 1.25, () => playSfx("sweep"));
+    once("grind", 1.65, () => playSfx("sweep"));
   } else if (fat.kind === "burn") {
     once("snap", 0.35, () => playSfx("special_morgen"));
     once("ignite", 0.55, () => { playSfx("fat_burn"); F.flash = 0.35; F.shake = 14; });
@@ -5107,33 +5114,48 @@ function drawFatFighter(f) {
 
   if (fat.kind === "stomp") {
     const l = F.fighters[fat.l];
+    const MINI = 0.5, miniTop = () => { const fr2 = frameOf(l.cid, "walk_1") || frameOf(l.cid, "idle"); return fr2 ? fr2.ay * MINI : 120; };
+    // the mini waddles back and forth like a platformer enemy
+    const waddle = (tt) => Math.sin(Math.min(tt, 1.3) * 5) * 18;
     if (isW) {
       let x = fat.x0, y = FLOOR_Y, name = "crouch", rot = 0;
-      if (t >= 0.3 && t < 0.9) {
-        const k = (t - 0.3) / 0.6;
-        x = lerp(fat.x0, l.x, k); y = lerp(FLOOR_Y, FLOOR_Y - pancakeH(l), k) - 300 * Math.sin(k * Math.PI); name = "jump";
+      if (t < 0.75) name = t < 0.5 ? "idle" : "crouch";
+      else if (t < 1.3) {
+        const k = (t - 0.75) / 0.55, tx = l.x + waddle(1.3);
+        x = lerp(fat.x0, tx, k); y = lerp(FLOOR_Y, FLOOR_Y - 26, k) - 330 * Math.sin(k * Math.PI); name = "jump";
         rot = dir * 0.25 * Math.sin(k * Math.PI);
-      } else if (t >= 0.9) {
-        x = l.x; y = FLOOR_Y - pancakeH(l);
-        name = t < 1.2 ? "crouch" : end ? "win" : "idle";
-        if (t > 1.25 && t < 2.3) rot = Math.sin((t - 1.25) * 14) * 0.08;
+      } else {
+        x = l.x + waddle(1.3); y = FLOOR_Y - 26;
+        name = t < 1.6 ? "crouch" : end ? "win" : "idle";
+        if (t > 1.65 && t < 2.7) rot = Math.sin((t - 1.65) * 14) * 0.08;
       }
       drawShadowAt(x, 64 * (y < FLOOR_Y - 100 ? 0.6 : 1));
       P(name, x, y, { rot });
+      if (fat.coin) {                                       // a spinning coin pops out of the flattened enemy
+        const c = fat.coin.t, cy = FLOOR_Y - 60 - 260 * c + 420 * c * c;
+        if (c < 1.0) { const w2 = Math.abs(Math.cos(c * 18)) * 16 + 3; ctx.save(); ctx.fillStyle = "#ffd23a"; ctx.strokeStyle = "#8a5a00"; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.ellipse(l.x + waddle(1.3) + 30, cy, w2, 20, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore(); }
+      }
       return;
     }
-    if (t < 0.9) { drawShadowAt(f.x, 70); P("hurt", f.x, f.y, { rot: sway }); return; }
-    const g = clamp((t - 1.25) / 1.0, 0, 1);
-    drawShadowAt(f.x, 170 + 40 * g, 0.55);
-    for (const [dx, dy] of [[-3, 0], [3, 0], [0, -3]]) P("ko", f.x + dx, f.y + 2 + dy, { sy: 0.6, sx: 1.25 + 0.35 * g, flash: 1, flashColor: "#ffe2b8", alpha: 0.55 });
-    P("ko", f.x, f.y + 2, { sy: 0.6, sx: 1.25 + 0.35 * g });
-    // cartoon splat marks
-    ctx.save(); ctx.strokeStyle = "rgba(255,255,255,0.75)"; ctx.lineWidth = 3;
-    for (const s2 of [-1, 1]) for (let i = 0; i < 3; i++) {
-      const x0 = f.x + s2 * (150 + 30 * g + i * 4), y0 = FLOOR_Y - 10 - i * 14;
-      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + s2 * (22 + i * 6), y0 - 8 - i * 6); ctx.stroke();
+    const wx = f.x + (t > 0.45 ? waddle(t - 0.45) : 0);
+    if (t < 0.2) { drawShadowAt(f.x, 70); P("hurt", f.x, f.y, { rot: sway }); return; }
+    if (t < 0.45) {                                         // shrinking in a puff
+      const k = (t - 0.2) / 0.25;
+      drawShadowAt(f.x, 70 * (1 - 0.5 * k));
+      drawPixelPose(l.cid, "hurt", f.x, f.y, -dir, 1 - (1 - MINI) * k, Math.round(1 + 5 * k));
+      return;
     }
-    ctx.restore();
+    if (t < 1.3) {                                          // 8-bit enemy walking back and forth
+      const step = Math.floor(t * 6) % 2;
+      const facing = Math.cos((t - 0.45) * 5) > 0 ? 1 : -1;
+      drawShadowAt(wx, 34);
+      drawPixelPose(l.cid, step ? "walk_1" : "walk_3", wx, f.y - (step ? 3 : 0), facing, MINI, 6);
+      return;
+    }
+    const g = clamp((t - 1.65) / 0.9, 0, 1);               // squashed flat
+    drawShadowAt(wx, 60 + 20 * g, 0.5);
+    drawPixelPose(l.cid, "hurt", wx, f.y, -dir, MINI, 6, 0.18, 1.5 + 0.3 * g);
     return;
   }
 
@@ -5698,6 +5720,25 @@ function drawLaser(x0, y0, x1, y1, t) {
   const g = ctx.createRadialGradient(x1, y1, 2, x1, y1, 50);
   g.addColorStop(0, "rgba(255,240,200,0.9)"); g.addColorStop(1, "rgba(255,40,0,0)");
   ctx.fillStyle = g; ctx.fillRect(x1 - 50, y1 - 50, 100, 100);
+  ctx.restore();
+}
+// a pose rendered as a chunky 8-bit sprite: scaled down, every `px` pixels become one block
+const pixCache = new Map();
+function drawPixelPose(cid, name, x, y, dir, scale, px, sy = 1, sx = 1) {
+  const fr = frameOf(cid, name); if (!fr) return;
+  const key = cid + name + px;
+  let c = pixCache.get(key);
+  if (!c) {
+    const w = Math.max(1, Math.round(fr.image.width / px)), h = Math.max(1, Math.round(fr.image.height / px));
+    c = document.createElement("canvas"); c.width = w; c.height = h;
+    const g = c.getContext("2d"); g.imageSmoothingEnabled = true; g.drawImage(fr.image, 0, 0, w, h);
+    const d = g.getImageData(0, 0, w, h);                  // hard alpha + fewer colours = retro look
+    for (let i = 0; i < d.data.length; i += 4) { d.data[i + 3] = d.data[i + 3] > 110 ? 255 : 0; for (let j = 0; j < 3; j++) d.data[i + j] = Math.round(d.data[i + j] / 48) * 48; }
+    g.putImageData(d, 0, 0); pixCache.set(key, c);
+  }
+  ctx.save(); ctx.imageSmoothingEnabled = false;
+  ctx.translate(Math.round(x), Math.round(y)); ctx.scale(dir * scale * sx, scale * sy);
+  ctx.drawImage(c, -fr.ax, -fr.ay, fr.image.width, fr.image.height);
   ctx.restore();
 }
 const ACID_COLS = ["#7dff3a", "#b8ff5a", "#3acc2a", "#e4ff9a"];
