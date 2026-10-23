@@ -4788,7 +4788,6 @@ function finishKO(l, dir) {
 function finishFall() {
   stopFinishSfx();
   const l = F.fighters[F.finish.l], w = F.fighters[F.finish.w];
-  if (!w.isBot && !G.botVsBot) unlockSecret("a_mercy");
   l.dazed = false; l.ko = true; l.action = null;
   w.won = true;
   F.phase = "ko"; F.phaseT = 0; F.endType = "ko";
@@ -4820,12 +4819,6 @@ function startFatality(w, l) {
   }
   F.slow = 0; F.flash = 0.5; F.shake = 10;
   F.stats.fatality = (F.stats.fatality || 0) + 1;
-  if (!w.isBot && !G.botVsBot) {
-    unlockSecret("a_fatal");
-    for (const sd of SECRETS) if (sd.fat === w.cid) unlockSecret(sd.id);
-    const done = new Set(store.get("fat_done", [])); done.add(w.cid); store.set("fat_done", [...done]);
-    if (done.size >= 10) unlockSecret("a_collector");
-  }
   playSfx("superStart");
 }
 
@@ -7108,7 +7101,7 @@ function arcadeEndItems() {
       A.secretAdded = true; A.ladder.push({ cid: "babangida", stage: "yard", boss: true, secret: true }); A.idx++; A.wins++; setScreen("ladder"); }], toMenu];
   }
   if (won && last) return [["ФИНАЛ", () => {
-    if (A.ladder[A.idx].secret && !babUnlocked()) { CHAR_IDS.push("babangida"); store.set("bab_unlocked", true); A.newBab = true; unlockSecret("a_bab"); } confirmSfx(); G.arcadeBoss = false;
+    if (A.ladder[A.idx].secret && !babUnlocked()) { CHAR_IDS.push("babangida"); store.set("bab_unlocked", true); A.newBab = true; } confirmSfx(); G.arcadeBoss = false;
     if (!chipUnlocked()) { CHAR_IDS.push("chip"); store.set("chip_unlocked", true); A.newUnlock = true; } G.difficulty = A.prevDiff; G.arcadeEndT = G.time; unlockSecret("champion"); setScreen("arcadeEnd"); }], toMenu];
   if (won) return [["СЛЕДУЮЩИЙ БОЙ", () => { confirmSfx(); A.idx++; A.wins++; G.arcadeBoss = false; setScreen("ladder"); }], ["СОХРАНИТЬ", shareResult], toMenu];
   return [["ЕЩЁ РАЗ", () => { A.retries++; arcadeFight(); }], toMenu];
@@ -7212,24 +7205,15 @@ function drawArcadeEndText(A, cid) {
 function openSecrets() { G.secretsBack = G.screen === "mode" ? "mode" : "title"; setScreen("secrets"); }
 function drawSecrets() {
   menuBackground(0.8);
-  const PER = 12, pages = Math.ceil(SECRETS.length / PER);
-  G.secretsPage = clamp(G.secretsPage || 0, 0, pages - 1);
-  header("СЕКРЕТЫ", `НАЙДЕНО ${secrets.size} ИЗ ${SECRETS.length}` + (pages > 1 ? `   •   СТР. ${G.secretsPage + 1} / ${pages}` : ""));
+  header("СЕКРЕТЫ", `НАЙДЕНО ${secrets.size} ИЗ ${SECRETS.length}`);
   const cols = 3, gx = 14, gy = 10;
-  const rows = 4;
+  const rows = Math.ceil(SECRETS.length / cols);
   const w = Math.floor((W - 60 - gx * (cols - 1)) / cols);
   const y0 = 140;
   const h = Math.min(92, Math.floor((H - 60 - y0 - gy * (rows - 1)) / rows));
-  const pageItems = SECRETS.slice(G.secretsPage * PER, G.secretsPage * PER + PER);
-  if (pages > 1) {
-    const arrow = (dirA, x) => { text(dirA < 0 ? "◀" : "▶", x, H - 72, { size: 30, align: "center", color: GOLD, stroke: "#000", strokeW: 5 });
-      region("sec-pg" + dirA, x - 30, H - 100, 60, 56, () => { playSfx("uiMove"); G.secretsPage = (G.secretsPage + dirA + pages) % pages; }); };
-    arrow(-1, W / 2 - 80); arrow(1, W / 2 + 80);
-  }
-  pageItems.forEach((sd, j) => {
-    const i = G.secretsPage * PER + j;
-    const x = 30 + (j % cols) * (w + gx);
-    const y = y0 + Math.floor(j / cols) * (h + gy);
+  SECRETS.forEach((sd, i) => {
+    const x = 30 + (i % cols) * (w + gx);
+    const y = y0 + Math.floor(i / cols) * (h + gy);
     const found = secrets.has(sd.id);
     const info = SECRET_INFO[sd.id] || {};
     panel(x, y, w, h, { border: found ? GOLD : "rgba(157,151,201,0.35)" });
@@ -7240,7 +7224,7 @@ function drawSecrets() {
     if (found) text("✓", x + w - 18, y + 22, { size: 20, align: "center", color: "#8dff7a", stroke: "#000", strokeW: 4 });
   });
   region("secrets-back", 0, H - 46, W, 46, () => { confirmSfx(); setScreen(G.secretsBack || "title"); });
-  footer(isTouch ? "" : "← →  СТРАНИЦЫ    ESC / ENTER  НАЗАД");
+  footer(isTouch ? "" : "ESC / ENTER  НАЗАД");
   backButton();
 }
 
@@ -7879,24 +7863,6 @@ const SECRETS = [
   { id: "a_center", name: "СПАСИБО ЦЕНТРУ ЗА ЭТО!", win: "guf", stage: "moscow", how: "Выиграй за Гуфа в Городе дорог" },
   { id: "a_pussyboy", name: "ПУСИБОЙ", special: "kreed", how: "Используй спецприём Егора" },
   { id: "a_truegangsta", name: "ЕДИНСТВЕННЫЙ ТРУ-ГАНГСТА-РЭПЕР", lose: "chip", how: "Победи Чипинкоса" },
-  // --- big update ---
-  { id: "a_fatal", name: "ФАТАЛИТИ!", event: "fatality", how: "Сделай первое фаталити" },
-  { id: "a_collector", name: "КОЛЛЕКЦИОНЕР", event: "fatality10", how: "Сделай фаталити за 10 разных бойцов" },
-  { id: "a_mercy", name: "МИЛОСЕРДИЕ", event: "mercy", how: "На «ДОБЕЙ ЕГО!» не трогай соперника — пусть падает сам" },
-  { id: "a_holost", name: "ХОЛОСТЯК", fat: "kreed", how: "Сделай ХОЛОСТЯЛИТИ за Егора" },
-  { id: "a_ragequit", name: "RAGE QUIT", fat: "loki", how: "Сделай фаталити за Локи" },
-  { id: "a_8bit", name: "8-BIT", fat: "oxxxy", how: "Сделай фаталити за Окси" },
-  { id: "a_toxin", name: "ПСЫ НЕ ЛЮБЯТ ТОКСИН", fat: "ramirez", how: "Сделай фаталити за РЭМа" },
-  { id: "a_bab", name: "ГОСТЬ ИЗ ПОДПОЛЬЯ", event: "bab", how: "Открой секретного бойца" },
-  { id: "a_water", name: "ЖИВАЯ ВОДА", win: "husky", cond: (w) => w.waterUsed, how: "Победи за Хаски, выпив живую воду" },
-  { id: "a_812", name: "КОД 8-1-2", win: "smoky", lose: "babangida", how: "Победи Бабангиду за Смоки Мо" },
-  { id: "a_kupchino", name: "КУПЧИНО, ЮГ", win: "krip", stage: "gorgorod", how: "Выиграй за Крип-а-Крипа в Горгороде" },
-  { id: "a_titan", name: "ТИТАН ПРОШЛОГО", win: "tito", lose: "morgen", how: "Победи Моргенштерна за Титомира" },
-  { id: "a_nuke", name: "ЯДЕРКА", win: "atl", stage: "wasteland", how: "Выиграй за ATL на Апокалипсисе" },
-  { id: "a_pigeons", name: "ГОЛУБИ НЕ ЗНАЮТ ПОЩАДЫ", win: "shilo", stage: "roof", how: "Выиграй за Шило на Закате" },
-  { id: "a_original", name: "ОРИГИНАЛ", stage: "palenka", how: "Выиграй на Рынке" },
-  { id: "a_hair", name: "КУПЛЮ ВОЛОСЫ", stage: "tunnel", how: "Выиграй в Переходе" },
-  { id: "a_echpochmak", name: "С ПЫЛУ С ЖАРУ", win: "sqwoz", lose: "face", how: "Победи FACE за SQWOZ BAB" },
 ];
 const SECRET_INFO = Object.fromEntries(SECRETS.map((s) => [s.id, { how: s.how, hint: s.how }]));
 // Called once per finished match
@@ -7905,7 +7871,7 @@ function checkMatchSecrets() {
   const mw = F.matchWinner;
   const humans = F.fighters.filter((f) => !f.isBot);
   for (const sd of SECRETS) {
-    if (sd.special || sd.event || sd.fat) continue;   // unlocked where they happen
+    if (sd.special) continue;   // unlocked in startSpecial
     if (sd.lost) {   // a human lost with this fighter
       if (mw >= 0 && humans.some((f) => f.slot !== mw && f.cid === sd.lost)) unlockSecret(sd.id);
       continue;
@@ -7916,7 +7882,6 @@ function checkMatchSecrets() {
     if (sd.win && w.cid !== sd.win) continue;
     if (sd.lose && l.cid !== sd.lose) continue;
     if (sd.stage && G.stage !== sd.stage) continue;
-    if (sd.cond && !sd.cond(w, l)) continue;
     unlockSecret(sd.id);
   }
 }
@@ -8498,8 +8463,6 @@ function handleNav(ev) {
     return;
   }
   if (s === "secrets") {
-    const pages = Math.ceil(SECRETS.length / 12);
-    if (t === "left" || t === "right") G.secretsPage = ((G.secretsPage || 0) + (t === "right" ? 1 : -1) + pages) % pages;
     if (t === "confirm" || t === "back") { confirmSfx(); setScreen(G.secretsBack || "title"); }
     return;
   }
