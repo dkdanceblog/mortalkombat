@@ -7029,7 +7029,7 @@ function startArcade(cid) {
   const stages = STAGE_IDS.filter((s2) => s2 !== "bar");
   const ladder = others.slice(0, ARCADE_FIGHTS - 1).map((o) => ({ cid: o, stage: pick(stages) }));
   ladder.push({ cid: "chip", stage: "bar", boss: true });
-  G.arcade = { cid, ladder, idx: 0, retries: 0, prevDiff: G.difficulty, wins: 0 };
+  G.arcade = { cid, ladder, idx: 0, retries: 0, prevDiff: G.difficulty, wins: 0, chipBefore: chipUnlocked() };
   setScreen("ladder");
 }
 
@@ -7053,8 +7053,8 @@ function arcadeEndItems() {
   const last = A.idx >= A.ladder.length - 1;
   const toMenu = ["МЕНЮ", () => { confirmSfx(); G.difficulty = A.prevDiff; G.arcade = null; G.arcadeBoss = false; setScreen("mode"); }];
   if (A.checkedIdx !== A.idx && F) { A.checkedIdx = A.idx; if (F.wins[1] > 0) A.flawless = false; }
-  // a flawless run (no round lost) summons the secret boss after Chipinkos
-  if (won && last && A.flawless !== false && !A.secretAdded && A.cid !== "babangida" && !babUnlocked()) {
+  // first arcade win opens Chipinkos; once he is open, beating the arcade again summons the secret boss
+  if (won && last && A.chipBefore && !A.secretAdded && A.cid !== "babangida" && !babUnlocked()) {
     return [["???", () => { playSfx("boss_reveal"); G.arcadeBoss = false;
       if (!chipUnlocked()) { CHAR_IDS.splice(CHAR_IDS.indexOf("babangida") >= 0 ? CHAR_IDS.indexOf("babangida") : CHAR_IDS.length, 0, "chip"); store.set("chip_unlocked", true); A.newUnlock = true; }
       A.secretAdded = true; A.ladder.push({ cid: "babangida", stage: "yard", boss: true, secret: true }); A.idx++; A.wins++; setScreen("ladder"); }], toMenu];
@@ -8555,5 +8555,5 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 // Debug/test hook (harmless in production): lets automated checks read state.
-window.__game = { G, get TT() { return TT; }, makeShareCard: (s) => makeShareCard(s), regions: () => hitRegions.map((r) => ({ id: r.id, x: r.x, y: r.y, w: r.w, h: r.h })), get F() { return F; }, CHARS, startMatch, sayQuote, updateFight, shareResult, endRound,
+window.__game = { G, get TT() { return TT; }, startArcade, arcadeEndItems, chipUnlocked, babUnlocked, makeShareCard: (s) => makeShareCard(s), regions: () => hitRegions.map((r) => ({ id: r.id, x: r.x, y: r.y, w: r.w, h: r.h })), get F() { return F; }, CHARS, startMatch, sayQuote, updateFight, shareResult, endRound,
   audio: () => ({ state: actx && actx.state, loaded: Object.values(sfxBuf).filter((b) => b.length).length, total: Object.keys(sfxBuf).length, voices }) };
