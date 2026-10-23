@@ -2162,6 +2162,12 @@ function applyHit(att, def, h) {
   if (!def.onGround && !h.launch) def.vy = Math.min(def.vy, -260);
 
   if (att.combo >= 2) { att.comboShow = att.combo; att.comboT = 1.3; }
+  if (att.combo >= 5 && (att.combo - 5) % 3 === 0) {            // КОМБО! at 5, 8, 11… hits: banner, announcer, bonus super
+    F.comboBanner = { slot: att.slot, t: 0, n: att.combo };
+    F.shake = Math.max(F.shake, 10); F.flash = Math.max(F.flash, 0.12);
+    playSfx(sfxPools.voice_combo ? "voice_combo" : "comboFinisher");
+    addSuper(att, 20);
+  }
   if (dmg >= 9 || att.combo >= 3) {
     F.hypeUntil = G.time + 1.1;   // bar crowd goes wild
     if (REACT[G.stage] && G.time - (F.crowdSfxAt || -99) > (REACT_CD[G.stage] || 4) && (dmg >= 12 || att.combo >= 4 || !REACT_CD[G.stage] || REACT_CD[G.stage] < 10)) {
@@ -6290,6 +6296,7 @@ function drawFight() {
   drawPeek();
   drawCadillacWarning();
   if (!(F.fat && F.fat.kind === "elements")) drawHUD();         // the five elements play in letterbox, no HUD
+  drawComboBanner();
   drawQuote();
   drawFightOverlays();
   drawSuperCut();
@@ -6491,6 +6498,20 @@ function drawSide(f, side) {
     const rate = n >= 7 ? "ЛЕГЕНДАРНО!" : n >= 5 ? "ЖЁСТКО!" : n >= 3 ? "НЕПЛОХО" : "КОМБО";
     text(rate, x, 290, { size: n >= 5 ? 26 : 20, font: n >= 3 ? FONT_HEAD : FONT_PIX, align: left ? "left" : "right", color: n >= 7 ? "#ff7a3d" : n >= 5 ? GOLD : "#fff", stroke: "#000", strokeW: 5 });
   }
+}
+
+function drawComboBanner() {
+  const cb = F.comboBanner;
+  if (!cb) return;
+  cb.t += 1 / 60;
+  if (cb.t > 1.1) { F.comboBanner = null; return; }
+  const k = cb.t < 0.12 ? cb.t / 0.12 : 1, out = clamp((cb.t - 0.85) / 0.25, 0, 1);
+  const sc = 1.6 - 0.6 * easeOut(k);
+  ctx.save();
+  ctx.globalAlpha = 1 - out;
+  ctx.translate(W / 2, 205); ctx.scale(sc, sc); ctx.rotate(-0.05);
+  text("КОМБО!", 0, 0, { size: 84, align: "center", gradient: ["#fff6c8", "#ffd54a", "#ff3b2a"], stroke: "#2a0d00", strokeW: 10 });
+  ctx.restore();
 }
 
 function drawQuote() {
