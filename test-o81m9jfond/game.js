@@ -462,7 +462,7 @@ const SPECIALS = {
   loki: { startup: 0.38, total: 0.8, sfx: "special_loki" },
   smoky: { startup: 0.4, total: 1.3, sfx: "whoosh" },
   fludd: { startup: 0.36, total: 0.8, sfx: "whoosh" },
-  maybe: { startup: 0.21, active: 0.14, total: 0.7, sfx: "special_maybe" },
+  maybe: { startup: 0.27, active: 0.12, total: 0.74, sfx: "special_maybe" },
 };
 
 /* ------------------------------------------------------------------ */
@@ -1806,11 +1806,11 @@ function updateSpecial(f, opp, a) {
       const hb = hurtbox(opp);
       if (overlap(box, hb)) {
         a.hitDone = true;
-        const tip0 = f.x + f.dir * (WHIP_LEN - 110);
+        const tip0 = f.x + f.dir * (WHIP_LEN - 150);
         const tip = overlap({ x0: Math.min(tip0, far), x1: Math.max(tip0, far), y0: box.y0, y1: box.y1 }, hb);
         // the hair wraps around the opponent, yanks them in and Maybe throws them over herself
         const res = applyHit(f, opp, {
-          dmg: tip ? 12 : 9, height: "mid", hitstun: 2, blockstun: 0.2,
+          dmg: tip ? 14 : 11, height: "mid", hitstun: 2, blockstun: 0.2,
           knock: 0, dir: f.dir, sfx: tip ? "hitHeavy" : "hitLight", stop: tip ? 0.12 : 0.07, chip: 2,
           sparkX: opp.x - f.dir * 16, sparkY: f.y - 165,
         });
@@ -3034,7 +3034,7 @@ function updatePull(f, dt) {
     const by = f.thrown.by;
     f.thrown = null;
     f.hitstun = 0.5;
-    const dmg = F.fighters[by] && F.fighters[by].cid === "maybe" ? 11 : 8;   // Maybe's whip slam hits harder
+    const dmg = F.fighters[by] && F.fighters[by].cid === "maybe" ? 12 : 8;   // Maybe's whip slam hits harder
     f.hp = Math.max(0, f.hp - dmg);
     if (f.hp <= 0) fakeDeath(f);
     f.flash = 0.1;
@@ -3051,7 +3051,7 @@ function updatePull(f, dt) {
 /* ------------------------------------------------------------------ */
 /* Maybe Baby: hair whip                                               */
 /* ------------------------------------------------------------------ */
-const WHIP_LEN = 400;
+const WHIP_LEN = 540;
 // Hair root relative to the feet in the "special" frame (measured from the sprite).
 const WHIP_ROOT = { x: 4, y: -206 };
 const HAIR = { outline: "#141d3c", dark: "#224776", mid: "#396698", light: "#5688b6", shine: "#78aedd" }; // sampled from her sprite
@@ -3159,12 +3159,12 @@ function drawHairWhipStrands(f) {
     }
   };
   // 1) dark outline of the whole bundle
-  for (const s of strands) strokeStrand(s.pts, (u) => lerp(12, 3.5, u) + 3, HAIR.outline);
+  for (const s of strands) strokeStrand(s.pts, (u) => lerp(17, 5, u) + 3, HAIR.outline);
   // 2) strands, back to front: darker underneath, light on top
   const order = [...strands].sort((p, q) => q.o - p.o);
   order.forEach((s, idx) => {
     const col = [HAIR.dark, HAIR.mid, HAIR.dark, HAIR.light, HAIR.mid, HAIR.light, HAIR.mid][idx % 7];
-    strokeStrand(s.pts, (u) => lerp(9, 2, u), col);
+    strokeStrand(s.pts, (u) => lerp(13, 3, u), col);
   });
   // 3) glossy highlights along a couple of strands
   const mid = strands[(K - 1) >> 1].pts;
@@ -8740,5 +8740,5 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 // Debug/test hook (harmless in production): lets automated checks read state.
-window.__game = { G, get TT() { return TT; }, startArcade, arcadeEndItems, chipUnlocked, babUnlocked, makeShareCard: (s) => makeShareCard(s), regions: () => hitRegions.map((r) => ({ id: r.id, x: r.x, y: r.y, w: r.w, h: r.h })), get F() { return F; }, CHARS, startMatch, sayQuote, updateFight, shareResult, endRound,
+window.__game = { G, get TT() { return TT; }, startArcade, startSpecial, arcadeEndItems, chipUnlocked, babUnlocked, makeShareCard: (s) => makeShareCard(s), regions: () => hitRegions.map((r) => ({ id: r.id, x: r.x, y: r.y, w: r.w, h: r.h })), get F() { return F; }, CHARS, startMatch, sayQuote, updateFight, shareResult, endRound,
   audio: () => ({ state: actx && actx.state, loaded: Object.values(sfxBuf).filter((b) => b.length).length, total: Object.keys(sfxBuf).length, voices }) };
