@@ -7512,7 +7512,8 @@ function drawCharacter() {
     ctx.strokeStyle = "rgba(255,90,61,0.6)"; ctx.lineWidth = 3; ctx.strokeRect(lx + 1.5, ly + 1.5, tile - 3, tile - 3);
     ctx.restore();
     text("?", lx + tile / 2, ly + tile / 2 + 4, { size: 54, align: "center", color: "#ff5a3d", stroke: "#000", strokeW: 6 });
-    text("ПРОЙДИ АРКАДУ", lx + tile / 2, ly + tile + 15, { size: fitText("ПРОЙДИ АРКАДУ", tile + gap - 6, 13), align: "center", color: "#ff8a7a", stroke: "#000", strokeW: 4 });
+    if (cols > 10) for (const [k, wd] of ["ПРОЙДИ", "АРКАДУ"].entries()) text(wd, lx + tile / 2, ly + tile + 12 + k * 14, { size: 12, align: "center", color: "#ff8a7a", stroke: "#000", strokeW: 4 });
+    else text("ПРОЙДИ АРКАДУ", lx + tile / 2, ly + tile + 15, { size: fitText("ПРОЙДИ АРКАДУ", tile + gap - 6, 13), align: "center", color: "#ff8a7a", stroke: "#000", strokeW: 4 });
   }
   CHAR_IDS.forEach((id, i) => {
     const row = Math.floor(i / cols);
@@ -7613,6 +7614,7 @@ function drawCharacter() {
 const PREVIEW_X = 205;
 function drawPreview(id, x, slot, badge) {
   const y = 610;
+  const sc = charCols() < selectCount() ? 0.9 : 1.25;   // two rows of tiles: keep the figure below them
   // spotlight
   const g = ctx.createRadialGradient(x, y - 120, 10, x, y - 120, 220);
   g.addColorStop(0, "rgba(160,130,255,0.35)");
@@ -7632,10 +7634,10 @@ function drawPreview(id, x, slot, badge) {
   if (badge) pose = "win";
   const b = Math.sin(G.time * 3.2);
   drawPose(id, pose, x, y, {
-    dir: slot === 0 ? 1 : -1, scale: 1.25, sy: 1 + 0.012 * b, sx: 1 - 0.006 * b,
+    dir: slot === 0 ? 1 : -1, scale: sc, sy: 1 + 0.012 * b, sx: 1 - 0.006 * b,
   });
   text(slot === 0 ? (G.mode === 1 ? "ВЫ" : "1P") : "2P", x, y + 34, { size: 14, font: FONT_PIX, align: "center", color: P_COLORS[slot] });
-  if (badge) text(badge, x, y - 340, { size: 30, align: "center", color: GOLD, stroke: "#000", strokeW: 6 });
+  if (badge) text(badge, x, y - 272 * sc, { size: 30, align: "center", color: GOLD, stroke: "#000", strokeW: 6 });
 }
 
 function drawMystery(x, label) {
