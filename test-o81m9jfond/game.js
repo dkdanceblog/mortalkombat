@@ -7630,7 +7630,8 @@ function drawMode() {
     { mode: 3, title: "АРКАДА", sub: "6 боёв подряд", ids: [null, "boss"], lines: ["в конце — финальный босс"] },
     { mode: 2, title: "2 ИГРОКА", sub: "на одной клавиатуре", ids: ["guf", "noize"], off: isTouch,
       lines: isTouch ? ["только на компьютере"] : ["1P: WASD + F G H, R — блок", "2P: стрелки + J K L, ; — блок"] },
-    { mode: 5, title: "БЕЗУМИЕ", sub: "все против тебя", ids: [null, "mad"], lines: ["в каждом бою — сюрприз"] },
+    madOpen() ? { mode: 5, title: "БЕЗУМИЕ", sub: "все против тебя", ids: [null, "mad"], lines: ["в каждом бою — сюрприз"] }
+      : { mode: 5, title: "БЕЗУМИЕ", sub: "закрыто", ids: [null, "lock"], lines: ["победи Чипинкоса,", "чтобы открыть"], off: true, locked: true },
     { mode: 4, title: "ОБУЧЕНИЕ", sub: "все приёмы по шагам", ids: ["guf", "tut"], lines: ["проиграть нельзя"] },
   ];
   const w = 232, h = 372, gap = 12;
@@ -7648,6 +7649,7 @@ function drawMode() {
       ctx.fillRect(px, py, 120, 120);
       if (id === "tut") text("?", px + 60, py + 64, { size: 60, align: "center", color: "#8dff7a", stroke: "#000", strokeW: 6 });
       else if (id === "boss") text("БОСС", px + 60, py + 62, { size: 22, font: FONT_PIX, align: "center", color: "#ff5a3d" });
+      else if (id === "lock") { const pc = img("portrait.chip"); if (pc) { ctx.globalAlpha = 0.9; ctx.drawImage(silhouette(pc, "#05030c"), px, py, 120, 120); ctx.globalAlpha = 1; } text("🔒", px + 60, py + 70, { size: 44, align: "center" }); }
       else if (id === "mad") text("?!", px + 60, py + 64, { size: 56, align: "center", gradient: ["#fff", "#ff86d8"], stroke: "#000", strokeW: 6 });
       else if (id) { const p = img("portrait." + id); if (p) ctx.drawImage(p, px, py, 120, 120); }
       else if (o.mode === 3 || o.mode === 5) text("?", px + 60, py + 64, { size: 60, align: "center", color: GOLD, stroke: "#000", strokeW: 6 });
@@ -7676,7 +7678,10 @@ function drawMode() {
   backButton();
 }
 const MODE_ORDER = [1, 3, 2, 5, 4];
+// БЕЗУМИЕ opens once Chipinkos has been beaten (arcade boss, or anywhere)
+function madOpen() { return chipUnlocked() || secrets.has("a_truegangsta"); }
 function chooseMode(m) {
+  if (m === 5 && !madOpen()) { playSfx("block"); toast("Победи Чипинкоса, чтобы открыть БЕЗУМИЕ"); return; }
   confirmSfx();
   G.arcade = null;
   G.arcadeBoss = false;
