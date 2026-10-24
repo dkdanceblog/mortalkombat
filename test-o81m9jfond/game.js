@@ -8059,8 +8059,10 @@ function checkMatchSecrets() {
     unlockSecret(sd.id);
   }
 }
+// test link only: ?unlock opens Chipinkos and Babangida for testing (and remembers it there)
+if (/[?&]unlock/.test(location.search) && (/\/test-/.test(location.pathname) || location.hostname === "localhost")) { store.set("chip_unlocked", true); store.set("bab_unlocked", true); }
 if (store.get("chip_unlocked", false) && !CHAR_IDS.includes("chip")) CHAR_IDS.push("chip");
-if ((store.get("bab_unlocked", false) || /[?&]unlock/.test(location.search)) && !CHAR_IDS.includes("babangida")) CHAR_IDS.push("babangida");
+if (store.get("bab_unlocked", false) && !CHAR_IDS.includes("babangida")) CHAR_IDS.push("babangida");
 const secrets = new Set(store.get("secrets", []).filter((id) => SECRETS.some((s) => s.id === id)));
 G.cheats = { madness: false, tea: false };
 G.banner = null;
