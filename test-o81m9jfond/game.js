@@ -233,9 +233,9 @@ const CHARS = {
     loseTitle: "НОЙЗ СДУЛСЯ",
     quotes: ["ПРЕДУПРЕЖДАЮ, У*БЫВАЮ", "ЩА УСТРОЮ ДЕСТРОЙ", "ВЫДЫХАЙСЯ СКОРЕЙ"],
     moves: {
-      // swings the guitar by the neck — long reach, hits crouching opponents too
-      heavy: { frame: "light", startup: 0.16, active: 0.11, recovery: 0.3, dmg: 10, reach: 158, guitar: true,
-        y0: -230, y1: -90, hitstun: 0.48, blockstun: 0.22, knock: 430, height: "mid", sfx: "hitHeavy", stop: 0.1 },
+      // plain heavy kick (the guitar is saved for the special)
+      heavy: { frame: "heavy", startup: 0.16, active: 0.11, recovery: 0.3, dmg: 10, reach: 158,
+        y0: -230, y1: -90, hitstun: 0.48, blockstun: 0.22, knock: 430, height: "mid", sfx: "hitKick", stop: 0.1 },
     },
   },
   oxxxy: {
