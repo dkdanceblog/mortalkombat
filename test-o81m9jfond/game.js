@@ -2046,7 +2046,6 @@ function fakeDeath(f) {
   if (F.fakeUsed[f.slot]) return false;
   F.fakeUsed[f.slot] = true;
   f.hp = 1; f.fakeT = 1.9; playSfx("bab_fake_death");
-  F.ticker = { text: "БАБАНГИДА УМЕР  •  ПРОДЮСЕР ОПРОВЕРГАЕТ  •  БАБАНГИДА УМЕР", t: 0 };
   return true;
 }
 
@@ -6894,7 +6893,16 @@ function titleUpdate() {
       if (free.length) sl.cid = pick(free);
       sl.state = "enter"; sl.t = 0; sl.act = null;
     }
-    if (sl.act) { sl.act.t += dt; if (sl.act.t >= sl.act.dur) sl.act = null; }
+    if (sl.act) {
+      const a = sl.act, t0 = a.t; a.t += dt;
+      const hit = (at) => t0 < at && a.t >= at;
+      if (a.kind === "brawled" && T.t > 1) {
+        if (hit(0.5)) playSfx("hitLight");
+        if (hit(0.78)) { playSfx("hitKick"); T.shake = Math.max(T.shake, 6); }
+        if (hit(1.12)) { playSfx("bodyfall"); T.shake = Math.max(T.shake, 8); }
+      }
+      if (a.t >= a.dur) sl.act = null;
+    }
   }
   // rotation: someone leaves, someone new jumps in
   T.nextSwap -= dt;
@@ -6912,7 +6920,15 @@ function titleUpdate() {
     const c = T.slots.filter((q) => q.state === "idle" && !q.act);
     if (c.length) {
       const q = pick(c), r = Math.random();
-      if (r < 0.25) {
+      const busy = T.slots.some((o) => o.act && o.act.kind === "brawl");
+      if (r < 0.32 && !busy) {                                   // mini-fight: walk up, combo, knockdown, he gets back up
+        const nb = c.filter((o) => o !== q && o.row === q.row && Math.abs(o.x - q.x) < (q.row ? 420 : 340));
+        if (nb.length) {
+          const o = pick(nb), face = Math.sign(o.x - q.x), gap = Math.abs(o.x - q.x);
+          q.act = { kind: "brawl", t: 0, dur: 3.0, face, go: Math.max(0, gap - 130 * q.scale / 0.74) };
+          o.act = { kind: "brawled", t: 0, dur: 3.0, face: -face };
+        }
+      } else if (r < 0.42) {
         const nb = c.filter((o) => o !== q && o.row === q.row && Math.abs(o.x - q.x) < (q.row ? 300 : 260));
         if (nb.length) {
           const o = pick(nb), seq = [["light_0", 0.12], ["light", 0.22], ["idle", 0.2], ["heavy_0", 0.14], ["heavy", 0.25]];
@@ -6984,17 +7000,48 @@ function drawTitleRow(row) {
     if (a && a.t >= 0) {
       if (a.face) dir = a.face;
       if (a.kind === "hurt") { pose = a.t > 0.42 && a.t < 0.75 ? "hurt" : "block"; if (pose === "hurt") ox = -dir * 14; }
+      else if (a.kind === "brawl") {                       // attacker
+        const t = a.t, go = a.go, back = clamp((t - 2.35) / 0.5, 0, 1);
+        const step = (k) => "walk_" + (1 + Math.floor(k * 8) % 4);
+        if (t < 0.36) { pose = step(t); ox = dir * go * (t / 0.36); }
+        else if (t < 2.35) { ox = dir * go; pose = t < 0.44 ? "light_0" : t < 0.6 ? "light" : t < 0.68 ? "heavy_0" : t < 0.95 ? "heavy" : t < 1.3 ? "idle" : "win"; }
+        else { ox = dir * go * (1 - back); pose = back < 1 ? step(t) : "idle"; dir = back > 0 && back < 1 ? -dir : dir; }
+      } else if (a.kind === "brawled") {                   // victim: block, two hits, flies back, lies, gets up
+        const t = a.t, fly = clamp((t - 0.78) / 0.34, 0, 1), ret = clamp((t - 2.3) / 0.55, 0, 1);
+        const away = -dir * (24 + 70 * easeOut(fly)) * (1 - ret);
+        if (t < 0.48) pose = "block";
+        else if (t < 0.78) { pose = "hurt"; ox = -dir * 14; }
+        else if (t < 1.12) { pose = hasPose(sl.cid, "fall") ? "fall" : "hurt"; ox = away; y -= Math.sin(fly * Math.PI) * 50; }
+        else if (t < 2.0) { pose = "ko"; ox = away; }
+        else if (t < 2.3) { pose = hasPose(sl.cid, "getup") ? "getup" : "crouch"; ox = away; }
+        else { pose = ret < 1 ? "walk_" + (1 + Math.floor(t * 8) % 4) : "idle"; ox = away; }
+      }
       else { let acc = 0; for (const [nm, d] of a.seq) { acc += d; if (a.t < acc) { pose = nm; break; } } if (pose === "light" || pose === "heavy") ox = dir * 10; }
     }
     const ph = G.time * 2.2 + sl.x * 0.01;
     ctx.fillStyle = `rgba(0,0,0,${0.45 * alpha})`;
-    ctx.beginPath(); ctx.ellipse(sl.x, sl.y + 2, 70 * sl.scale, 12 * sl.scale, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(sl.x + ox, sl.y + 2, (pose === "ko" ? 110 : 70) * sl.scale, 12 * sl.scale, 0, 0, Math.PI * 2); ctx.fill();
     drawPose(sl.cid, pose, sl.x + ox, y, { dir, scale: sl.scale, sy: 1 + Math.sin(ph) * 0.012, alpha,
       tint: sl.dark ? { color: "#120a2c", a: sl.dark } : undefined });
   }
 }
 function drawTitleLineup() {
   drawTitleFly("back");
+  if (!babUnlocked() && SPRITE_META.babangida) {             // the secret boss lurks at the back of the stage
+    const fr = frameOf("babangida", "idle"), x = W / 2, y = 572, sc = 0.52;
+    if (fr) {
+      const pulse = 0.5 + 0.5 * Math.sin(G.time * 1.7);
+      ctx.save();
+      const g = ctx.createRadialGradient(x, y - 80, 10, x, y - 80, 150);
+      g.addColorStop(0, `rgba(255,60,60,${0.16 + 0.1 * pulse})`); g.addColorStop(1, "rgba(255,60,60,0)");
+      ctx.fillStyle = g; ctx.fillRect(x - 150, y - 230, 300, 260);
+      ctx.globalAlpha = 0.82;
+      ctx.translate(x, y); ctx.scale(sc, sc);
+      ctx.drawImage(silhouette(fr.image, "#07040f"), -fr.ax, -fr.ay);
+      ctx.restore();
+      text("?", x + 2, y - fr.ay * sc * 0.55 + Math.sin(G.time * 2.4) * 3, { size: 44, align: "center", gradient: ["#ffffff", "#ff8a7a"], stroke: "#000", strokeW: 6, alpha: 0.6 + 0.4 * pulse });
+    }
+  }
   drawTitleRow(0);
   drawTitleFly("mid");
   drawTitleRow(1);
@@ -7050,8 +7097,30 @@ function drawTitleLogo(cx, cy, scale) {
   ctx.restore();
 }
 
+// pressing start: the logo bursts into pieces with a flash, then the menu opens
+function startTitleExit() {
+  const T = titleState();
+  if (T.exit) return;
+  T.exit = { t: 0, pieces: Array.from({ length: 18 }, (_, i) => ({ c: i % 6, r: Math.floor(i / 6), vx: rand(-900, 900), vy: rand(-700, 200), vr: rand(-8, 8) })) };
+  playSfx("fatality_sting"); playSfx("koHit"); buzz([40, 30, 90]);
+  T.shake = 14;
+}
+function drawTitleLogoBurst(T) {
+  const logo = img("logo"); if (!logo) return;
+  const e = T.exit, t = e.t, cx = W / 2, cy = 160, lw = logo.naturalWidth, lh = logo.naturalHeight;
+  const pw = lw / 6, ph = lh / 3;
+  ctx.save(); ctx.globalAlpha = Math.max(0, 1 - t / 0.5);
+  for (const p of e.pieces) {
+    const x0 = cx - lw / 2 + (p.c + 0.5) * pw, y0 = cy - lh / 2 + (p.r + 0.5) * ph;
+    ctx.save(); ctx.translate(x0 + p.vx * t, y0 + p.vy * t + 1400 * t * t); ctx.rotate(p.vr * t);
+    ctx.drawImage(logo, p.c * pw, p.r * ph, pw, ph, -pw / 2, -ph / 2, pw, ph);
+    ctx.restore();
+  }
+  ctx.restore();
+}
 function drawTitle() {
   titleUpdate();
+  if (TT.exit) { TT.exit.t += 1 / 60; if (TT.exit.t > 0.55) { TT.exit = null; setScreen("mode"); return; } }
   const T = TT;
   ctx.save();
   if (T.shake > 0) ctx.translate(rand(-T.shake, T.shake), rand(-T.shake, T.shake));
@@ -7092,12 +7161,15 @@ function drawTitle() {
     // intro: the logo slams down from above
     const u = clamp(T.t / 0.55, 0, 1), drop = T.intro ? (1 - u * u) * -420 : 0;
     const sc = T.intro && T.t < 0.85 && T.t > 0.55 ? 1 + 0.12 * Math.sin((T.t - 0.55) / 0.3 * Math.PI) : 1;
-    drawTitleLogo(W / 2, 160 + drop + Math.sin(G.time * 1.6) * 4, sc);
+    if (T.exit) drawTitleLogoBurst(T);
+    else drawTitleLogo(W / 2, 160 + drop + Math.sin(G.time * 1.6) * 4, sc);
   }
+  if (T.exit) { const k = T.exit.t; ctx.fillStyle = `rgba(255,245,220,${Math.max(0, 0.9 - k * 2.2)})`; ctx.fillRect(-20, -20, W + 40, H + 40); }
   if (T.flash > 0) { ctx.fillStyle = `rgba(255,240,200,${T.flash * 0.6})`; ctx.fillRect(0, 0, W, H); }
   ctx.restore();
 
   // start button
+  if (T.exit) return;
   const pulse = 0.5 + 0.5 * Math.sin(G.time * 4);
   const bw = 520, bh = 70, bx = W / 2 - bw / 2, by = 330;
   ctx.save();
@@ -7113,7 +7185,7 @@ function drawTitle() {
   const ar = 10 + pulse * 6;
   text("◀", bx - ar, by + bh / 2, { size: 24, align: "right", color: "#ff5a3d" });
   text("▶", bx + bw + ar, by + bh / 2, { size: 24, align: "left", color: "#ff5a3d" });
-  region("start", 0, 0, W, H, () => { confirmSfx(); setScreen("mode"); });
+  region("start", 0, 0, W, H, () => startTitleExit());
 
   text(`${plural(CHAR_IDS.length, "БОЕЦ", "БОЙЦА", "БОЙЦОВ")} • ${plural(STAGE_IDS.length, "АРЕНА", "АРЕНЫ", "АРЕН")}`, W / 2, by + bh + 26, { size: 11, font: FONT_PIX, align: "center", color: "rgba(255,255,255,0.7)", stroke: "#000", strokeW: 4 });
   {
@@ -8719,7 +8791,7 @@ function handleNav(ev) {
     else if (t === "back") playSfx("uiBack");
   }
   if (s === "title") {
-    if (t === "confirm" || t.startsWith("digit") || t === "pause") { confirmSfx(); setScreen("mode"); }
+    if (t === "confirm" || t.startsWith("digit") || t === "pause") startTitleExit();
     return;
   }
   if (s === "vs") {
