@@ -4778,7 +4778,8 @@ function drawCadillacWarning() {
 /* ------------------------------------------------------------------ */
 // The match-deciding KO leaves the loser dazed for a few seconds: a plain hit = victory, the special = fatality.
 const FINISH_TIME = 5;
-const LOLLI_HIT = 1.05;   // Fludd's lollipop lands
+const LOLLI_HIT = 1.05;
+const TV_CRACK = 1.45;     // Noize: the TV on his head shows his own face, then the screen bursts   // Fludd's lollipop lands
 const FATALITIES = {
   guf:    { kind: "ice",   caption: "АЙС БЭЙБИ",              dur: 3.4, titleAt: 1.9 },
   noize:  { kind: "tv",    caption: "Я РОК-ЗВЕЗДА, ИДИТЕ НА",            dur: 3.3, titleAt: 2.4 },
@@ -4787,7 +4788,7 @@ const FATALITIES = {
   maybe:  { kind: "dora",  caption: "ДОРА ДУРА!",               dur: 3.6, titleAt: 2.0 },
   kreed:  { kind: "rose",  caption: "", title: "ХОЛОСТЯЛИТИ", dur: 3.8, titleAt: 2.5 },
   slava:  { kind: "hearse", caption: "КАТАФАЛК",     dur: 4.0, titleAt: 2.4 },
-  atl:    { kind: "stork", caption: "АИСТ МАРАБУ",                 dur: 3.8, titleAt: 2.4 },
+  atl:    { kind: "stork", caption: "АИСТ МАРАБУ",                 dur: 4.8, titleAt: 3.3 },
   loki:   { kind: "quit",  caption: "", title: "RAGE QUIT",   dur: 3.4, titleAt: 1.7 },
   korzh:  { kind: "car",   caption: "МОТЫЛЁК",                dur: 4.0, titleAt: 2.6 },
   chip:   { kind: "tea",   caption: "Я ЛЕГЕНДА",                dur: 4.2, titleAt: 2.4 },
@@ -4893,6 +4894,7 @@ function updateFatality(dt) {
   fat.t += dt;
   const t = fat.t, w = F.fighters[fat.w], l = F.fighters[fat.l], dir = fat.dir;
   const once = (k, at, fn) => { if (!fat.ev[k] && t >= at) { fat.ev[k] = true; fn(); } };
+  const shake0 = F.shake;
   const head = (f) => { const fr = frameOf(f.cid, "hurt"); return f.y - (fr ? fr.ay : 230); };
   once("title", fat.titleAt, () => {
     playSfx("fatality_sting"); F.shake = Math.max(F.shake, 8);
@@ -4949,7 +4951,13 @@ function updateFatality(dt) {
       for (let i = 0; i < 40; i++) F.particles.push({ type: "sq", x: l.x + rand(-50, 50), y: head(l) + rand(0, 70), vx: rand(-380, 380), vy: rand(-600, -100), g: 1400,
         life: rand(0.5, 1.1), max: 1.1, size: pick([3, 4, 6]), color: pick(["#dfe8ee", "#a9c0cc", "#ffffff", "#ffe27a"]) });
     });
-    if (t > 0.85 && t < 2.0 && Math.random() < dt * 6) hitSpark(l.x + rand(-40, 40), head(l) + rand(10, 70), 2);
+    once("crack", TV_CRACK, () => {                          // the broadcast ends: the screen bursts
+      playSfx("fat_tv_smash"); playSfx("fat_ice_shatter"); F.shake = 20; F.flash = 0.25; buzz([40, 30, 120]);
+      for (let i = 0; i < 46; i++) F.particles.push({ type: "sq", x: l.x + rand(-40, 40), y: head(l) + rand(10, 60), vx: rand(-420, 420), vy: rand(-560, -60), g: 1500,
+        life: rand(0.5, 1.1), max: 1.1, size: pick([3, 4, 6]), color: pick(["#dff4ff", "#9fd8ff", "#ffffff", "#7fb4d8"]) });
+      hitSpark(l.x, head(l) + 40, 12);
+    });
+    if (t > TV_CRACK && t < 2.0 && Math.random() < dt * 6) hitSpark(l.x + rand(-40, 40), head(l) + rand(10, 70), 2);
     once("fall", 2.35, () => { playSfx("bodyfall"); playSfx("landHeavy"); F.shake = 16; spawnDust(l.x + dir * 120, FLOOR_Y, 1.6); });
   } else if (fat.kind === "stomp") {
     // the opponent shrinks into an 8-bit platformer enemy, Oxxxy jumps on his head
@@ -5122,7 +5130,20 @@ function updateFatality(dt) {
     if (t > 1.5 && t < 2.6 && Math.random() < dt * 3) { playSfx(pick(["hitLight", "hitBody", "hitHeavy"])); F.shake = Math.max(F.shake, 7); }
     once("leave", 2.65, () => playSfx("whooshHeavy"));
   }
+  // cinematic push-in: every big hit of a fatality (a jump in screen shake) zooms the camera onto the victim for a moment
+  if (fat.kind !== "elements" && F.shake >= 14 && shake0 < 14 && (fat.camHit === undefined || t - fat.camHit > 0.7)) {
+    fat.camHit = t; fat.camX = l.x; fat.camY = Math.min(l.y - 130, FLOOR_Y - 130);
+  }
   if (t >= fat.dur) { F.phase = "ko"; F.phaseT = 0; F.fatDone = true; F.quote = null; }
+}
+// 0 → 1 → 0 envelope of the push-in after an impact
+function fatCamPush(fat) {
+  if (!fat || fat.camHit === undefined) return 0;
+  const u = (F.phase === "fatality" ? fat.t : fat.dur + F.phaseT) - fat.camHit;
+  if (u < 0) return 0;
+  if (u < 0.12) return easeOut(u / 0.12);
+  if (u < 0.6) return 1;
+  return Math.max(0, 1 - (u - 0.6) / 0.45);
 }
 
 // height of the squashed KO pose Oxxxy stands on
@@ -5228,7 +5249,7 @@ function drawFatFighter(f) {
       if (t >= 0.6 && t < 0.82) {
         const k = (t - 0.6) / 0.22;
         const x0 = f.x - dir * 10, y0 = f.y - wh - 60, l = F.fighters[fat.l], x1 = l.x, y1 = l.y - hH + 34;
-        drawTV(lerp(x0, x1, k), lerp(y0, y1, k) - Math.sin(k * Math.PI) * 60, 150, 118, dir * k * 0.6, 0, false);
+        drawTV(lerp(x0, x1, k), lerp(y0, y1, k) - Math.sin(k * Math.PI) * 60, 150, 118, dir * k * 0.6, 0, false, img("portrait." + l.cid));
       }
       return;
     }
@@ -5237,7 +5258,7 @@ function drawFatFighter(f) {
     drawShadowAt(f.x + dir * 110 * fall, 70 + 50 * fall);
     ctx.save(); ctx.translate(f.x, f.y - 46 * fall); ctx.rotate(ang + (t < 1.95 ? sway * 1.4 : 0));
     P("hurt", 0, 0);
-    if (t >= 0.82) drawTV(0, -hH + 34, 150, 118, 0.12 * Math.sin(t * 9) * (1 - fall), 1, true);
+    if (t >= 0.82) drawTV(0, -hH + 34, 150, 118, 0.12 * Math.sin(t * 9) * (1 - fall), t >= TV_CRACK ? 1 : 0, true, t < TV_CRACK ? img("portrait." + f.cid) : null);
     ctx.restore();
     if (t < 0.82) {} // TV still flying (drawn with the winner)
     return;
@@ -5366,6 +5387,8 @@ function drawFatFighter(f) {
       P("hurt", st.x, st.y + hH + 40, { rot: Math.sin(t * 6) * 0.15 });
       return;
     }
+    const sunK = clamp((t - 1.9) / 0.6, 0, 1);
+    if (sunK > 0) drawStorkSunset(fat, t, sunK);                // final shot: the stork flies off into the sunset
     drawShadowAt(f.x, 64);
     P(t < 1.0 ? "special" : end ? "win" : "idle", f.x, f.y);
     drawStork(st.x, st.y, dir, t);
@@ -6054,6 +6077,34 @@ function storkPos(fat, t) {
   const u = t - 1.1;
   return { x: l.x + dir * 170 * u, y: grabY - 150 * u - 90 * u * u + Math.sin(u * 12) * 6 };
 }
+function drawStorkSunset(fat, t, k) {
+  const dir = fat.dir, sx = dir > 0 ? W * 0.8 : W * 0.2, sy = FLOOR_Y - 175;
+  ctx.save();
+  const g = ctx.createLinearGradient(0, 0, 0, FLOOR_Y);
+  g.addColorStop(0, `rgba(90,20,80,${0.35 * k})`); g.addColorStop(0.6, `rgba(255,110,60,${0.42 * k})`); g.addColorStop(1, `rgba(255,170,70,${0.55 * k})`);
+  ctx.fillStyle = g; ctx.fillRect(-60, -60, W + 120, FLOOR_Y + 60);
+  const glow = ctx.createRadialGradient(sx, sy, 20, sx, sy, 260);
+  glow.addColorStop(0, `rgba(255,220,120,${0.7 * k})`); glow.addColorStop(1, "rgba(255,140,60,0)");
+  ctx.fillStyle = glow; ctx.fillRect(sx - 260, sy - 260, 520, 520);
+  ctx.beginPath(); ctx.arc(sx, sy, 92, 0, Math.PI * 2); ctx.clip();       // retro striped sun
+  const sg = ctx.createLinearGradient(0, sy - 92, 0, sy + 92);
+  sg.addColorStop(0, `rgba(255,236,140,${k})`); sg.addColorStop(1, `rgba(255,96,70,${k})`);
+  ctx.fillStyle = sg; ctx.fillRect(sx - 92, sy - 92, 184, 184);
+  ctx.fillStyle = `rgba(120,30,70,${0.8 * k})`;
+  for (let i = 0; i < 5; i++) ctx.fillRect(sx - 92, sy + 18 + i * 15, 184, 3 + i * 1.5);
+  ctx.restore();
+  // the stork with the victim, a dark silhouette shrinking towards the sun
+  const u = clamp((t - 2.7) / 1.8, 0, 1);
+  if (u <= 0 || u >= 1) return;
+  const e = easeOut(u), x = lerp(sx - dir * 430, sx, e), y = lerp(150, sy - 20, e), sc = lerp(0.42, 0.06, e);
+  const up = Math.floor(t * 5) % 2 === 1, im = img(up ? "fx.stork_2" : "fx.stork_1");
+  const l = F.fighters[fat.l], fr = frameOf(l.cid, "hurt");
+  ctx.save(); ctx.translate(x, y + Math.sin(t * 6) * 4 * sc); ctx.scale(dir * sc, sc);
+  ctx.globalAlpha = 0.95 * (1 - clamp((u - 0.85) / 0.15, 0, 1));
+  if (fr) ctx.drawImage(silhouette(fr.image, "#2a0c22"), -fr.ax, 40);
+  if (im) ctx.drawImage(silhouette(im, "#2a0c22"), -(up ? 150 : 140), 50 - im.naturalHeight);
+  ctx.restore();
+}
 function drawStork(x, y, dir, t) {
   const up = Math.floor(t * 6) % 2 === 1;
   const im = img(up ? "fx.stork_2" : "fx.stork_1");
@@ -6135,15 +6186,28 @@ function drawIceChunk(x, y, s, r) {
 }
 
 // old CRT television: body, screen (static + cracks when smashed), antennas
-function drawTV(x, y, w, h, rot, cracked, on) {
+function drawTV(x, y, w, h, rot, cracked, on, face) {
   const tim = img("fx.tv");
   if (tim) {
     const tw = w * 1.05, th = tw * tim.naturalHeight / tim.naturalWidth;
     ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
     ctx.drawImage(tim, -tw / 2, -th * 0.6, tw, th);
     const sx = -tw / 2 + tw * 0.09, sy = -th * 0.6 + th * 0.37, sw = tw * 0.52, sh = th * 0.46;   // the screen
+    if (face) {                          // live broadcast: the victim's own face, with scanlines and a flicker
+      ctx.save(); ctx.beginPath(); ctx.rect(sx, sy, sw, sh); ctx.clip();
+      ctx.fillStyle = "#1b2a3a"; ctx.fillRect(sx, sy, sw, sh);
+      const s2 = Math.max(sw, sh) * 1.05, jx = Math.random() < 0.15 ? rand(-4, 4) : 0;
+      ctx.globalAlpha = 0.85 + 0.15 * Math.sin(G.time * 40);
+      ctx.drawImage(face, sx + (sw - s2) / 2 + jx, sy + (sh - s2) * 0.3, s2, s2);
+      ctx.globalAlpha = 1; ctx.fillStyle = "rgba(0,0,0,0.25)";
+      for (let yy = sy; yy < sy + sh; yy += 3) ctx.fillRect(sx, yy, sw, 1);
+      ctx.fillStyle = "rgba(140,200,255,0.12)"; ctx.fillRect(sx, sy, sw, sh);
+      ctx.restore();
+      on = false;
+    }
     if (on) for (let i = 0; i < 70; i++) { ctx.fillStyle = Math.random() < 0.5 ? "rgba(255,255,255,0.7)" : "rgba(20,20,20,0.55)"; ctx.fillRect(sx + Math.random() * (sw - 4), sy + Math.random() * (sh - 3), 4, 3); }
     if (cracked) {
+      ctx.fillStyle = `rgba(10,12,16,${0.55 * Math.min(1, cracked)})`; ctx.fillRect(sx, sy, sw, sh);   // dead screen
       ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 2;
       const cx = sx + sw * 0.45, cy = sy + sh * 0.45;
       for (let i = 0; i < 7; i++) { const a = i * 0.9 + 0.2; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(a) * sw * 0.3 + 4, cy + Math.sin(a) * sh * 0.25); ctx.lineTo(cx + Math.cos(a) * sw * 0.5, cy + Math.sin(a) * sh * 0.5); ctx.stroke(); }
@@ -6256,10 +6320,13 @@ function drawQuitNotice(fat) {
 }
 function drawFatalityTitle() {
   const fat = F.fat;
-  if (fat.kind === "elements") {
+  {                                      // cinema bars for every fatality
     const tt = F.phase === "fatality" ? fat.t : fat.dur + F.phaseT;
     const bh = 70 * easeOut(clamp(tt / 0.5, 0, 1));
     ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, bh); ctx.fillRect(0, H - bh, W, bh);
+  }
+  if (fat.kind === "elements") {
+    const tt = F.phase === "fatality" ? fat.t : fat.dur + F.phaseT;
     if (fat.cflash && tt - fat.cflash.t < 0.35) { ctx.save(); ctx.globalAlpha = 0.3 * (1 - (tt - fat.cflash.t) / 0.35); ctx.fillStyle = fat.cflash.c; ctx.fillRect(0, 0, W, H); ctx.restore(); }
   }
   const t = (F.phase === "fatality" ? fat.t : fat.dur + F.phaseT) - fat.titleAt;
@@ -6281,6 +6348,11 @@ function drawFight() {
 
   ctx.save();
   if (F.shake > 0) ctx.translate(rand(-1, 1) * F.shake, rand(-1, 1) * F.shake * 0.6);
+  const push = F.fat ? fatCamPush(F.fat) : 0;
+  if (push > 0) {                         // fatality push-in onto the victim
+    const z = 1 + 0.16 * push, zx = clamp(F.fat.camX, 360, W - 360), zy = F.fat.camY;
+    ctx.translate(zx, zy); ctx.scale(z, z); ctx.translate(-zx, -zy);
+  }
   if (F.zoom > 0.002) {                  // impact zoom punch towards the hit
     const z = 1 + F.zoom, zx = clamp(F.zoomX, 300, W - 300), zy = F.zoomY;
     ctx.translate(zx, zy); ctx.scale(z, z); ctx.translate(-zx, -zy);
@@ -6293,8 +6365,14 @@ function drawFight() {
   if (sk && !F.fat) { const k = Math.min(1, sk.action.t / 0.3, Math.max(0, (1.25 - sk.action.t) / 0.3)); ctx.fillStyle = `rgba(10,12,24,${0.45 * k})`; ctx.fillRect(-60, -60, W + 120, H + 120); }
   if (F.phase === "finish" || F.fat) {
     const k = F.fat ? clamp(fatClock() / 0.4, 0, 1) : clamp(F.phaseT / 0.5, 0, 1) * 0.5;
-    ctx.fillStyle = `rgba(14,0,4,${0.62 * k})`;
+    ctx.fillStyle = `rgba(14,0,4,${(F.fat ? 0.74 : 0.62) * k})`;
     ctx.fillRect(-60, -60, W + 120, H + 120);
+    if (F.fat) {                          // spotlight on the two fighters, darker edges
+      const [p0, p1] = F.fighters, cx = (p0.x + p1.x) / 2;
+      const g = ctx.createRadialGradient(cx, FLOOR_Y - 150, 120, cx, FLOOR_Y - 150, 760);
+      g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, `rgba(0,0,0,${0.55 * k})`);
+      ctx.fillStyle = g; ctx.fillRect(-60, -60, W + 120, H + 120);
+    }
   }
 
   // draw the attacking fighter on top
@@ -6309,7 +6387,7 @@ function drawFight() {
   drawVignette();
   drawPeek();
   drawCadillacWarning();
-  if (!(F.fat && F.fat.kind === "elements")) drawHUD();         // the five elements play in letterbox, no HUD
+  if (!F.fat) drawHUD();                                          // fatalities play in letterbox, no HUD
   drawComboBanner();
   drawQuote();
   drawFightOverlays();
