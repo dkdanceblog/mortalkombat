@@ -5058,6 +5058,7 @@ function updateFatality(dt) {
     once("go", 2.25, () => playSfx("fat_car_leave"));
     if (t > 2.3 && t < 3.3 && Math.random() < dt * 20) { const cx = carX(fat, t, w); F.particles.push({ type: "sq", x: cx + dir * 300, y: FLOOR_Y - rand(10, 30), vx: dir * rand(20, 80), vy: rand(-60, -20), life: 0.7, max: 0.7, size: pick([8, 10, 12]), color: pick(["rgba(150,150,150,0.6)", "rgba(110,110,110,0.5)"]) }); }
   } else if (fat.kind === "tea") {
+    once("line", 0.05, () => { F.quote = { slot: w.slot, text: "ЧАЙ, ЧАЙ, ЧАЁЧЕК, НАЛИВАЙ КИПЯТОЧЕК!", t: 2.2 }; });
     once("drop", 0.55, () => { playSfx("fat_mug_land"); F.shake = 16; spawnDust(teaX(fat), FLOOR_Y, 1.6); });
     once("throw", 0.9, () => playSfx("throw"));
     once("splash", 1.55, () => {
