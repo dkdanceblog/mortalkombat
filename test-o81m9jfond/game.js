@@ -7538,8 +7538,12 @@ function drawSecrets() {
     panel(x, y, w, h, { border: found ? GOLD : "rgba(157,151,201,0.35)" });
     text(String(i + 1).padStart(2, "0"), x + 16, y + 22, { size: 12, font: FONT_PIX, color: found ? GOLD : "#6f6a99", shadow: false });
     text(found ? sd.name : "? ? ?", x + 56, y + 23, { size: fitText(found ? sd.name : "???", w - 96, 20, FONT_HEAD, 12), color: found ? "#fff6c8" : "#8d87b9", stroke: "#000", strokeW: 4 });
-    wrapText(found ? (info.how || "") : (info.hint || ""), x + 16, y + 52, w - 32, 17,
-      { size: 14, color: found ? "#c9c2ff" : "#7d77a8", shadow: false });
+    {                                     // description: one line if it fits, otherwise two smaller lines — always inside the tile
+      const ds = found ? (info.how || "") : (info.hint || ""), col = found ? "#c9c2ff" : "#7d77a8";
+      const one = fitText(ds, w - 32, 14, FONT_HEAD, 12);
+      if (textWidth(ds, one, FONT_HEAD) <= w - 32) text(ds, x + 16, y + Math.min(52, h - 18), { size: one, color: col, shadow: false });
+      else wrapText(ds, x + 16, y + Math.min(45, h - 30), w - 32, 8, { size: 12, color: col, shadow: false });
+    }
     if (found) text("✓", x + w - 18, y + 22, { size: 20, align: "center", color: "#8dff7a", stroke: "#000", strokeW: 4 });
   });
   region("secrets-back", 0, H - 46, W, 46, () => { confirmSfx(); setScreen(G.secretsBack || "title"); });
