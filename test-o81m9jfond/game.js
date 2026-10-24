@@ -7102,20 +7102,12 @@ function startTitleExit() {
   const T = titleState();
   if (T.exit) return;
   T.exit = { t: 0, pieces: Array.from({ length: 18 }, (_, i) => ({ c: i % 6, r: Math.floor(i / 6), vx: rand(-900, 900), vy: rand(-700, 200), vr: rand(-8, 8) })) };
-  playSfx("fatality_sting"); playSfx("koHit"); buzz([40, 30, 90]);
-  T.shake = 14;
+  confirmSfx();
 }
-function drawTitleLogoBurst(T) {
-  const logo = img("logo"); if (!logo) return;
-  const e = T.exit, t = e.t, cx = W / 2, cy = 160, lw = logo.naturalWidth, lh = logo.naturalHeight;
-  const pw = lw / 6, ph = lh / 3;
-  ctx.save(); ctx.globalAlpha = Math.max(0, 1 - t / 0.5);
-  for (const p of e.pieces) {
-    const x0 = cx - lw / 2 + (p.c + 0.5) * pw, y0 = cy - lh / 2 + (p.r + 0.5) * ph;
-    ctx.save(); ctx.translate(x0 + p.vx * t, y0 + p.vy * t + 1400 * t * t); ctx.rotate(p.vr * t);
-    ctx.drawImage(logo, p.c * pw, p.r * ph, pw, ph, -pw / 2, -ph / 2, pw, ph);
-    ctx.restore();
-  }
+function drawTitleLogoBurst(T) {                             // soft: the logo swells a little and fades out
+  const k = clamp(T.exit.t / 0.45, 0, 1);
+  ctx.save(); ctx.globalAlpha = 1 - k;
+  drawTitleLogo(W / 2, 160, 1 + 0.12 * easeOut(k));
   ctx.restore();
 }
 function drawTitle() {
@@ -7164,7 +7156,7 @@ function drawTitle() {
     if (T.exit) drawTitleLogoBurst(T);
     else drawTitleLogo(W / 2, 160 + drop + Math.sin(G.time * 1.6) * 4, sc);
   }
-  if (T.exit) { const k = T.exit.t; ctx.fillStyle = `rgba(255,245,220,${Math.max(0, 0.9 - k * 2.2)})`; ctx.fillRect(-20, -20, W + 40, H + 40); }
+  if (T.exit) { const k = clamp(T.exit.t / 0.5, 0, 1); ctx.fillStyle = `rgba(11,8,32,${0.85 * k})`; ctx.fillRect(-20, -20, W + 40, H + 40); }
   if (T.flash > 0) { ctx.fillStyle = `rgba(255,240,200,${T.flash * 0.6})`; ctx.fillRect(0, 0, W, H); }
   ctx.restore();
 
