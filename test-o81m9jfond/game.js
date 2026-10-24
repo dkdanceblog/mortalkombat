@@ -1409,6 +1409,8 @@ function makeFighter(cid, slot) {
 }
 
 function startMatch() {
+  // Krip-a-Krip meets Smoky Mo: the Petersburg showdown (someone real has to be playing)
+  if (!G.botVsBot && !G.tutorial && G.chars.includes("krip") && G.chars.includes("smoky")) setTimeout(() => unlockSecret("a_piter"), 1200);
   F = {
     fighters: [makeFighter(G.chars[0], 0), makeFighter(G.chars[1], 1)],
     projectiles: [], particles: [], popups: [], ambient: [],
@@ -8195,6 +8197,8 @@ const SECRETS = [
   { id: "a_mayor", name: "СЛОВО МЭРА", win: "oxxxy", stage: "gorgorod", how: "Выиграй за Оксимирона в Горгороде" },
   { id: "a_suck", name: "ПОСОСИ", win: "morgen", stage: "mansion", how: "Выиграй за Моргенштерна в его особняке" },
   { id: "a_sunset", name: "МАЛИНОВЫЙ ЗАКАТ", win: "korzh", stage: "roof", how: "Выиграй за Коржа на Закате" },
+  { id: "a_piter", name: "ЭТО РАЗБОРКА ПИТЕРСКАЯ", event: "piter", how: "Сведи в бою Крип-а-Крипа и Смоки Мо" },
+  { id: "a_panelka", name: "ПАНЕЛЬКА", win: "husky", stage: "yard", how: "Выиграй за Хаски у падика" },
   { id: "a_collector", name: "КОЛЛЕКЦИОНЕР", event: "allfat", how: "Попробуй все фаталити" },
   { id: "a_rapgod", name: "RAP GOD", event: "rapgod", how: "Выиграй бой на сложном боте, не пропустив ни одного удара" },
 ];
