@@ -7537,7 +7537,7 @@ function drawSecrets() {
     const info = SECRET_INFO[sd.id] || {};
     panel(x, y, w, h, { border: found ? GOLD : "rgba(157,151,201,0.35)" });
     text(String(i + 1).padStart(2, "0"), x + 16, y + 22, { size: 12, font: FONT_PIX, color: found ? GOLD : "#6f6a99", shadow: false });
-    text(found ? sd.name : "? ? ?", x + 56, y + 23, { size: fitText(found ? sd.name : "???", w - 72, 20, FONT_HEAD, 12), color: found ? "#fff6c8" : "#8d87b9", stroke: "#000", strokeW: 4 });
+    text(found ? sd.name : "? ? ?", x + 56, y + 23, { size: fitText(found ? sd.name : "???", w - 96, 20, FONT_HEAD, 12), color: found ? "#fff6c8" : "#8d87b9", stroke: "#000", strokeW: 4 });
     wrapText(found ? (info.how || "") : (info.hint || ""), x + 16, y + 52, w - 32, 17,
       { size: 14, color: found ? "#c9c2ff" : "#7d77a8", shadow: false });
     if (found) text("✓", x + w - 18, y + 22, { size: 20, align: "center", color: "#8dff7a", stroke: "#000", strokeW: 4 });
@@ -8199,6 +8199,8 @@ const SECRETS = [
   { id: "a_sunset", name: "МАЛИНОВЫЙ ЗАКАТ", win: "korzh", stage: "roof", how: "Выиграй за Коржа на Закате" },
   { id: "a_piter", name: "ЭТО РАЗБОРКА ПИТЕРСКАЯ", event: "piter", how: "Сведи в бою Крип-а-Крипа и Смоки Мо" },
   { id: "a_panelka", name: "ПАНЕЛЬКА", win: "husky", stage: "yard", how: "Выиграй за Хаски у падика" },
+  { id: "a_sugarman", name: "САХАРНЫЙ ЧЕЛОВЕК", fat: "fludd", how: "Сделай ФЛАДАЛИТИ" },
+  { id: "a_auf", name: "АУФ", fat: "sqwoz", how: "Сделай фаталити за SQWOZ BAB" },
   { id: "a_collector", name: "КОЛЛЕКЦИОНЕР", event: "allfat", how: "Попробуй все фаталити" },
   { id: "a_rapgod", name: "RAP GOD", event: "rapgod", how: "Выиграй бой на сложном боте, не пропустив ни одного удара" },
 ];
