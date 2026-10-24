@@ -5247,7 +5247,7 @@ function drawFatFighter(f) {
       } else P(end ? "win" : t < 1.3 ? "light" : "idle", f.x, f.y);
       if (t >= 0.6 && t < 0.82) {
         const k = (t - 0.6) / 0.22;
-        const x0 = f.x - dir * 10, y0 = f.y - wh - 60, l = F.fighters[fat.l], x1 = l.x, y1 = l.y - hH + 34;
+        const x0 = f.x - dir * 10, y0 = f.y - wh - 60, l = F.fighters[fat.l], lh = headOf(l.cid, "hurt"), x1 = l.x + lh.x * l.dir, y1 = l.y + lh.y + 44;
         drawTV(lerp(x0, x1, k), lerp(y0, y1, k) - Math.sin(k * Math.PI) * 60, 150, 118, dir * k * 0.6, 0, false, img("portrait." + l.cid));
       }
       return;
@@ -5257,7 +5257,8 @@ function drawFatFighter(f) {
     drawShadowAt(f.x + dir * 110 * fall, 70 + 50 * fall);
     ctx.save(); ctx.translate(f.x, f.y - 46 * fall); ctx.rotate(ang + (t < 1.95 ? sway * 1.4 : 0));
     P("hurt", 0, 0);
-    if (t >= 0.82) drawTV(0, -hH + 34, 150, 118, 0.12 * Math.sin(t * 9) * (1 - fall), t >= TV_CRACK ? 1 : 0, true, t < TV_CRACK ? img("portrait." + f.cid) : null);
+    const hd = headOf(f.cid, "hurt");
+    if (t >= 0.82) drawTV(hd.x * f.dir, hd.y + 44, 150, 118, 0.12 * Math.sin(t * 9) * (1 - fall), t >= TV_CRACK ? 1 : 0, true, t < TV_CRACK ? img("portrait." + f.cid) : null);
     ctx.restore();
     if (t < 0.82) {} // TV still flying (drawn with the winner)
     return;
@@ -6185,6 +6186,22 @@ function drawIceChunk(x, y, s, r) {
 }
 
 // old CRT television: body, screen (static + cracks when smashed), antennas
+// where the head is on a pose: top of the sprite and the middle of its top rows, relative to the feet anchor (cached)
+const headCache = new Map();
+function headOf(cid, pose) {
+  const key = cid + "." + pose;
+  if (headCache.has(key)) return headCache.get(key);
+  const fr = frameOf(cid, pose); if (!fr) return { x: 0, y: -230 };
+  const im = fr.image, c = document.createElement("canvas"); c.width = im.width; c.height = im.height;
+  const g = c.getContext("2d"); g.drawImage(im, 0, 0);
+  const d = g.getImageData(0, 0, im.width, im.height).data;
+  let top = -1, sx = 0, n = 0;
+  for (let y = 0; y < im.height && (top < 0 || y < top + 34); y++) for (let x = 0; x < im.width; x++) {
+    if (d[(y * im.width + x) * 4 + 3] > 128) { if (top < 0) top = y; sx += x; n++; }
+  }
+  const r = { x: n ? sx / n - fr.ax : 0, y: (top < 0 ? 0 : top) - fr.ay };
+  headCache.set(key, r); return r;
+}
 function drawTV(x, y, w, h, rot, cracked, on, face) {
   const tim = img("fx.tv");
   if (tim) {
