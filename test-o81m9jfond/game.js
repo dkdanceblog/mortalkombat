@@ -7630,11 +7630,9 @@ function drawMode() {
     { mode: 3, title: "АРКАДА", sub: "6 боёв подряд", ids: [null, "boss"], lines: ["в конце — финальный босс"] },
     { mode: 2, title: "2 ИГРОКА", sub: "на одной клавиатуре", ids: ["guf", "noize"], off: isTouch,
       lines: isTouch ? ["только на компьютере"] : ["1P: WASD + F G H, R — блок", "2P: стрелки + J K L, ; — блок"] },
-    madOpen() ? { mode: 5, title: "БЕЗУМИЕ", sub: "все против тебя", ids: [null, "mad"], lines: ["в каждом бою — сюрприз"] }
-      : { mode: 5, title: "БЕЗУМИЕ", sub: "закрыто", ids: [null, "lock"], lines: ["победи Чипинкоса,", "чтобы открыть"], off: true, locked: true },
     { mode: 4, title: "ОБУЧЕНИЕ", sub: "все приёмы по шагам", ids: ["guf", "tut"], lines: ["проиграть нельзя"] },
   ];
-  const w = 232, h = 372, gap = 12;
+  const w = 292, h = 360, gap = 16;
   const x0 = W / 2 - (w * opts.length + gap * (opts.length - 1)) / 2;
   opts.forEach((o, i) => {
     const x = x0 + i * (w + gap);
@@ -7642,9 +7640,9 @@ function drawMode() {
     const active = G.sel === i;
     panel(x, y, w, h, { active });
     o.ids.forEach((id, k) => {
-      const px = x + w / 2 - 112 + k * 128;
-      const py = y + 40;
-      ctx.save(); ctx.translate(px, py); ctx.scale(96 / 120, 96 / 120); ctx.translate(-px, -py);
+      const px = x + w / 2 - 126 + k * 132;
+      const py = y + 30;
+      ctx.save();
       ctx.fillStyle = "#0d0f26";
       ctx.fillRect(px, py, 120, 120);
       if (id === "tut") text("?", px + 60, py + 64, { size: 60, align: "center", color: "#8dff7a", stroke: "#000", strokeW: 6 });
@@ -7659,25 +7657,34 @@ function drawMode() {
       ctx.strokeRect(px + 1.5, py + 1.5, 117, 117);
       ctx.restore();
     });
-    text("VS", x + w / 2, y + 90, { size: 22, align: "center", gradient: ["#fff", GOLD], stroke: "#000" });
+    text("VS", x + w / 2 - 5, y + 92, { size: 30, align: "center", gradient: ["#fff", GOLD], stroke: "#000" });
     text(o.title, x + w / 2, y + 196, { size: fitText(o.title, w - 30, 40), align: "center", color: active ? GOLD : "#fff", stroke: "#000", strokeW: 6 });
     text(o.sub, x + w / 2, y + 244, { size: fitText(o.sub, w - 30, 26), align: "center", color: "#c9c2ff", stroke: "#000", strokeW: 4 });
     o.lines.forEach((ln, k) => text(ln, x + w / 2, y + 300 + k * 28, { size: fitText(ln, w - 24, 20, FONT_HEAD, 11), align: "center", color: "#9d97c9", shadow: false }));
     if (o.off) { ctx.fillStyle = "rgba(8,5,20,0.6)"; ctx.fillRect(x, y, w, h); }
     region("mode" + i, x, y, w, h, () => { if (o.off) { playSfx("block"); G.sel = i; return; } chooseMode(o.mode); }, () => { G.sel = i; });
   });
+  {   // БЕЗУМИЕ: a separate button under the cards (locked until Chipinkos is beaten)
+    const open = madOpen(), act = G.sel === 4;
+    const bw = 380, bh = 56, bx = W / 2 - bw - 10, by = 556;
+    panel(bx, by, bw, bh, { active: act, border: open ? "#ff86d8" : "rgba(157,151,201,0.35)" });
+    if (open) text("БЕЗУМИЕ", bx + bw / 2, by + bh / 2 + 2, { size: 28, align: "center", gradient: ["#ffffff", "#ff86d8", "#a02cff"], stroke: "#1a0830", strokeW: 6 });
+    else { text("🔒 БЕЗУМИЕ", bx + bw / 2, by + 20, { size: 20, align: "center", color: "#8d87b9", stroke: "#000", strokeW: 4 });
+      text("победи Чипинкоса", bx + bw / 2, by + 42, { size: 13, font: FONT_PIX, align: "center", color: "#7d77a8", shadow: false }); }
+    region("mode-mad", bx, by, bw, bh, () => chooseMode(5), () => { G.sel = 4; });
+  }
   {   // achievements are reachable from here too (on phones the title badge is easy to miss)
     const label = `СЕКРЕТЫ ${secrets.size} / ${SECRETS.length}`;
-    const bw = 380, bh = 56, bx = W / 2 - bw / 2, by = 560;
+    const bw = 380, bh = 56, bx = W / 2 + 10, by = 556;
     const hov = hover && hover.id === "mode-ach";
     panel(bx, by, bw, bh, { active: hov });
-    text(label, W / 2, by + bh / 2 + 1, { size: 20, font: FONT_PIX, align: "center", color: GOLD, shadow: false });
+    text(label, bx + bw / 2, by + bh / 2 + 1, { size: 20, font: FONT_PIX, align: "center", color: GOLD, shadow: false });
     region("mode-ach", bx, by, bw, bh, () => { confirmSfx(); openSecrets(); });
   }
   footer("← →  ВЫБОР    ENTER  ОК    S  СЕКРЕТЫ    ESC  НАЗАД    M  ЗВУК");
   backButton();
 }
-const MODE_ORDER = [1, 3, 2, 5, 4];
+const MODE_ORDER = [1, 3, 2, 4, 5];
 // БЕЗУМИЕ opens once Chipinkos has been beaten (arcade boss, or anywhere)
 function madOpen() { return chipUnlocked() || secrets.has("a_truegangsta"); }
 function chooseMode(m) {
@@ -8911,8 +8918,10 @@ function handleNav(ev) {
     return;
   }
   if (s === "mode") {
-    if (t === "left" || t === "up") G.sel = (G.sel + 4) % 5;
-    if (t === "right" || t === "down") G.sel = (G.sel + 1) % 5;
+    if (t === "left") G.sel = G.sel === 4 ? 3 : (G.sel + 3) % 4;
+    if (t === "right") G.sel = G.sel === 4 ? 0 : (G.sel + 1) % 4;
+    if (t === "down") { G.selUp = G.sel === 4 ? G.selUp : G.sel; G.sel = 4; }
+    if (t === "up" && G.sel === 4) G.sel = G.selUp || 0;
     if (t === "digit:4") chooseMode(4);
     if (t === "digit:1") chooseMode(1);
     if (t === "digit:2") chooseMode(3);
@@ -8941,7 +8950,7 @@ function handleNav(ev) {
     if (t === "confirm" && (G.mode === 1 || pl === -1 || pl === G.picking)) pickChar(G.charCursor[G.picking]);
     if (t === "back") {
       if (G.mode === 2 && G.picking === 1) { G.picking = 0; G.chars = [null, null]; }
-      else if (G.arcadePick) { const wasMad = G.madPick; G.arcadePick = false; G.madPick = false; setScreen("mode"); G.sel = wasMad ? 3 : 1; }
+      else if (G.arcadePick) { const wasMad = G.madPick; G.arcadePick = false; G.madPick = false; setScreen("mode"); G.sel = wasMad ? 4 : 1; }
       else { setScreen(G.mode === 1 ? "difficulty" : "mode"); G.sel = G.mode === 1 ? DIFF_IDS.indexOf(G.difficulty) : 2; }
     }
     return;
