@@ -17,7 +17,22 @@ const GAME_SPEED = 1.12;   // the whole fight runs a little faster
 const DMG_SCALE = 1.15;    // rounds end sooner
 const WALL_L = 70;
 const WALL_R = W - 70;
-const ROUNDS_TO_WIN = 2;
+const ROUNDS_TO_WIN_BASE = 2;
+function roundsToWin() { return F && F.madness ? 1 : ROUNDS_TO_WIN_BASE; }
+// БЕЗУМИЕ: one round per fight, a random modifier each time
+const MAD_MODS = {
+  giant:   { name: "ГИГАНТЫ" },
+  bighead: { name: "БОЛЬШИЕ ГОЛОВЫ" },
+  moon:    { name: "ЛУННАЯ ГРАВИТАЦИЯ" },
+  slow:    { name: "СЛОУ-МО: УРОН ×2" },
+  ice:     { name: "ЛЁД" },
+  bit8:    { name: "8-БИТ" },
+  onehit:  { name: "ОДИН УДАР" },
+  tea:     { name: "ЧАЙНЫЙ РЕЖИМ" },
+};
+const MAD_GIANT = 1.4;
+function madMod(k) { return !!(F && F.mod === k); }
+function teaOn() { return G.cheats.tea || madMod("tea"); }
 const MAX_ROUNDS = 5;
 
 const FONT_HEAD = '"Russo One", "Arial Black", system-ui, sans-serif';
@@ -1374,6 +1389,11 @@ function drawPose(cid, name, x, y, o = {}) {
   ctx.scale(dir * (o.sx || 1) * (o.scale || 1), (o.sy || 1) * (o.scale || 1));
   if (o.rot) ctx.rotate(o.rot);
   ctx.drawImage(fr.image, -fr.ax, -fr.ay);
+  if (o.bighead) {                       // БЕЗУМИЕ: the head drawn again, much bigger, on top
+    const hd = headOf(cid, name), hh = fr.ay * 0.21, hw = fr.ay * 0.27, k = 2.1;
+    const sx0 = clamp(hd.x + fr.ax - hw / 2, 0, fr.image.width - hw), sy0 = Math.max(0, hd.y + fr.ay - 4);
+    ctx.drawImage(fr.image, sx0, sy0, hw, hh, hd.x - hw * k / 2, hd.y - 4 + hh / 2 - hh * k / 2 - hh * 0.35, hw * k, hh * k);
+  }
   if (o.tint) {
     const ga = ctx.globalAlpha;
     ctx.globalAlpha = ga * o.tint.a;
@@ -1414,7 +1434,7 @@ function startMatch() {
   F = {
     fighters: [makeFighter(G.chars[0], 0), makeFighter(G.chars[1], 1)],
     projectiles: [], particles: [], popups: [], ambient: [],
-    round: 1, wins: [0, 0], timer: ROUND_TIME, hintUntil: G.time + 10,
+    round: 1, wins: [0, 0], timer: ROUND_TIME, hintUntil: G.arcade && G.arcade.madness ? 0 : G.time + 10,
     phase: "intro", phaseT: 0,
     hitstop: 0, slow: 0, shake: 0, flash: 0,
     winner: -1, endType: "", perfect: false,
@@ -1423,6 +1443,7 @@ function startMatch() {
     diff: DIFFICULTIES[G.difficulty],
     stats: { time: 0, maxCombo: [0, 0] },
     birds: [], flicker: 0, money: 0, legend: false,
+    madness: !!(G.arcade && G.arcade.madness), mod: G.arcade && G.arcade.madness ? G.madMod : null,
   };
   setScreen("fight");
   startRound();
@@ -1438,6 +1459,7 @@ function startRound() {
     b.data = { ...b.data, power: b.data.power * 1.1 };
     b.super = Math.max(b.super, 25);
   }
+  if (F.mod === "onehit") for (const f of F.fighters) { f.hp = 1; f.shownHp = 1; f.trailHp = 1; }
   F.superCut = null;
   F.projectiles = [];
   F.particles = [];
@@ -1456,13 +1478,17 @@ function startRound() {
 }
 
 function isFinalRound() {
-  return F.wins[0] === ROUNDS_TO_WIN - 1 && F.wins[1] === ROUNDS_TO_WIN - 1;
+  return F.wins[0] === roundsToWin() - 1 && F.wins[1] === roundsToWin() - 1;
 }
 
 /* ------------------------------------------------------------------ */
 /* Fighter logic                                                       */
 /* ------------------------------------------------------------------ */
 function hurtbox(f) {
+  if (madMod("giant")) { const b = hurtbox0(f), k = MAD_GIANT; return { x0: f.x + (b.x0 - f.x) * k, x1: f.x + (b.x1 - f.x) * k, y0: f.y + (b.y0 - f.y) * k, y1: f.y + (b.y1 - f.y) * k }; }
+  return hurtbox0(f);
+}
+function hurtbox0(f) {
   if (!f.onGround) return { x0: f.x - 45, x1: f.x + 45, y0: f.y - 200, y1: f.y - 10 };
   if (f.crouch) return { x0: f.x - 52, x1: f.x + 52, y0: f.y - 140, y1: f.y };
   return { x0: f.x - 46, x1: f.x + 46, y0: f.y - 215, y1: f.y };
@@ -1510,7 +1536,7 @@ function startSpecial(f) {
   const sp = SPECIALS[f.cid];
   f.action = { type: "special", t: 0, hitDone: false, spawned: false, total: sp.total, startup: sp.startup, sp };
   f.specialCd = Math.max(4.5, f.data.specialCd * 1.4) * (G.cheats.madness ? 0.2 : 1);
-  playSfx(G.cheats.tea ? "special_guf" : sp.sfx);
+  playSfx(teaOn() ? "special_guf" : sp.sfx);
   voice(f, "attack", 0.6);
   if (!f.isBot && !G.tutorial) { const sd = SECRETS.find((x) => x.special === f.cid); if (sd) unlockSecret(sd.id); }
   if (Math.random() < 0.35) sayQuote(f);
@@ -1652,7 +1678,7 @@ function updateFighter(f, opp, dt) {
       const isBack = dirInput !== 0 && dirInput !== f.dir;
       target = dirInput * f.data.speed * 1.15 * (isBack ? 0.8 : 1) * (f.chillT > 0 ? 0.55 : 1);
       if (c.held.up) {
-        f.vy = -JUMP_V * (f.data.jump || 1);
+        f.vy = -JUMP_V * (f.data.jump || 1) * (madMod("moon") ? 0.78 : 1);
         f.onGround = false;
         f.vx = dirInput * f.data.speed * 0.95;
         target = f.vx;
@@ -1661,18 +1687,19 @@ function updateFighter(f, opp, dt) {
       }
     }
     if (f.onGround) {
-      const accel = f.hitstun > 0 || f.blockstun > 0 ? 1500 : 2800;
+      const accel = madMod("ice") ? (f.hitstun > 0 || f.blockstun > 0 ? 220 : 620) : f.hitstun > 0 || f.blockstun > 0 ? 1500 : 2800;
       const diff = target - f.vx;
       const step = accel * dt;
       f.vx = Math.abs(diff) <= step ? target : f.vx + Math.sign(diff) * step;
-      if (f.action && f.action.type !== "special") f.vx *= Math.pow(0.0005, dt);
+      if (f.action && f.action.type !== "special" && !madMod("ice")) f.vx *= Math.pow(0.0005, dt);
     }
   }
 
   // Physics
   f.x += f.vx * dt;
-  f.vy += GRAVITY * dt;
+  f.vy += GRAVITY * dt * (madMod("moon") ? 0.34 : 1);
   f.y += f.vy * dt;
+  if (madMod("moon") && f.y < 70) { f.y = 70; f.vy = Math.max(0, f.vy); }
   if (f.y >= FLOOR_Y) {
     if (!f.onGround) {
       f.land = 0.12;
@@ -1764,8 +1791,9 @@ function updateFighter(f, opp, dt) {
 function meleeCheck(f, opp, a) {
   const mv = a.move;
   const near = f.x + f.dir * 18;
-  const far = f.x + f.dir * (18 + mv.reach);
-  const box = { x0: Math.min(near, far), x1: Math.max(near, far), y0: f.y + mv.y0, y1: f.y + mv.y1 };
+  const gk = madMod("giant") ? MAD_GIANT : 1;
+  const far = f.x + f.dir * (18 + mv.reach * gk);
+  const box = { x0: Math.min(near, far), x1: Math.max(near, far), y0: f.y + mv.y0 * gk, y1: f.y + mv.y1 * gk };
   if (overlap(box, hurtbox(opp))) {
     a.hitDone = true;
     const res = applyHit(f, opp, {
@@ -1792,7 +1820,7 @@ function meleeCheck(f, opp, a) {
 
 function updateSpecial(f, opp, a) {
   const sp = a.sp;
-  if (G.cheats.tea && f.cid !== "guf") {
+  if (teaOn() && f.cid !== "guf") {
     if (a.spawned || a.t < sp.startup) return;
     a.spawned = true;
     F.projectiles.push({
@@ -2037,7 +2065,7 @@ function updateSpecial(f, opp, a) {
 
 function warnTime(f) {
   // Morgen's Cadillac warning: shown while the special is winding up.
-  return f.action && f.action.type === "special" && (f.cid === "morgen" || f.cid === "kreed") && !f.action.spawned && !G.cheats.tea;
+  return f.action && f.action.type === "special" && (f.cid === "morgen" || f.cid === "kreed") && !f.action.spawned && !teaOn();
 }
 
 // Babangida's perk: the news of his death was fake — once per match he gets back up after a KO
@@ -2146,7 +2174,7 @@ function applyHit(att, def, h) {
   if (att.cid === "kreed" && att.hp <= 30 && !h.noScale) perk *= 1.15;
   if (att.cid === "sqwoz" && h.melee && att.fedT > 0) { perk *= 1.3; att.fedT = 0; popup(def.x, def.y - 320, "СЫТЫЙ!", "#e0a050", 24); }
   if (att.cid === "ramirez" && h.melee && G.time - (att.hurtAt ?? -9) < 1.6) { perk *= 1.25; popup(def.x, def.y - 320, "ЗВЕРЕЕТ!", "#b4c94a", 24); att.hurtAt = -9; }
-  let dmg = Math.max(1, Math.round(h.dmg * DMG_SCALE * att.data.power * scale * perk * (counter ? 1.25 : 1) / (def.data.tough || 1)));
+  let dmg = Math.max(1, Math.round((madMod("slow") ? 2 : 1) * h.dmg * DMG_SCALE * att.data.power * scale * perk * (counter ? 1.25 : 1) / (def.data.tough || 1)));
   def.hp = Math.max(0, def.hp - dmg);
   if (def.hp <= 0 && fakeDeath(def)) h = { ...h, knockdown: true };
   def.hurtAt = G.time;
@@ -2157,7 +2185,7 @@ function applyHit(att, def, h) {
   def.flash = 0.12;
   // light hits keep the fight close (combos), heavy hits push hard
   const wt = def.data.weight || 1;
-  def.vx = h.knock * h.dir * (Math.abs(h.knock) < 250 ? 0.6 : 1.15) / wt;
+  def.vx = h.knock * h.dir * (Math.abs(h.knock) < 250 ? 0.6 : 1.15) / wt * (madMod("ice") ? 1.7 : 1);
   def.hurtK = clamp(dmg / 10, 0.5, 1.6); def.hurtT = 0;
   if (h.wall) { def.wallT = 0.7; def.wallBy = att.slot; }
   if (h.launch && def.onGround) { def.vy = h.launch / Math.sqrt(wt); def.onGround = false; }
@@ -2727,7 +2755,7 @@ function hostLine() {
   if (!F) return null;
   if (F.phase === "intro") return HOST_LINES.intro;
   if (F.phase === "ko") {
-    const decided = F.wins[0] >= ROUNDS_TO_WIN || F.wins[1] >= ROUNDS_TO_WIN;
+    const decided = F.wins[0] >= roundsToWin() || F.wins[1] >= roundsToWin();
     return decided && F.phaseT > 1.2 ? HOST_LINES.match : HOST_LINES.ko;
   }
   if ((F.shockUntil || 0) > G.time || (F.hypeUntil || 0) - G.time > 1.2) return HOST_LINES.hit;
@@ -4019,7 +4047,7 @@ function endRound(type, winnerSlot, dir = 1) {
     F.perfect = w.hp >= 100;
     w.won = true;
     w.action = null;
-    if (type === "ko" && !G.tutorial && F.wins[winnerSlot] >= ROUNDS_TO_WIN) { startFinishHim(w, l); stopMusic(); return; }
+    if (type === "ko" && !G.tutorial && F.wins[winnerSlot] >= roundsToWin()) { startFinishHim(w, l); stopMusic(); return; }
     if (type === "ko") {
       l.ko = true;
       l.action = null;
@@ -4045,7 +4073,7 @@ function endRound(type, winnerSlot, dir = 1) {
 }
 
 function afterRound() {
-  const done = F.wins[0] >= ROUNDS_TO_WIN || F.wins[1] >= ROUNDS_TO_WIN || F.round >= MAX_ROUNDS;
+  const done = F.wins[0] >= roundsToWin() || F.wins[1] >= roundsToWin() || F.round >= MAX_ROUNDS;
   if (done) {
     if (F.wins[0] === F.wins[1]) F.matchWinner = -1;
     else F.matchWinner = F.wins[0] > F.wins[1] ? 0 : 1;
@@ -4093,7 +4121,7 @@ function updateFight(rawDt) {
 
   if (F.phase === "fatality") { if (F.fatHold) return; F.phaseT += rawDt; updateFatality(rawDt); updateEffects(rawDt); return; }   // fatHold: test hook (freeze frame)
 
-  let dt = rawDt * GAME_SPEED;
+  let dt = rawDt * GAME_SPEED * (madMod("slow") ? 0.5 : 1);
   if (F.slow > 0) { F.slow -= rawDt; dt *= 0.3; }
 
   F.phaseT += dt;
@@ -4205,6 +4233,14 @@ function poseName(f) {
 }
 
 function drawFighter(f) {
+  if (madMod("giant") && !F.fat) {
+    ctx.save(); ctx.translate(f.x, FLOOR_Y); ctx.scale(MAD_GIANT, MAD_GIANT); ctx.translate(-f.x, -FLOOR_Y);
+    try { drawFighter0(f); } finally { ctx.restore(); }
+    return;
+  }
+  drawFighter0(f);
+}
+function drawFighter0(f) {
   if (F.fat) { drawFatFighter(f); return; }
   if (f.cid === "smoky" && f.action && f.action.type === "special" && f.action.dashed && !F.fat) { drawSmokyKarate(f); if (f.action.t < 0.82) return; }
   if (f.zillaT > 0) return;          // he IS the monster right now
@@ -4307,7 +4343,7 @@ function drawFighter(f) {
   }
 
   // Maybe Baby's hair whip grows from behind her head, so it goes under the sprite
-  if (f.cid === "maybe" && f.action && f.action.type === "special" && !G.cheats.tea) drawHairWhip(f);
+  if (f.cid === "maybe" && f.action && f.action.type === "special" && !teaOn()) drawHairWhip(f);
 
   // Smooth pose changes: the previous frame fades out under the new one
   if (f.poseName !== name) { f.prevPose = { name: f.poseName, x: f.x, y: f.y, dir: f.dir }; f.poseName = name; f.poseT = 0; }
@@ -4350,7 +4386,7 @@ function drawFighter(f) {
     ctx.restore();
   }
   drawPose(f.cid, name, f.x + ox, f.y + oy, {
-    dir: drawDir, sx, sy, rot, tint: fighterTint(f),
+    dir: drawDir, sx, sy, rot, tint: fighterTint(f), bighead: madMod("bighead") && name !== "ko" && name !== "fall" && name !== "lose",
     flash: f.flash > 0 ? 0.7 : (blockingNow ? 0.25 : 0),
     flashColor: blockingNow ? "#8fd3ff" : "#ffffff",
   });
@@ -6401,6 +6437,13 @@ function drawFight() {
   drawEasterFx();
   if (G.stage === "bar") drawBarCrowd(F.camX);
   ctx.restore();
+  if (madMod("bit8")) {                 // the whole scene in chunky pixels
+    const px = 5, sw = Math.round(W / px), sh = Math.round(H / px);
+    if (!F.pixCv) { F.pixCv = document.createElement("canvas"); F.pixCv.width = sw; F.pixCv.height = sh; }
+    const g = F.pixCv.getContext("2d"); g.imageSmoothingEnabled = true; g.drawImage(ctx.canvas, 0, 0, sw, sh);
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(F.pixCv, 0, 0, sw, sh, 0, 0, ctx.canvas.width, ctx.canvas.height); ctx.restore();
+  }
 
   drawVignette();
   drawPeek();
@@ -6559,7 +6602,7 @@ function drawSide(f, side) {
   });
 
   // Round wins
-  for (let i = 0; i < ROUNDS_TO_WIN; i++) {
+  for (let i = 0; i < roundsToWin(); i++) {
     const cx = left ? bx + bw - 20 - i * 26 : bx + 20 + i * 26;
     const cy = by + bh + 20;
     ctx.beginPath();
@@ -6702,7 +6745,18 @@ function drawControlsHint() {
   ctx.restore();
 }
 
+function drawMadBanner() {
+  if (!F.madness || !F.mod) return;
+  const t = F.phase === "intro" ? F.phaseT : F.phase === "fight" && F.round === 1 ? F.phaseT + 2 : 99;
+  if (t > 3.2) return;
+  const A = G.arcade, a = Math.min(1, t * 4, (3.2 - t) / 0.4), k = 1 + 0.25 * Math.max(0, 1 - t * 3);
+  ctx.save(); ctx.translate(W / 2, 168); ctx.scale(k, k);
+  text(`БЕЗУМИЕ • БОЙ ${A.idx + 1} / ${A.ladder.length}`, 0, -34, { size: 16, font: FONT_PIX, align: "center", color: "#ff86d8", stroke: "#000", strokeW: 5, alpha: a });
+  text(MAD_MODS[F.mod].name, 0, 14, { size: 52, align: "center", gradient: ["#ffffff", "#ff86d8", "#a02cff"], stroke: "#1a0830", strokeW: 8, alpha: a });
+  ctx.restore();
+}
 function drawFightOverlays() {
+  drawMadBanner();
   drawControlsHint();
   if (F.phase === "intro") {
     const t = F.phaseT;
@@ -7393,9 +7447,19 @@ function startArcade(cid) {
   setScreen("ladder");
 }
 
+// БЕЗУМИЕ: everyone else in a row, one round each, a random modifier every fight
+function startMadness(cid) {
+  const opps = CHAR_IDS.filter((c) => c !== cid).sort(() => Math.random() - 0.5);
+  const keys = Object.keys(MAD_MODS); let bag = [], last = null;
+  const nextMod = () => { if (!bag.length) bag = [...keys].sort(() => Math.random() - 0.5); let m = bag.pop(); if (m === last && bag.length) { bag.unshift(m); m = bag.pop(); } return (last = m); };
+  const ladder = opps.map((o) => ({ cid: o, stage: pick(STAGE_IDS), mod: nextMod() }));
+  G.arcade = { madness: true, cid, ladder, idx: 0, retries: 0, prevDiff: G.difficulty, wins: 0 };
+  arcadeFight();
+}
 function arcadeFight() {
   const A = G.arcade;
   const step = A.ladder[A.idx];
+  G.madMod = A.madness ? step.mod : null;
   confirmSfx();
   G.mode = 1;
   G.chars = [A.cid, step.cid];
@@ -7403,7 +7467,7 @@ function arcadeFight() {
   G.arcadeBoss = !!step.boss;
   G.arcadeSecret = !!step.secret;
   G.stage = step.stage;
-  G.difficulty = step.boss ? "normal" : arcadeDifficulty(A.idx);
+  G.difficulty = A.madness ? "normal" : step.boss ? "normal" : arcadeDifficulty(A.idx);
   startVs();
 }
 
@@ -7411,7 +7475,13 @@ function arcadeEndItems() {
   const A = G.arcade;
   const won = F && F.matchWinner === 0;
   const last = A.idx >= A.ladder.length - 1;
-  const toMenu = ["МЕНЮ", () => { confirmSfx(); G.difficulty = A.prevDiff; G.arcade = null; G.arcadeBoss = false; setScreen("mode"); }];
+  const toMenu = ["МЕНЮ", () => { confirmSfx(); G.difficulty = A.prevDiff; G.arcade = null; G.arcadeBoss = false; G.madMod = null; setScreen("mode"); }];
+  if (A.madness) {
+    if (A.scoredIdx !== A.idx) { A.scoredIdx = A.idx; A.score = A.idx + (won ? 1 : 0); if (A.score > store.get("mad_best", 0)) { store.set("mad_best", A.score); A.newBest = true; } }
+    const again = ["ЕЩЁ РАЗ", () => { confirmSfx(); G.difficulty = A.prevDiff; startMadness(A.cid); }];
+    if (won && !last) return [["СЛЕДУЮЩИЙ БОЙ", () => { confirmSfx(); A.idx++; A.wins++; arcadeFight(); }], toMenu];
+    return [again, toMenu];
+  }
   if (A.checkedIdx !== A.idx && F) { A.checkedIdx = A.idx; if (F.wins[1] > 0) A.flawless = false; }
   // first arcade win opens Chipinkos; once he is open, beating the arcade again summons the secret boss
   if (won && last && A.chipBefore && !A.secretAdded && A.cid !== "babangida" && !babUnlocked()) {
@@ -7560,33 +7630,37 @@ function drawMode() {
     { mode: 3, title: "АРКАДА", sub: "6 боёв подряд", ids: [null, "boss"], lines: ["в конце — финальный босс"] },
     { mode: 2, title: "2 ИГРОКА", sub: "на одной клавиатуре", ids: ["guf", "noize"], off: isTouch,
       lines: isTouch ? ["только на компьютере"] : ["1P: WASD + F G H, R — блок", "2P: стрелки + J K L, ; — блок"] },
+    { mode: 5, title: "БЕЗУМИЕ", sub: "все против тебя", ids: [null, "mad"], lines: ["в каждом бою — сюрприз"] },
     { mode: 4, title: "ОБУЧЕНИЕ", sub: "все приёмы по шагам", ids: ["guf", "tut"], lines: ["проиграть нельзя"] },
   ];
-  const w = 292, h = 372, gap = 16;
-  const x0 = W / 2 - (w * 4 + gap * 3) / 2;
+  const w = 232, h = 372, gap = 12;
+  const x0 = W / 2 - (w * opts.length + gap * (opts.length - 1)) / 2;
   opts.forEach((o, i) => {
     const x = x0 + i * (w + gap);
     const y = 170;
     const active = G.sel === i;
     panel(x, y, w, h, { active });
     o.ids.forEach((id, k) => {
-      const px = x + w / 2 - 126 + k * 132;
-      const py = y + 30;
+      const px = x + w / 2 - 112 + k * 128;
+      const py = y + 40;
+      ctx.save(); ctx.translate(px, py); ctx.scale(96 / 120, 96 / 120); ctx.translate(-px, -py);
       ctx.fillStyle = "#0d0f26";
       ctx.fillRect(px, py, 120, 120);
       if (id === "tut") text("?", px + 60, py + 64, { size: 60, align: "center", color: "#8dff7a", stroke: "#000", strokeW: 6 });
       else if (id === "boss") text("БОСС", px + 60, py + 62, { size: 22, font: FONT_PIX, align: "center", color: "#ff5a3d" });
+      else if (id === "mad") text("?!", px + 60, py + 64, { size: 56, align: "center", gradient: ["#fff", "#ff86d8"], stroke: "#000", strokeW: 6 });
       else if (id) { const p = img("portrait." + id); if (p) ctx.drawImage(p, px, py, 120, 120); }
-      else if (o.mode === 3) text("?", px + 60, py + 64, { size: 60, align: "center", color: GOLD, stroke: "#000", strokeW: 6 });
+      else if (o.mode === 3 || o.mode === 5) text("?", px + 60, py + 64, { size: 60, align: "center", color: GOLD, stroke: "#000", strokeW: 6 });
       else text("CPU", px + 60, py + 62, { size: 26, font: FONT_PIX, align: "center", color: "#ff8a8a" });
       ctx.strokeStyle = id === "boss" ? "#ff5a3d" : k === 0 ? P_COLORS[0] : (id ? P_COLORS[1] : "#ff8a8a");
       ctx.lineWidth = 3;
       ctx.strokeRect(px + 1.5, py + 1.5, 117, 117);
+      ctx.restore();
     });
-    text("VS", x + w / 2 - 5, y + 92, { size: 30, align: "center", gradient: ["#fff", GOLD], stroke: "#000" });
+    text("VS", x + w / 2, y + 90, { size: 22, align: "center", gradient: ["#fff", GOLD], stroke: "#000" });
     text(o.title, x + w / 2, y + 196, { size: fitText(o.title, w - 30, 40), align: "center", color: active ? GOLD : "#fff", stroke: "#000", strokeW: 6 });
     text(o.sub, x + w / 2, y + 244, { size: fitText(o.sub, w - 30, 26), align: "center", color: "#c9c2ff", stroke: "#000", strokeW: 4 });
-    o.lines.forEach((ln, k) => text(ln, x + w / 2, y + 300 + k * 28, { size: fitText(ln, w - 30, 22), align: "center", color: "#9d97c9", shadow: false }));
+    o.lines.forEach((ln, k) => text(ln, x + w / 2, y + 300 + k * 28, { size: fitText(ln, w - 24, 20, FONT_HEAD, 11), align: "center", color: "#9d97c9", shadow: false }));
     if (o.off) { ctx.fillStyle = "rgba(8,5,20,0.6)"; ctx.fillRect(x, y, w, h); }
     region("mode" + i, x, y, w, h, () => { if (o.off) { playSfx("block"); G.sel = i; return; } chooseMode(o.mode); }, () => { G.sel = i; });
   });
@@ -7601,16 +7675,17 @@ function drawMode() {
   footer("← →  ВЫБОР    ENTER  ОК    S  СЕКРЕТЫ    ESC  НАЗАД    M  ЗВУК");
   backButton();
 }
-const MODE_ORDER = [1, 3, 2, 4];
+const MODE_ORDER = [1, 3, 2, 5, 4];
 function chooseMode(m) {
   confirmSfx();
   G.arcade = null;
   G.arcadeBoss = false;
   G.tutorial = null;
   if (m === 4) { startTutorial(); return; }
-  if (m === 3) {            // arcade: single player, pick a fighter, then the ladder
+  G.madPick = false;
+  if (m === 3 || m === 5) {  // arcade / madness: single player, pick a fighter, then the run
     G.mode = 1; G.twin = false; G.twinArmed = false; G.chars = [null, null]; G.picking = 0; G.charCursor = [0, 1];
-    G.arcadePick = true;
+    G.arcadePick = true; G.madPick = m === 5;
     setScreen("character");
     return;
   }
@@ -7866,7 +7941,7 @@ function pickChar(i) {
   const id = CHAR_IDS[i];
   if (G.mode === 2 && G.picking === 1 && G.chars[0] === id) return;
   playSfx("uiPick");
-  if (G.mode === 1 && G.arcadePick) { G.arcadePick = false; startArcade(id); return; }
+  if (G.mode === 1 && G.arcadePick) { G.arcadePick = false; if (G.madPick) { G.madPick = false; startMadness(id); } else startArcade(id); return; }
   if (G.mode === 1) {
     G.chars[0] = id;
     G.twin = G.twinArmed || heldKeys.has("ShiftLeft") || heldKeys.has("ShiftRight");
@@ -7965,7 +8040,8 @@ function startVs() {
   const [c0, c1] = G.chars;
   const key = [c0, c1].sort().join();
   let line, by = null;
-  if (G.arcade && G.arcadeSecret) line = ARCADE_TEXT.secretVs;
+  if (G.arcade && G.arcade.madness) line = `БЕЗУМИЕ ${G.arcade.idx + 1}/${G.arcade.ladder.length}: ${MAD_MODS[G.madMod].name}`;
+  else if (G.arcade && G.arcadeSecret) line = ARCADE_TEXT.secretVs;
   else if (G.arcadeBoss) line = ARCADE_TEXT.bossVs;
   else if (c0 === c1) line = G.twin ? "ЗЛОЙ ДВОЙНИК ВЫХОДИТ НА СЦЕНУ" : "КТО ИЗ ВАС ТРУШНЫЙ?";
   else line = pick(VS_LINES);   // only impersonal lines here — no quotes of real artists
@@ -8133,6 +8209,13 @@ function drawEnd() {
     ctx.restore();
   }
 
+  if (G.arcade && G.arcade.madness) {   // БЕЗУМИЕ run summary
+    const A = G.arcade; arcadeEndItems();
+    const all = A.score >= A.ladder.length, lost = F.matchWinner !== 0;
+    const line = all ? "ТЫ ПРОШЁЛ БЕЗУМИЕ!" : lost ? `ПРОДЕРЖАЛСЯ: ${A.score} ИЗ ${A.ladder.length}` : `БЕЗУМИЕ: ${A.score} ИЗ ${A.ladder.length}`;
+    text(line, W / 2, H - 150, { size: all ? 40 : 30, align: "center", gradient: ["#ffffff", "#ff86d8", "#a02cff"], stroke: "#1a0830", strokeW: 7 });
+    if (lost || all) text(A.newBest ? "НОВЫЙ РЕКОРД!" : `РЕКОРД: ${store.get("mad_best", 0)}`, W / 2, H - 116, { size: 16, font: FONT_PIX, align: "center", color: A.newBest ? GOLD : "#c9c2ff", stroke: "#000", strokeW: 4 });
+  }
   const items = G.arcade ? arcadeEndItems() : [
     ["РЕВАНШ", rematch],
     ["СОХРАНИТЬ", shareResult],
@@ -8823,8 +8906,8 @@ function handleNav(ev) {
     return;
   }
   if (s === "mode") {
-    if (t === "left" || t === "up") G.sel = (G.sel + 3) % 4;
-    if (t === "right" || t === "down") G.sel = (G.sel + 1) % 4;
+    if (t === "left" || t === "up") G.sel = (G.sel + 4) % 5;
+    if (t === "right" || t === "down") G.sel = (G.sel + 1) % 5;
     if (t === "digit:4") chooseMode(4);
     if (t === "digit:1") chooseMode(1);
     if (t === "digit:2") chooseMode(3);
@@ -8853,7 +8936,7 @@ function handleNav(ev) {
     if (t === "confirm" && (G.mode === 1 || pl === -1 || pl === G.picking)) pickChar(G.charCursor[G.picking]);
     if (t === "back") {
       if (G.mode === 2 && G.picking === 1) { G.picking = 0; G.chars = [null, null]; }
-      else if (G.arcadePick) { G.arcadePick = false; setScreen("mode"); G.sel = 1; }
+      else if (G.arcadePick) { const wasMad = G.madPick; G.arcadePick = false; G.madPick = false; setScreen("mode"); G.sel = wasMad ? 3 : 1; }
       else { setScreen(G.mode === 1 ? "difficulty" : "mode"); G.sel = G.mode === 1 ? DIFF_IDS.indexOf(G.difficulty) : 2; }
     }
     return;
@@ -8952,5 +9035,5 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 // Debug/test hook (harmless in production): lets automated checks read state.
-window.__game = { G, get TT() { return TT; }, startArcade, startSpecial, arcadeEndItems, chipUnlocked, babUnlocked, makeShareCard: (s) => makeShareCard(s), regions: () => hitRegions.map((r) => ({ id: r.id, x: r.x, y: r.y, w: r.w, h: r.h })), get F() { return F; }, CHARS, startMatch, sayQuote, updateFight, shareResult, endRound,
+window.__game = { G, get TT() { return TT; }, startArcade, startMadness, startSpecial, arcadeEndItems, chipUnlocked, babUnlocked, makeShareCard: (s) => makeShareCard(s), regions: () => hitRegions.map((r) => ({ id: r.id, x: r.x, y: r.y, w: r.w, h: r.h })), get F() { return F; }, CHARS, startMatch, sayQuote, updateFight, shareResult, endRound,
   audio: () => ({ state: actx && actx.state, loaded: Object.values(sfxBuf).filter((b) => b.length).length, total: Object.keys(sfxBuf).length, voices }) };
