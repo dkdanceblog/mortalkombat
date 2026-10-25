@@ -5759,7 +5759,7 @@ function drawElementAura(x, y, t) {
   ctx.fillStyle = g; ctx.fillRect(x - 170, y - 290, 340, 340);
   ctx.restore();
 }
-// the wheel of five: a pentagram with a node per element; lit nodes glow, at the end all fire beams
+// the wheel of five: a double ring with a node per element; lit nodes glow, at the end all fire beams
 function drawElementWheel(cx, cy, r, t, a, v) {
   const pts = ELEMENTS.map((_, i) => { const ang = -Math.PI / 2 + i * Math.PI * 2 / 5 + t * 0.4; return [cx + Math.cos(ang) * r, cy + Math.sin(ang) * r]; });
   ctx.save(); ctx.globalAlpha = a;
@@ -7275,7 +7275,13 @@ function drawTitle() {
       region("tg-logo", x - 20, 56, w + 40, h + 34, () => { confirmSfx(); openTelegram(); });
     }
   }
-  text("Неофициальная фанатская пародия. Не связана с исполнителями. Все персонажи — шаржи.", W / 2, H - 12, { size: 14, align: "center", color: "rgba(255,255,255,0.6)", stroke: "#000", strokeW: 4 });
+  {   // age mark: 18+
+    const bx = 34, by = H - 46, r = 26;
+    ctx.save(); ctx.fillStyle = "rgba(10,6,28,0.85)"; ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "#ff4a3d"; ctx.lineWidth = 3; ctx.stroke(); ctx.restore();
+    text("18+", bx, by + 2, { size: 18, align: "center", color: "#ffffff", stroke: "#000", strokeW: 4 });
+  }
+  text("18+  Неофициальная фанатская пародия. Не связана с исполнителями. Все персонажи — шаржи.", W / 2, H - 12, { size: 14, align: "center", color: "rgba(255,255,255,0.6)", stroke: "#000", strokeW: 4 });
   const badges = cheatBadges();
   if (badges) text(badges, 16, 66, { size: 16, color: "#ff86d8", stroke: "#000", strokeW: 4 });
 }
