@@ -7775,7 +7775,8 @@ function chooseDifficulty(id) {
 function drawCharacter() {
   menuBackground(0.78);
   const two = G.mode === 2;
-  header("ВЫБЕРИ БОЙЦА", two ? `ВЫБИРАЕТ ИГРОК ${G.picking + 1}` : null);
+  const oppPick = G.mode === 1 && G.picking === 1;
+  header(oppPick ? "ВЫБЕРИ СОПЕРНИКА" : "ВЫБЕРИ БОЙЦА", two ? `ВЫБИРАЕТ ИГРОК ${G.picking + 1}` : null);
 
   // Tiles: one row for a small roster, two rows otherwise
   const cols = charCols();
@@ -7808,7 +7809,7 @@ function drawCharacter() {
     const ty = 145 + row * rowH;
     const taken = two && G.picking === 1 && G.chars[0] === id;
     const c0 = G.picking === 0 ? G.charCursor[0] === i : G.chars[0] === id;
-    const c1 = two && G.picking === 1 && G.charCursor[1] === i;
+    const c1 = (two || oppPick) && G.picking === 1 && G.charCursor[1] === i;
     ctx.save();
     ctx.fillStyle = "#0d0f26";
     ctx.fillRect(x, ty, tile, tile);
@@ -7845,7 +7846,7 @@ function drawCharacter() {
       }
     };
     if (c0) cursor(P_COLORS[0], "1P", 4);
-    if (c1) cursor(P_COLORS[1], "2P", 10);
+    if (c1) cursor(oppPick ? "#ff8a8a" : P_COLORS[1], oppPick ? "CPU" : "2P", 10);
     region("char" + i, x, ty, tile, tile + 30, () => {
       if (isTouch && !taken && G.charCursor[G.picking] !== i) { G.charCursor[G.picking] = i; playSfx("uiMove"); return; }
       pickChar(i);
@@ -7860,9 +7861,14 @@ function drawCharacter() {
     const p2id = G.picking === 1 ? (G.chars[1] || CHAR_IDS[G.charCursor[1]]) : null;
     if (p2id) drawPreview(p2id, W - PREVIEW_X, 1, G.chars[1] ? "ГОТОВ" : null);
     else drawMystery(W - PREVIEW_X, "ИГРОК 2");
+  } else if (oppPick) {
+    drawPreview(CHAR_IDS[G.charCursor[1]], W - PREVIEW_X, 1, null);
   } else {
     if (G.twinArmed) drawTwinPreview(CHARS[CHAR_IDS[G.charCursor[0]]].id, W - PREVIEW_X);
-    else drawMystery(W - PREVIEW_X, "СОПЕРНИК");
+    else {
+      drawMystery(W - PREVIEW_X, "СОПЕРНИК");
+      if (!oppPickOpen() && !G.arcadePick) text("пройди аркаду, чтобы выбирать", W - PREVIEW_X, 610 + 58, { size: 11, font: FONT_PIX, align: "center", color: "#8d87b9", stroke: "#000", strokeW: 3 });
+    }
     const my0 = twoRowsSel ? 410 : 300;                  // never over the second row of tiles
     region("mystery", W - PREVIEW_X - 130, my0, 260, 640 - my0, () => {
       G.mysteryClicks = (G.mysteryClicks || 0) + 1;
@@ -7927,8 +7933,8 @@ function drawPreview(id, x, slot, badge) {
   drawPose(id, pose, x, y, {
     dir: slot === 0 ? 1 : -1, scale: sc, sy: 1 + 0.012 * b, sx: 1 - 0.006 * b,
   });
-  text(slot === 0 ? (G.mode === 1 ? "ВЫ" : "1P") : "2P", x, y + 34, { size: 14, font: FONT_PIX, align: "center", color: P_COLORS[slot] });
-  if (badge) text(badge, x, y - 272 * sc, { size: 30, align: "center", color: GOLD, stroke: "#000", strokeW: 6 });
+  text(slot === 0 ? (G.mode === 1 ? "ВЫ" : "1P") : G.mode === 1 ? "CPU" : "2P", x, y + 34, { size: 14, font: FONT_PIX, align: "center", color: P_COLORS[slot] });
+  if (badge) text(badge, x, sc < 1 ? y + 62 : y - 272 * sc, { size: sc < 1 ? 22 : 30, align: "center", color: GOLD, stroke: "#000", strokeW: 6 });
 }
 
 function drawMystery(x, label) {
@@ -7953,9 +7959,20 @@ function pickChar(i) {
   if (G.mode === 2 && G.picking === 1 && G.chars[0] === id) return;
   playSfx("uiPick");
   if (G.mode === 1 && G.arcadePick) { G.arcadePick = false; if (G.madPick) { G.madPick = false; startMadness(id); } else startArcade(id); return; }
+  if (G.mode === 1 && G.picking === 1) {           // chosen opponent (opens after the arcade is beaten)
+    G.chars[1] = id; G.charCursor[1] = i; G.twin = false;
+    setScreen("stage");
+    return;
+  }
   if (G.mode === 1) {
     G.chars[0] = id;
     G.twin = G.twinArmed || heldKeys.has("ShiftLeft") || heldKeys.has("ShiftRight");
+    if (!G.twin && oppPickOpen()) {
+      G.twinArmed = false; G.charCursor[0] = i; G.picking = 1;
+      let j = Math.floor(Math.random() * CHAR_IDS.length); if (j === i) j = (j + 1) % CHAR_IDS.length;
+      G.charCursor[1] = j;
+      return;
+    }
     G.twinArmed = false;
     G.chars[1] = G.twin ? id : pick(CHAR_IDS.filter((c) => c !== id));
     if (G.twin) unlockSecret("twin");
@@ -7975,6 +7992,8 @@ function pickChar(i) {
   }
 }
 
+// vs bot: the opponent can be picked once the arcade has been beaten (Chipinkos open)
+function oppPickOpen() { return chipUnlocked(); }
 function selectCount() { return CHAR_IDS.length + (chipUnlocked() ? 0 : 1); }
 function charCols() { const n = selectCount(); return n > 7 ? Math.ceil(n / 2) : n; }
 // Jump to the tile above/below (wrapping between the two rows)
@@ -8947,7 +8966,7 @@ function handleNav(ev) {
     if (t.startsWith("digit")) { const n = +t.slice(6) - 1; if (n < CHAR_IDS.length) pickChar(n); }
     if (t === "confirm" && (G.mode === 1 || pl === -1 || pl === G.picking)) pickChar(G.charCursor[G.picking]);
     if (t === "back") {
-      if (G.mode === 2 && G.picking === 1) { G.picking = 0; G.chars = [null, null]; }
+      if (G.picking === 1) { G.picking = 0; G.chars = [null, null]; }
       else if (G.arcadePick) { const wasMad = G.madPick; G.arcadePick = false; G.madPick = false; setScreen("mode"); G.sel = wasMad ? 4 : 1; }
       else { setScreen(G.mode === 1 ? "difficulty" : "mode"); G.sel = G.mode === 1 ? DIFF_IDS.indexOf(G.difficulty) : 2; }
     }
