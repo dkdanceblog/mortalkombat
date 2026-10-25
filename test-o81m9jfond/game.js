@@ -6712,12 +6712,12 @@ function drawControlsHint() {
   if (left <= 0) return;
   const a = clamp(left / 0.8, 0, 1) * clamp((10 - left) / 0.4, 0, 1);
   const two = G.mode === 2;
-  const w = two ? 1080 : 760, h = two ? 116 : 92, x = W / 2 - w / 2, y = 118;
+  const w = two ? 1120 : 900, h = two ? 116 : 92, x = W / 2 - w / 2, y = 128;
   ctx.save();
   ctx.globalAlpha = a;
   ctx.fillStyle = "rgba(8,5,22,0.82)"; ctx.fillRect(x, y, w, h);
   ctx.strokeStyle = "rgba(255,213,74,0.7)"; ctx.lineWidth = 2; ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
-  const t = (str, tx, ty, size, color, align = "center") => text(str, tx, ty, { size, align, color, stroke: "#000", strokeW: 4 });
+  const t = (str, tx, ty, size, color, align = "center") => text(str, tx, ty, { size: fitText(str, (two && ty < y + 90 ? w / 2 : w) - 36, size, FONT_HEAD, 11), align, color, stroke: "#000", strokeW: 4 });
   if (two) {
     t("ИГРОК 1", x + w * 0.25, y + 24, 20, P_COLORS[0]);
     t("WASD — ходьба, прыжок, присед", x + w * 0.25, y + 50, 18, "#fff");
