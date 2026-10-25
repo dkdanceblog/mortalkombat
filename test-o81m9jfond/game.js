@@ -26,7 +26,6 @@ const MAD_MODS = {
   moon:    { name: "ЛУННАЯ ГРАВИТАЦИЯ" },
   slow:    { name: "СЛОУ-МО: УРОН ×2" },
   ice:     { name: "ЛЁД" },
-  bit8:    { name: "8-БИТ" },
   onehit:  { name: "ОДИН УДАР" },
   tea:     { name: "ЧАЙНЫЙ РЕЖИМ" },
 };
