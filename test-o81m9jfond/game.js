@@ -5765,7 +5765,7 @@ function drawElementWheel(cx, cy, r, t, a, v) {
   ctx.save(); ctx.globalAlpha = a;
   ctx.strokeStyle = "rgba(255,240,200,0.55)"; ctx.lineWidth = 3;
   ctx.beginPath(); ctx.arc(cx, cy, r + 16, 0, Math.PI * 2); ctx.stroke();
-  ctx.beginPath(); for (let i = 0; i <= 5; i++) { const p = pts[(i * 2) % 5]; i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); } ctx.stroke();
+  ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, cy, r - 16, 0, Math.PI * 2); ctx.stroke();   // plain double ring, no star
   ctx.globalCompositeOperation = "lighter";
   ELEMENTS.forEach((el, i) => {
     const lit = t >= EL_T[i];
