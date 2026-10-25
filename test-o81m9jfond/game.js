@@ -1443,7 +1443,7 @@ function startMatch() {
     diff: DIFFICULTIES[G.difficulty],
     stats: { time: 0, maxCombo: [0, 0] },
     birds: [], flicker: 0, money: 0, legend: false,
-    madness: !!(G.arcade && G.arcade.madness), mod: G.arcade && G.arcade.madness ? G.madMod : null,
+    madness: !!(G.arcade && G.arcade.madness), mod: G.arcade && (G.arcade.madness || G.arcade.round2) ? G.madMod : null,
   };
   setScreen("fight");
   startRound();
@@ -6746,12 +6746,12 @@ function drawControlsHint() {
 }
 
 function drawMadBanner() {
-  if (!F.madness || !F.mod) return;
+  if (!F.mod) return;
   const t = F.phase === "intro" ? F.phaseT : F.phase === "fight" && F.round === 1 ? F.phaseT + 2 : 99;
   if (t > 3.2) return;
   const A = G.arcade, a = Math.min(1, t * 4, (3.2 - t) / 0.4), k = 1 + 0.25 * Math.max(0, 1 - t * 3);
   ctx.save(); ctx.translate(W / 2, 168); ctx.scale(k, k);
-  text(`БЕЗУМИЕ • БОЙ ${A.idx + 1} / ${A.ladder.length}`, 0, -34, { size: 16, font: FONT_PIX, align: "center", color: "#ff86d8", stroke: "#000", strokeW: 5, alpha: a });
+  text(`${A.round2 ? "ВТОРОЙ КРУГ" : "БЕЗУМИЕ"} • БОЙ ${A.idx + 1} / ${A.ladder.length}`, 0, -34, { size: 16, font: FONT_PIX, align: "center", color: "#ff86d8", stroke: "#000", strokeW: 5, alpha: a });
   text(MAD_MODS[F.mod].name, 0, 14, { size: 52, align: "center", gradient: ["#ffffff", "#ff86d8", "#a02cff"], stroke: "#1a0830", strokeW: 8, alpha: a });
   ctx.restore();
 }
@@ -7441,9 +7441,11 @@ function startArcade(cid) {
   const others = BASE_IDS.filter((c) => c !== cid);
   for (let i = others.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [others[i], others[j]] = [others[j], others[i]]; }
   const stages = STAGE_IDS.filter((s2) => s2 !== "bar");
-  const ladder = others.slice(0, ARCADE_FIGHTS - 1).map((o) => ({ cid: o, stage: pick(stages) }));
+  const round2 = chipUnlocked();                     // ВТОРОЙ КРУГ: after the first win the arcade gets harder and crazier
+  const keys = Object.keys(MAD_MODS).filter((k) => k !== "onehit").sort(() => Math.random() - 0.5);
+  const ladder = others.slice(0, ARCADE_FIGHTS - 1).map((o, i) => ({ cid: o, stage: pick(stages), mod: round2 ? keys[i % keys.length] : null }));
   ladder.push({ cid: "chip", stage: "bar", boss: true });
-  G.arcade = { cid, ladder, idx: 0, retries: 0, prevDiff: G.difficulty, wins: 0, chipBefore: chipUnlocked() };
+  G.arcade = { cid, ladder, idx: 0, retries: 0, prevDiff: G.difficulty, wins: 0, chipBefore: chipUnlocked(), round2 };
   setScreen("ladder");
 }
 
@@ -7459,7 +7461,7 @@ function startMadness(cid) {
 function arcadeFight() {
   const A = G.arcade;
   const step = A.ladder[A.idx];
-  G.madMod = A.madness ? step.mod : null;
+  G.madMod = A.madness || A.round2 ? step.mod || null : null;
   confirmSfx();
   G.mode = 1;
   G.chars = [A.cid, step.cid];
@@ -7467,7 +7469,7 @@ function arcadeFight() {
   G.arcadeBoss = !!step.boss;
   G.arcadeSecret = !!step.secret;
   G.stage = step.stage;
-  G.difficulty = A.madness ? "normal" : step.boss ? "normal" : arcadeDifficulty(A.idx);
+  G.difficulty = A.madness ? "normal" : A.round2 ? "hard" : step.boss ? "normal" : arcadeDifficulty(A.idx);
   startVs();
 }
 
@@ -7501,7 +7503,13 @@ function drawLadder() {
   { const st = A.ladder[A.idx], ck = "L" + A.cid + st.cid + st.stage;
     if (G.prioChars !== ck) { G.prioChars = ck; prioritizeAssets(fightAssetKeys([A.cid, st.cid], st.stage)); } }
   menuBackground(0.8);
-  header("АРКАДА", `БОЙ ${A.idx + 1} ИЗ ${A.ladder.length}`);
+  if (A.round2) {                       // night: red light over the ladder
+    const g = ctx.createRadialGradient(W / 2, H * 0.45, 60, W / 2, H * 0.45, 720);
+    g.addColorStop(0, "rgba(150,0,20,0.35)"); g.addColorStop(1, "rgba(20,0,10,0.75)");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+  header(A.round2 ? "ВТОРОЙ КРУГ" : "АРКАДА", `БОЙ ${A.idx + 1} ИЗ ${A.ladder.length}`);
+  if (A.round2) text("сложные боты • в каждом бою сюрприз", W / 2, 170, { size: 14, font: FONT_PIX, align: "center", color: "#ff8a8a", stroke: "#000", strokeW: 4 });
   const n = A.ladder.length, tile = 104, gap = 22;
   const x0 = W / 2 - (n * tile + (n - 1) * gap) / 2, y = 250;
   A.ladder.forEach((st, i) => {
@@ -7525,13 +7533,14 @@ function drawLadder() {
     ctx.strokeRect(x + 1.5, y + 1.5, tile - 3, tile - 3);
     ctx.restore();
     const label = st.secret ? "???" : st.boss ? "БОСС" : String(i + 1);
+    if (st.mod && i >= A.idx) text(MAD_MODS[st.mod].name, x + tile / 2, y + tile + 44, { size: fitText(MAD_MODS[st.mod].name, tile + gap - 4, 11, FONT_PIX, 7), font: FONT_PIX, align: "center", color: "#ff86d8", shadow: false });
     text(label, x + tile / 2, y + tile + 22, { size: st.boss ? 16 : 14, font: FONT_PIX, align: "center", color: st.boss ? "#ff5a3d" : cur ? GOLD : "#9d97c9" });
     if (i < n - 1) { ctx.fillStyle = "rgba(255,213,74,0.4)"; ctx.fillRect(x + tile + 4, y + tile / 2 - 2, gap - 8, 4); }
   });
   const st = A.ladder[A.idx];
   const opp = st.boss && st.cid === A.cid ? "ЗЛОЙ " + CHARS[st.cid].name : CHARS[st.cid].name;
   text(`${CHARS[A.cid].name}  VS  ${opp}`, W / 2, 450, { size: fitText(`${CHARS[A.cid].name}  VS  ${opp}`, W - 120, 40), align: "center", gradient: ["#fff6c8", GOLD], stroke: "#1a0830", strokeW: 7 });
-  text(`АРЕНА: ${STAGES[st.stage].name}   •   СЛОЖНОСТЬ: ${DIFFICULTIES[st.boss ? "normal" : arcadeDifficulty(A.idx)].label}${st.boss ? " + БОСС" : ""}`, W / 2, 500,
+  text(`АРЕНА: ${STAGES[st.stage].name}   •   СЛОЖНОСТЬ: ${DIFFICULTIES[A.round2 ? "hard" : st.boss ? "normal" : arcadeDifficulty(A.idx)].label}${st.boss ? " + БОСС" : ""}`, W / 2, 500,
     { size: 14, font: FONT_PIX, align: "center", color: "#c9c2ff" });
   if (A.retries) text(`ПЕРЕИГРОВОК: ${A.retries}`, W / 2, 535, { size: 12, font: FONT_PIX, align: "center", color: "#9d97c9" });
   const bw = 320, bh = 62, bx = W / 2 - bw / 2, by = 570;
@@ -8053,6 +8062,7 @@ function startVs() {
   const key = [c0, c1].sort().join();
   let line, by = null;
   if (G.arcade && G.arcade.madness) line = `БЕЗУМИЕ ${G.arcade.idx + 1}/${G.arcade.ladder.length}: ${MAD_MODS[G.madMod].name}`;
+  else if (G.arcade && G.arcade.round2 && G.madMod && !G.arcadeBoss) line = `ВТОРОЙ КРУГ: ${MAD_MODS[G.madMod].name}`;
   else if (G.arcade && G.arcadeSecret) line = ARCADE_TEXT.secretVs;
   else if (G.arcadeBoss) line = ARCADE_TEXT.bossVs;
   else if (c0 === c1) line = G.twin ? "ЗЛОЙ ДВОЙНИК ВЫХОДИТ НА СЦЕНУ" : "КТО ИЗ ВАС ТРУШНЫЙ?";
