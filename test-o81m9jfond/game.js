@@ -7442,7 +7442,7 @@ function startArcade(cid) {
   const stages = STAGE_IDS.filter((s2) => s2 !== "bar");
   const round2 = chipUnlocked();                     // ВТОРОЙ КРУГ: after the first win the arcade gets harder and crazier
   const keys = Object.keys(MAD_MODS).filter((k) => k !== "onehit").sort(() => Math.random() - 0.5);
-  const ladder = others.slice(0, ARCADE_FIGHTS - 1).map((o, i) => ({ cid: o, stage: pick(stages), mod: round2 ? keys[i % keys.length] : null }));
+  const ladder = others.slice(0, ARCADE_FIGHTS - 1).map((o, i) => ({ cid: o, stage: pick(stages), mod: null }));
   ladder.push({ cid: "chip", stage: "bar", boss: true });
   G.arcade = { cid, ladder, idx: 0, retries: 0, prevDiff: G.difficulty, wins: 0, chipBefore: chipUnlocked(), round2 };
   setScreen("ladder");
@@ -7508,7 +7508,7 @@ function drawLadder() {
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   }
   header(A.round2 ? "ВТОРОЙ КРУГ" : "АРКАДА", `БОЙ ${A.idx + 1} ИЗ ${A.ladder.length}`);
-  if (A.round2) text("сложные боты • в каждом бою сюрприз", W / 2, 170, { size: 14, font: FONT_PIX, align: "center", color: "#ff8a8a", stroke: "#000", strokeW: 4 });
+  if (A.round2) text("сложные боты с первого боя", W / 2, 170, { size: 14, font: FONT_PIX, align: "center", color: "#ff8a8a", stroke: "#000", strokeW: 4 });
   const n = A.ladder.length, tile = 104, gap = 22;
   const x0 = W / 2 - (n * tile + (n - 1) * gap) / 2, y = 250;
   A.ladder.forEach((st, i) => {
@@ -7672,18 +7672,9 @@ function drawMode() {
     if (o.off) { ctx.fillStyle = "rgba(8,5,20,0.6)"; ctx.fillRect(x, y, w, h); }
     region("mode" + i, x, y, w, h, () => { if (o.off) { playSfx("block"); G.sel = i; return; } chooseMode(o.mode); }, () => { G.sel = i; });
   });
-  {   // БЕЗУМИЕ: a separate button under the cards (locked until Chipinkos is beaten)
-    const open = madOpen(), act = G.sel === 4;
-    const bw = 380, bh = 56, bx = W / 2 - bw - 10, by = 556;
-    panel(bx, by, bw, bh, { active: act, border: open ? "#ff86d8" : "rgba(157,151,201,0.35)" });
-    if (open) text("БЕЗУМИЕ", bx + bw / 2, by + bh / 2 + 2, { size: 28, align: "center", gradient: ["#ffffff", "#ff86d8", "#a02cff"], stroke: "#1a0830", strokeW: 6 });
-    else { text("🔒 БЕЗУМИЕ", bx + bw / 2, by + 20, { size: 20, align: "center", color: "#8d87b9", stroke: "#000", strokeW: 4 });
-      text("победи Чипинкоса", bx + bw / 2, by + 42, { size: 13, font: FONT_PIX, align: "center", color: "#7d77a8", shadow: false }); }
-    region("mode-mad", bx, by, bw, bh, () => chooseMode(5), () => { G.sel = 4; });
-  }
   {   // achievements are reachable from here too (on phones the title badge is easy to miss)
     const label = `СЕКРЕТЫ ${secrets.size} / ${SECRETS.length}`;
-    const bw = 380, bh = 56, bx = W / 2 + 10, by = 556;
+    const bw = 380, bh = 56, bx = W / 2 - bw / 2, by = 556;
     const hov = hover && hover.id === "mode-ach";
     panel(bx, by, bw, bh, { active: hov });
     text(label, bx + bw / 2, by + bh / 2 + 1, { size: 20, font: FONT_PIX, align: "center", color: GOLD, shadow: false });
@@ -7692,11 +7683,11 @@ function drawMode() {
   footer("← →  ВЫБОР    ENTER  ОК    S  СЕКРЕТЫ    ESC  НАЗАД    M  ЗВУК");
   backButton();
 }
-const MODE_ORDER = [1, 3, 2, 4, 5];
+const MODE_ORDER = [1, 3, 2, 4];
 // БЕЗУМИЕ opens once Chipinkos has been beaten (arcade boss, or anywhere)
 function madOpen() { return chipUnlocked() || secrets.has("a_truegangsta"); }
 function chooseMode(m) {
-  if (m === 5 && !madOpen()) { playSfx("block"); toast("Победи Чипинкоса, чтобы открыть БЕЗУМИЕ"); return; }
+  if (m === 5) return;   // БЕЗУМИЕ removed
   confirmSfx();
   G.arcade = null;
   G.arcadeBoss = false;
@@ -8927,10 +8918,8 @@ function handleNav(ev) {
     return;
   }
   if (s === "mode") {
-    if (t === "left") G.sel = G.sel === 4 ? 3 : (G.sel + 3) % 4;
-    if (t === "right") G.sel = G.sel === 4 ? 0 : (G.sel + 1) % 4;
-    if (t === "down") { G.selUp = G.sel === 4 ? G.selUp : G.sel; G.sel = 4; }
-    if (t === "up" && G.sel === 4) G.sel = G.selUp || 0;
+    if (t === "left" || t === "up") G.sel = (G.sel + 3) % 4;
+    if (t === "right" || t === "down") G.sel = (G.sel + 1) % 4;
     if (t === "digit:4") chooseMode(4);
     if (t === "digit:1") chooseMode(1);
     if (t === "digit:2") chooseMode(3);
