@@ -8027,8 +8027,8 @@ function drawStageSelect() {
     if (bg) drawCover(bg, x + 10, y + 10, w - 20, h - 60, active ? 1.06 + Math.sin(G.time) * 0.02 : 1);
     if (!active) { ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.fillRect(x, y, w, h); }
     ctx.restore();
-    text(`${i + 1}`, x + 26, y + h - 26, { size: 18, font: FONT_PIX, color: "#9d97c9", shadow: false });
-    text(STAGES[id].name, x + w / 2 + 10, y + h - 25, { size: fitText(STAGES[id].name, w - 90, 24), align: "center", color: active ? GOLD : "#fff", stroke: "#000", strokeW: 5 });
+    text(`${i + 1}`, x + 12, y + h - 26, { size: 15, font: FONT_PIX, color: "#9d97c9", shadow: false });
+    text(STAGES[id].name, x + 44 + (w - 56) / 2, y + h - 25, { size: fitText(STAGES[id].name, w - 70, 24, FONT_HEAD, 12), align: "center", color: active ? GOLD : "#fff", stroke: "#000", strokeW: 5 });
     region("stage" + i, x, y, w, h, () => chooseStage(id), () => { G.sel = i; });
   });
   footer("← → ↑ ↓  ВЫБОР    ENTER  В БОЙ    ESC  НАЗАД");
