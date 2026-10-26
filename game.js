@@ -7449,7 +7449,9 @@ function startArcade(cid) {
   const round2 = chipUnlocked();                     // ВТОРОЙ КРУГ: after the first win the arcade gets harder and crazier
   const keys = Object.keys(MAD_MODS).filter((k) => k !== "onehit").sort(() => Math.random() - 0.5);
   const ladder = others.slice(0, ARCADE_FIGHTS - 1).map((o, i) => ({ cid: o, stage: pick(stages), mod: null }));
-  ladder.push({ cid: "chip", stage: "bar", boss: true });
+  // first round ends with Chipinkos; every later round ends with Babangida (hidden as "???" until he is opened)
+  if (round2) ladder.push({ cid: "babangida", stage: "yard", boss: true, secret: !babUnlocked() });
+  else ladder.push({ cid: "chip", stage: "bar", boss: true });
   G.arcade = { cid, ladder, idx: 0, retries: 0, prevDiff: G.difficulty, wins: 0, chipBefore: chipUnlocked(), round2 };
   setScreen("ladder");
 }
@@ -7491,7 +7493,7 @@ function arcadeEndItems() {
   }
   if (A.checkedIdx !== A.idx && F) { A.checkedIdx = A.idx; if (F.wins[1] > 0) A.flawless = false; }
   // first arcade win opens Chipinkos; once he is open, beating the arcade again summons the secret boss
-  if (won && last && A.chipBefore && !A.secretAdded && A.cid !== "babangida" && !babUnlocked()) {
+  if (won && last && A.chipBefore && !A.round2 && !A.secretAdded && A.cid !== "babangida" && !babUnlocked()) {
     return [["???", () => { playSfx("boss_reveal"); G.arcadeBoss = false;
       if (!chipUnlocked()) { CHAR_IDS.splice(CHAR_IDS.indexOf("babangida") >= 0 ? CHAR_IDS.indexOf("babangida") : CHAR_IDS.length, 0, "chip"); store.set("chip_unlocked", true); A.newUnlock = true; }
       A.secretAdded = true; A.ladder.push({ cid: "babangida", stage: "yard", boss: true, secret: true }); A.idx++; A.wins++; setScreen("ladder"); }], toMenu];
@@ -7525,7 +7527,10 @@ function drawLadder() {
     ctx.fillRect(x, y, tile, tile);
     const p = img("portrait." + st.cid);
     if (p) {
-      if (st.boss) {
+      if (st.secret) {                    // the secret boss stays a silhouette until he is beaten
+        ctx.drawImage(silhouette(p, "#07040f"), x, y, tile, tile);
+        text("?", x + tile / 2, y + tile / 2 + 6, { size: 54, align: "center", gradient: ["#fff", "#ff8a7a"], stroke: "#000", strokeW: 6 });
+      } else if (st.boss) {
         ctx.drawImage(p, x, y, tile, tile);
         ctx.fillStyle = "rgba(40,0,60,0.55)"; ctx.fillRect(x, y, tile, tile);
       } else ctx.drawImage(p, x, y, tile, tile);
