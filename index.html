@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
   <title>РУССКИЙ РЭП НА ВЫЛЕТ — Pixel Fighter</title>
-  <meta name="description" content="Браузерный пиксельный пародийный файтинг: Гуф, Нойз, Окси, Морген, Мэйби Бэйби, Егор, Слава КПСС, ATL, Макс Корж и FACE." />
+  <meta name="description" content="18+. Браузерный пиксельный пародийный файтинг по русскому рэпу: 21 боец, 15 арен, фаталити, аркада и 24 секрета." />
   <meta property="og:title" content="РУССКИЙ РЭП НА ВЫЛЕТ — Pixel Fighter" />
-  <meta property="og:description" content="Браузерный пиксельный файтинг. 10 рэперов, 8 арен, аркада и секреты. Играй с телефона или компьютера." />
+  <meta property="og:description" content="18+. Браузерный пиксельный файтинг. 21 боец, 15 арен, фаталити у каждого, аркада и секреты. Играй с телефона или компьютера." />
   <meta property="og:image" content="https://dkdanceblog.github.io/mortalkombat/assets/ui/og_image.jpg" />
   <meta property="og:url" content="https://dkdanceblog.github.io/mortalkombat/" />
   <meta property="og:type" content="website" />
@@ -23,7 +23,7 @@
   <meta name="theme-color" content="#0b0820" />
   <link rel="preload" href="assets/fonts/russo-one-cyrillic-400-normal.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="assets/fonts/press-start-2p-cyrillic-400-normal.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=120" />
 </head>
 <body>
   <div id="rotate">
@@ -40,6 +40,7 @@
     <div id="touch-controls" aria-label="Сенсорное управление">
       <div id="stick" aria-label="Джойстик: движение, прыжок, присед"><div class="knob"></div></div>
       <button class="pause-btn" data-key="pause" aria-label="Пауза">II</button>
+      <button class="act-block" data-key="block" aria-label="Блок">БЛОК</button>
       <div class="touch-actions">
         <button class="act-throw" data-key="throw">БРОСОК</button>
         <button class="act-dash" data-key="dash">РЫВОК</button>
@@ -54,6 +55,8 @@
   <!-- Sounds. Several copies of frequent effects so hits can overlap. -->
   <audio data-sfx="block" src="assets/audio/block.mp3" preload="none"></audio>
   <audio data-sfx="block" src="assets/audio/block.mp3" preload="none"></audio>
+  <audio data-sfx="block" src="assets/audio/block_2.mp3" preload="none"></audio>
+  <audio data-sfx="block" src="assets/audio/block_2.mp3" preload="none"></audio>
   <audio data-sfx="whoosh" src="assets/audio/whoosh.mp3" preload="none"></audio>
   <audio data-sfx="whoosh" src="assets/audio/whoosh.mp3" preload="none"></audio>
   <audio data-sfx="whoosh" src="assets/audio/whoosh.mp3" preload="none"></audio>
@@ -77,8 +80,12 @@
   <audio data-sfx="crowdReact" src="assets/audio/crowd_react.mp3" preload="none"></audio>
   <audio data-sfx="whooshLight" src="assets/audio/whoosh_light.mp3" preload="none"></audio>
   <audio data-sfx="whooshLight" src="assets/audio/whoosh_light.mp3" preload="none"></audio>
+  <audio data-sfx="whooshLight" src="assets/audio/whoosh_light_2.mp3" preload="none"></audio>
+  <audio data-sfx="whooshLight" src="assets/audio/whoosh_light_2.mp3" preload="none"></audio>
   <audio data-sfx="whooshHeavy" src="assets/audio/whoosh_heavy.mp3" preload="none"></audio>
   <audio data-sfx="whooshHeavy" src="assets/audio/whoosh_heavy.mp3" preload="none"></audio>
+  <audio data-sfx="whooshHeavy" src="assets/audio/whoosh_heavy_2.mp3" preload="none"></audio>
+  <audio data-sfx="whooshHeavy" src="assets/audio/whoosh_heavy_3.mp3" preload="none"></audio>
   <audio data-sfx="bodyfall" src="assets/audio/bodyfall.mp3" preload="none"></audio>
   <audio data-sfx="bodyfall" src="assets/audio/bodyfall.mp3" preload="none"></audio>
   <audio data-sfx="parry" src="assets/audio/parry.mp3" preload="none"></audio>
@@ -110,6 +117,85 @@
   <audio data-sfx="special_guf_hit" src="assets/audio/special_guf_hit.mp3" preload="none"></audio>
   <audio data-sfx="special_noize_hit" src="assets/audio/special_noize_hit.mp3" preload="none"></audio>
   <audio data-sfx="react_yard" src="assets/audio/react_yard.mp3" preload="none"></audio>
+  <audio data-sfx="special_ramirez" src="assets/audio/special_ramirez.mp3" preload="none"></audio>
+  <audio data-sfx="special_babangida" src="assets/audio/special_babangida.mp3" preload="none"></audio>
+  <audio data-sfx="special_sqwoz" src="assets/audio/special_sqwoz.mp3" preload="none"></audio>
+  <audio data-sfx="special_shilo" src="assets/audio/special_shilo.mp3" preload="none"></audio>
+  <audio data-sfx="special_krip" src="assets/audio/special_krip.mp3" preload="none"></audio>
+  <audio data-sfx="special_tito" src="assets/audio/special_tito.mp3" preload="none"></audio>
+  <audio data-sfx="fat_freeze" src="assets/audio/fat_freeze.mp3" preload="none"></audio>
+  <audio data-sfx="fat_ice_shatter" src="assets/audio/fat_ice_shatter.mp3" preload="none"></audio>
+  <audio data-sfx="fat_tv_smash" src="assets/audio/fat_tv_smash.mp3" preload="none"></audio>
+  <audio data-sfx="fat_stomp" src="assets/audio/fat_stomp.mp3" preload="none"></audio>
+  <audio data-sfx="fat_dust" src="assets/audio/fat_dust.mp3" preload="none"></audio>
+  <audio data-sfx="voice_fatality" src="assets/audio/voice_fatality.mp3" preload="none"></audio>
+  <audio data-sfx="special_smoky" src="assets/audio/special_smoky.mp3" preload="none"></audio>
+  <audio data-sfx="voice_chip_win" src="assets/audio/voice_chip_win.mp3" preload="none"></audio>
+  <audio data-sfx="voice_finish_him" src="assets/audio/voice_finish_him.mp3" preload="none"></audio>
+  <audio data-sfx="react_tunnel" src="assets/audio/react_tunnel_1.mp3" preload="none"></audio>
+  <audio data-sfx="react_tunnel" src="assets/audio/react_tunnel_2.mp3" preload="none"></audio>
+  <audio data-sfx="react_tunnel" src="assets/audio/react_tunnel_3.mp3" preload="none"></audio>
+  <audio data-sfx="react_tunnel" src="assets/audio/react_tunnel_4.mp3" preload="none"></audio>
+  <audio data-sfx="tunnel_busker" src="assets/audio/tunnel_busker_1.mp3" preload="none"></audio>
+  <audio data-sfx="tunnel_busker" src="assets/audio/tunnel_busker_2.mp3" preload="none"></audio>
+  <audio data-sfx="react_moscow" src="assets/audio/react_moscow.mp3" preload="none"></audio>
+  <audio data-sfx="react_thailand" src="assets/audio/react_thailand_1.mp3" preload="none"></audio>
+  <audio data-sfx="react_thailand" src="assets/audio/react_thailand_2.mp3" preload="none"></audio>
+  <audio data-sfx="react_londograd" src="assets/audio/react_londograd_1.mp3" preload="none"></audio>
+  <audio data-sfx="react_londograd" src="assets/audio/react_londograd_2.mp3" preload="none"></audio>
+  <audio data-sfx="gorgorod_thunder" src="assets/audio/gorgorod_thunder.mp3" preload="none"></audio>
+  <audio data-sfx="tunnel_coin" src="assets/audio/tunnel_coin.mp3" preload="none"></audio>
+  <audio data-sfx="react_palenka" src="assets/audio/react_palenka.mp3" preload="none"></audio>
+  <audio data-sfx="palenka_till" src="assets/audio/palenka_till.mp3" preload="none"></audio>
+  <audio data-sfx="special_husky" src="assets/audio/special_husky.mp3" preload="none"></audio>
+  <audio data-sfx="husky_heal" src="assets/audio/husky_heal.mp3" preload="none"></audio>
+  <audio data-sfx="special_loki" src="assets/audio/special_loki.mp3" preload="none"></audio>
+  <audio data-sfx="el_charge" src="assets/audio/el_charge.mp3" preload="none"></audio>
+  <audio data-sfx="el_water" src="assets/audio/el_water.mp3" preload="none"></audio>
+  <audio data-sfx="el_wood" src="assets/audio/el_wood.mp3" preload="none"></audio>
+  <audio data-sfx="el_earth" src="assets/audio/el_earth.mp3" preload="none"></audio>
+  <audio data-sfx="el_metal" src="assets/audio/el_metal.mp3" preload="none"></audio>
+  <audio data-sfx="el_boom" src="assets/audio/el_boom.mp3" preload="none"></audio>
+  <audio data-sfx="fat_fox" src="assets/audio/fat_fox.mp3" preload="none"></audio>
+  <audio data-sfx="boss_reveal" src="assets/audio/boss_reveal.mp3" preload="none"></audio>
+  <audio data-sfx="bab_fake_death" src="assets/audio/bab_fake_death.mp3" preload="none"></audio>
+  <audio data-sfx="voice_ragequit" src="assets/audio/voice_ragequit.mp3" preload="none"></audio>
+  <audio data-sfx="voice_fladality" src="assets/audio/voice_fladality.mp3" preload="none"></audio>
+  <audio data-sfx="fludd_ice_hit" src="assets/audio/fludd_ice_hit.mp3" preload="none"></audio>
+  <audio data-sfx="fat_candy_smash" src="assets/audio/fat_candy_smash.mp3" preload="none"></audio>
+  <audio data-sfx="voice_holostyality" src="assets/audio/voice_holostyality.mp3" preload="none"></audio>
+  <audio data-sfx="fat_bottle_smash" src="assets/audio/fat_bottle_smash.mp3" preload="none"></audio>
+  <audio data-sfx="fat_laser" src="assets/audio/fat_laser.mp3" preload="none"></audio>
+  <audio data-sfx="finish_heartbeat" src="assets/audio/finish_heartbeat.mp3" preload="none"></audio>
+  <audio data-sfx="dazed_birds" src="assets/audio/dazed_birds.mp3" preload="none"></audio>
+  <audio data-sfx="fat_rose_swoon" src="assets/audio/fat_rose_swoon.mp3" preload="none"></audio>
+  <audio data-sfx="fat_hearse_engine" src="assets/audio/fat_hearse_engine.mp3" preload="none"></audio>
+  <audio data-sfx="fat_car_door" src="assets/audio/fat_car_door.mp3" preload="none"></audio>
+  <audio data-sfx="fat_car_leave" src="assets/audio/fat_car_leave.mp3" preload="none"></audio>
+  <audio data-sfx="fat_stork" src="assets/audio/fat_stork.mp3" preload="none"></audio>
+  <audio data-sfx="fat_glitch" src="assets/audio/fat_glitch.mp3" preload="none"></audio>
+  <audio data-sfx="fat_guitar_smash" src="assets/audio/fat_guitar_smash.mp3" preload="none"></audio>
+  <audio data-sfx="fat_mug_land" src="assets/audio/fat_mug_land.mp3" preload="none"></audio>
+  <audio data-sfx="fat_tea_splash" src="assets/audio/fat_tea_splash.mp3" preload="none"></audio>
+  <audio data-sfx="fat_wolf" src="assets/audio/fat_wolf.mp3" preload="none"></audio>
+  <audio data-sfx="fat_howl" src="assets/audio/fat_howl.mp3" preload="none"></audio>
+  <audio data-sfx="fat_monster" src="assets/audio/fat_monster.mp3" preload="none"></audio>
+  <audio data-sfx="fat_bubbles" src="assets/audio/fat_bubbles.mp3" preload="none"></audio>
+  <audio data-sfx="fat_burp" src="assets/audio/fat_burp.mp3" preload="none"></audio>
+  <audio data-sfx="fat_crowd" src="assets/audio/fat_crowd.mp3" preload="none"></audio>
+  <audio data-sfx="fat_brawl" src="assets/audio/fat_brawl.mp3" preload="none"></audio>
+  <audio data-sfx="secret_unlock" src="assets/audio/secret_unlock.mp3" preload="none"></audio>
+  <audio data-sfx="zilla_step" src="assets/audio/zilla_step.mp3" preload="none"></audio>
+  <audio data-sfx="rem_monkeys_hit" src="assets/audio/rem_monkeys_hit.mp3" preload="none"></audio>
+  <audio data-sfx="loki_fire" src="assets/audio/loki_fire.mp3" preload="none"></audio>
+  <audio data-sfx="fatality_sting" src="assets/audio/fatality_sting.mp3" preload="none"></audio>
+  <audio data-sfx="fat_burn" src="assets/audio/fat_burn.mp3" preload="none"></audio>
+  <audio data-sfx="fat_flies" src="assets/audio/fat_flies.mp3" preload="none"></audio>
+  <audio data-sfx="react_wasteland" src="assets/audio/react_wasteland.mp3" preload="none"></audio>
+  <audio data-sfx="react_gorgorod" src="assets/audio/react_gorgorod.mp3" preload="none"></audio>
+  <audio data-sfx="react_train" src="assets/audio/react_train.mp3" preload="none"></audio>
+  <audio data-sfx="react_mansion" src="assets/audio/react_mansion.mp3" preload="none"></audio>
+  <audio data-sfx="react_roof" src="assets/audio/react_roof.mp3" preload="none"></audio>
   <audio data-sfx="react_circus" src="assets/audio/react_circus.mp3" preload="none"></audio>
   <audio data-sfx="react_concert" src="assets/audio/react_concert.mp3" preload="none"></audio>
   <audio data-sfx="uiMove" src="assets/audio/ui_move.mp3" preload="none"></audio>
@@ -142,25 +228,33 @@
   <audio data-sfx="hitLight" src="assets/audio/hit_light_3.mp3" preload="none"></audio>
   <audio data-sfx="hitLight" src="assets/audio/hit_light_4.mp3" preload="none"></audio>
   <audio data-sfx="hitLight" src="assets/audio/hit_light_5.mp3" preload="none"></audio>
+  <audio data-sfx="hitLight" src="assets/audio/hit_light_6.mp3" preload="none"></audio>
+  <audio data-sfx="hitLight" src="assets/audio/hit_light_7.mp3" preload="none"></audio>
   <audio data-sfx="hitHeavy" src="assets/audio/hit_heavy_1.mp3" preload="none"></audio>
   <audio data-sfx="hitHeavy" src="assets/audio/hit_heavy_2.mp3" preload="none"></audio>
   <audio data-sfx="hitHeavy" src="assets/audio/hit_heavy_3.mp3" preload="none"></audio>
   <audio data-sfx="hitHeavy" src="assets/audio/hit_heavy_4.mp3" preload="none"></audio>
   <audio data-sfx="hitHeavy" src="assets/audio/hit_heavy_5.mp3" preload="none"></audio>
+  <audio data-sfx="hitHeavy" src="assets/audio/hit_heavy_6.mp3" preload="none"></audio>
+  <audio data-sfx="hitHeavy" src="assets/audio/hit_heavy_7.mp3" preload="none"></audio>
   <audio data-sfx="hitKick" src="assets/audio/hit_kick_1.mp3" preload="none"></audio>
   <audio data-sfx="hitKick" src="assets/audio/hit_kick_2.mp3" preload="none"></audio>
   <audio data-sfx="hitKick" src="assets/audio/hit_kick_3.mp3" preload="none"></audio>
   <audio data-sfx="hitKick" src="assets/audio/hit_kick_4.mp3" preload="none"></audio>
+  <audio data-sfx="hitKick" src="assets/audio/hit_kick_5.mp3" preload="none"></audio>
+  <audio data-sfx="hitKick" src="assets/audio/hit_kick_6.mp3" preload="none"></audio>
   <audio data-sfx="hitBody" src="assets/audio/hit_body_1.mp3" preload="none"></audio>
   <audio data-sfx="hitBody" src="assets/audio/hit_body_2.mp3" preload="none"></audio>
   <audio data-sfx="hitCrit" src="assets/audio/hit_crit_1.mp3" preload="none"></audio>
   <audio data-sfx="hitCrit" src="assets/audio/hit_crit_2.mp3" preload="none"></audio>
   <audio data-sfx="hitCrit" src="assets/audio/hit_crit_3.mp3" preload="none"></audio>
+  <audio data-sfx="hitCrit" src="assets/audio/hit_crit_4.mp3" preload="none"></audio>
+  <audio data-sfx="hitCrit" src="assets/audio/hit_crit_5.mp3" preload="none"></audio>
   <audio data-sfx="voice_g_attack" src="assets/audio/voice_g_attack.mp3" preload="none"></audio>
   <audio data-sfx="voice_g_attack" src="assets/audio/voice_g_attack.mp3" preload="none"></audio>
   <audio id="battle-music" preload="none"></audio>
 
-  <script src="sprites.js"></script>
-  <script src="game.js"></script>
+  <script src="sprites.js?v=120"></script>
+  <script src="game.js?v=120"></script>
 </body>
 </html>
