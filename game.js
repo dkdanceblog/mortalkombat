@@ -1140,6 +1140,11 @@ document.querySelectorAll("#touch-controls button").forEach((btn) => {
   btn.addEventListener("lostpointercapture", up);
   btn.addEventListener("contextmenu", (e) => e.preventDefault());
 });
+window.addEventListener("touchend", (e) => {
+  if (e.touches.length) return;
+  document.querySelectorAll("#touch-controls button.down").forEach((b) => b.classList.remove("down"));
+  for (const k of [...touchHeld]) if (!["left", "right", "up", "down"].includes(k)) touchHeld.delete(k);
+}, { passive: true, capture: true });
 
 function updateTouchVisibility() {
   const show = G.screen === "fight" && !G.paused && !padMode;
@@ -1214,9 +1219,12 @@ function goFullscreen() {
     const k = len < r * 0.28 ? 0 : 1;
     set({ left: k && dx < -r * 0.3, right: k && dx > r * 0.3, up: k && dy < -r * 0.5, down: k && dy > r * 0.42 });
   };
+  const release = () => { id = null; knob.style.transform = ""; set({}); };
   stick.addEventListener("pointerdown", (e) => {
     e.preventDefault(); unlockAudio();
-    if (id !== null) return;
+    // a new touch always takes the stick over: if the old finger's "up" was lost
+    // (fullscreen switch, system gesture, Telegram webview), the stick used to stay stuck forever
+    if (id !== null && id !== e.pointerId) { try { stick.releasePointerCapture(id); } catch (err) {} }
     id = e.pointerId;
     const rc = stick.getBoundingClientRect();
     cx = rc.left + rc.width / 2; cy = rc.top + rc.height / 2;
@@ -1228,6 +1236,15 @@ function goFullscreen() {
   stick.addEventListener("pointerup", end);
   stick.addEventListener("pointercancel", end);
   stick.addEventListener("lostpointercapture", end);
+  // safety nets: the finger left anywhere on the page, every finger is off the screen, or the app lost focus
+  window.addEventListener("pointerup", end, true);
+  window.addEventListener("pointercancel", end, true);
+  window.addEventListener("touchend", (e) => { if (id !== null && e.touches.length === 0) release(); }, { passive: true, capture: true });
+  window.addEventListener("touchcancel", (e) => { if (id !== null && e.touches.length === 0) release(); }, { passive: true, capture: true });
+  window.addEventListener("blur", release);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) release(); });
+  document.addEventListener("fullscreenchange", release);
+  window.addEventListener("orientationchange", release);
 })();
 
 // Light up the SUPER button when the meter is full
@@ -9077,5 +9094,5 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 // Debug/test hook (harmless in production): lets automated checks read state.
-window.__game = { G, get TT() { return TT; }, startArcade, startMadness, startSpecial, arcadeEndItems, chipUnlocked, babUnlocked, makeShareCard: (s) => makeShareCard(s), regions: () => hitRegions.map((r) => ({ id: r.id, x: r.x, y: r.y, w: r.w, h: r.h })), get F() { return F; }, CHARS, startMatch, sayQuote, updateFight, shareResult, endRound,
+window.__game = { G, get TT() { return TT; }, startArcade, startMadness, startSpecial, startAttack, arcadeEndItems, chipUnlocked, babUnlocked, makeShareCard: (s) => makeShareCard(s), regions: () => hitRegions.map((r) => ({ id: r.id, x: r.x, y: r.y, w: r.w, h: r.h })), get F() { return F; }, CHARS, startMatch, sayQuote, updateFight, shareResult, endRound,
   audio: () => ({ state: actx && actx.state, loaded: Object.values(sfxBuf).filter((b) => b.length).length, total: Object.keys(sfxBuf).length, voices }) };
