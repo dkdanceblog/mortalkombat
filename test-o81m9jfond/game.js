@@ -7643,7 +7643,8 @@ function drawSecrets() {
     const info = SECRET_INFO[sd.id] || {};
     panel(x, y, w, h, { border: found ? GOLD : "rgba(157,151,201,0.35)" });
     text(String(i + 1).padStart(2, "0"), x + 16, y + 22, { size: 12, font: FONT_PIX, color: found ? GOLD : "#6f6a99", shadow: false });
-    text(found ? sd.name : "? ? ?", x + 56, y + 23, { size: fitText(found ? sd.name : "???", w - 96, 20, FONT_HEAD, 12), color: found ? "#fff6c8" : "#8d87b9", stroke: "#000", strokeW: 4 });
+    const nm = found || sd.shown ? sd.name : "? ? ?";
+    text(nm, x + 56, y + 23, { size: fitText(nm, w - 96, 20, FONT_HEAD, 9), color: found ? "#fff6c8" : "#8d87b9", stroke: "#000", strokeW: 4 });
     {                                     // description: one line if it fits, otherwise two smaller lines — always inside the tile
       const ds = found ? (info.how || "") : (info.hint || ""), col = found ? "#c9c2ff" : "#7d77a8";
       const one = fitText(ds, w - 32, 14, FONT_HEAD, 12);
@@ -8348,9 +8349,9 @@ const SECRETS = [
   { id: "a_sugarman", name: "САХАРНЫЙ ЧЕЛОВЕК", fat: "fludd", how: "Сделай ФЛАДАЛИТИ" },
   { id: "a_auf", name: "АУФ", fat: "sqwoz", how: "Сделай фаталити за SQWOZ BAB" },
   { id: "a_collector", name: "КОЛЛЕКЦИОНЕР", event: "allfat", how: "Попробуй все фаталити" },
-  { id: "a_rapgod", name: "RAP GOD", event: "rapgod", how: "Выиграй бой на сложном боте, не пропустив ни одного удара" },
+  { id: "a_alina", name: "Girasole Alina", event: "all", how: "Girasole Alina — девушка, которая расписала про игру целый конспект", hint: "Открой все ачивки", shown: true },
 ];
-const SECRET_INFO = Object.fromEntries(SECRETS.map((s) => [s.id, { how: s.how, hint: s.how }]));
+const SECRET_INFO = Object.fromEntries(SECRETS.map((s) => [s.id, { how: s.how, hint: s.hint || s.how }]));
 // Called once per finished match
 function checkMatchSecrets() {
   if (!F || G.tutorial) return;
@@ -8376,6 +8377,7 @@ if (/[?&]unlock/.test(location.search) && (/\/test-/.test(location.pathname) || 
 if (store.get("chip_unlocked", false) && !CHAR_IDS.includes("chip")) CHAR_IDS.push("chip");
 if (store.get("bab_unlocked", false) && !CHAR_IDS.includes("babangida")) CHAR_IDS.push("babangida");
 const secrets = new Set(store.get("secrets", []).filter((id) => SECRETS.some((s) => s.id === id)));
+setTimeout(() => checkAllSecrets(), 4000);   // players who already had everything else
 G.cheats = { madness: false, tea: false };
 G.banner = null;
 
@@ -8389,6 +8391,12 @@ function unlockSecret(id) {
   }
   G.banner = { title: isNew ? "СЕКРЕТ ОТКРЫТ!" : "СЕКРЕТ", name: def.name, t: 3, isNew, count: secrets.size };
   if (isNew) playSfx("secret_unlock");
+  if (isNew && id !== "a_alina") checkAllSecrets(1500);
+}
+// the last one: every other achievement is open → a thank-you to Girasole Alina
+function checkAllSecrets(delay = 0) {
+  if (secrets.has("a_alina") || !SECRETS.every((s) => s.id === "a_alina" || secrets.has(s.id))) return;
+  setTimeout(() => unlockSecret("a_alina"), delay);
 }
 
 function drawBanner(dt) {
@@ -8473,7 +8481,7 @@ function drawTwinPreview(id, x) {
 /* Legend: beat the hard bot without losing a round */
 function legends() { return store.get("legends", []); }
 function checkRapGod() {
-  if (G.mode === 1 && !G.tutorial && !G.botVsBot && F.matchWinner === 0 && G.difficulty === "hard" && !F.hurt0) unlockSecret("a_rapgod");
+
 }
 function checkLegend() {
   if (G.mode === 1 && F.matchWinner === 0 && G.difficulty === "hard" && F.wins[1] === 0) {
